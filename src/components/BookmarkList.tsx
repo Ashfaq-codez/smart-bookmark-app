@@ -28,7 +28,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         return
       }
 
-      console.log("Subscribing as user:", session.user.email)
+      // console.log("Subscribing as user:", session.user.email)
 
       // B. Create the channel ONLY after we have the session
       const channel = supabase
@@ -41,7 +41,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             table: 'bookmarks',
           },
           (payload) => {
-            console.log("Realtime event received!", payload)
+            // console.log("Realtime event received!", payload)
             if (payload.eventType === 'INSERT') {
               setBookmarks((prev) => [payload.new as Bookmark, ...prev])
             } else if (payload.eventType === 'DELETE') {
