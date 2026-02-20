@@ -28,7 +28,6 @@ export default async function Home() {
             
             {/* Logo Area */}
             <div className="flex items-center gap-2">
-              {/* Brutalist Ribbon SVG Logo */}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 fill-yellow-400 stroke-gray-900 stroke-[2.5px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)]">
                 <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
               </svg>
@@ -37,20 +36,20 @@ export default async function Home() {
               </h1>
             </div>
             
-            {/* User Area */}
-            <div className="flex items-center gap-3 sm:gap-6">
+            {/* User Area - Now flexes perfectly across the entire mobile screen */}
+            <div className="flex items-center justify-between w-full sm:w-auto gap-4">
                 
-                {/* Account Email Box - Now inside a styled container */}
+                {/* Account Email Box */}
                 <div 
-                  className="bg-pink-100 border-2 border-gray-900 px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]"
+                  className="bg-pink-100 border-2 border-gray-900 px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] flex-1 sm:flex-none min-w-0 max-w-[250px] sm:max-w-xs"
                   title={user.email}
                 >
-                  <p className="text-xs sm:text-sm font-black text-gray-900 max-w-[100px] min-[375px]:max-w-[140px] sm:max-w-[200px] truncate">
+                  <p className="text-xs sm:text-sm font-black text-gray-900 truncate">
                     {user.email}
                   </p>
                 </div>
 
-                {/* Sign Out Button - shrink-0 ensures it never gets squished on tiny screens */}
+                {/* Sign Out Button */}
                 <form action="/auth/signout" method="post" className="shrink-0">
                   <button className="text-xs sm:text-sm font-black uppercase text-gray-900 bg-white border-2 border-gray-900 px-4 sm:px-5 py-1.5 rounded-xl hover:bg-gray-100 transition-all shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] sm:shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] active:translate-y-1 active:translate-x-1 active:shadow-none">
                     Sign Out
