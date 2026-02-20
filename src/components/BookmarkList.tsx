@@ -17,31 +17,18 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [url, setUrl] = useState('')
   const supabase = createClient()
 
- useEffect(() => {
-    // 1. Define an async function to handle the setup
+  useEffect(() => {
     const setupRealtime = async () => {
-      // A. Get the current user session explicitly
       const { data: { session } } = await supabase.auth.getSession()
 
-      if (!session) {
-        console.error("No session found, realtime will fail for RLS.")
-        return
-      }
+      if (!session) return
 
-      // console.log("Subscribing as user:", session.user.email)
-
-      // B. Create the channel ONLY after we have the session
       const channel = supabase
         .channel('realtime bookmarks')
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'bookmarks',
-          },
+          { event: '*', schema: 'public', table: 'bookmarks' },
           (payload) => {
-            // console.log("Realtime event received!", payload)
             if (payload.eventType === 'INSERT') {
               setBookmarks((prev) => [payload.new as Bookmark, ...prev])
             } else if (payload.eventType === 'DELETE') {
@@ -49,28 +36,27 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             }
           }
         )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('Connected!')
-          }
-        })
+        .subscribe()
 
-      // Cleanup function
       return () => {
         supabase.removeChannel(channel)
       }
     }
 
-    // 2. Run the setup
     setupRealtime()
-
   }, [supabase])
 
   const addBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
 
-    const { error } = await supabase.from('bookmarks').insert([{ title, url }])
+    // Ensure URL has http/https so the parser doesn't crash
+    let formattedUrl = url
+    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+      formattedUrl = 'https://' + formattedUrl
+    }
+
+    const { error } = await supabase.from('bookmarks').insert([{ title, url: formattedUrl }])
 
     if (error) {
         alert(error.message)
@@ -85,70 +71,121 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     if (error) alert(error.message)
   }
 
+  // Helper function to safely get the domain name for the logo
+  const getDomain = (link: string) => {
+    try {
+      return new URL(link).hostname
+    } catch {
+      return 'link'
+    }
+  }
+
   return (
-    <div className="max-w-2xl mx-auto p-4">
+    <div className="max-w-5xl mx-auto p-4 md:p-8">
+      
       {/* ADD BOOKMARK FORM */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 mb-8">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Add New Bookmark</h2>
-        <form onSubmit={addBookmark} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-10 max-w-2xl mx-auto">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Add New Bookmark</h2>
+        <form onSubmit={addBookmark} className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
             <input
               type="text"
-              placeholder="e.g. My Portfolio"
+              placeholder="Title (e.g. GitHub)"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              // Added border-gray-300 and text colors to make it visible
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder-gray-400"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 transition"
+              required
             />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+          <div className="flex-1">
             <input
-              type="url"
-              placeholder="https://example.com"
+              type="text"
+              placeholder="URL (e.g. github.com)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              // Added border-gray-300 and text colors here too
-              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder-gray-400"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 transition"
+              required
             />
           </div>
-
           <button 
             type="submit" 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-sm hover:shadow"
           >
-            Add Bookmark
+            Save
           </button>
         </form>
       </div>
 
-      {/* BOOKMARK LIST */}
-      <h3 className="text-xl font-bold text-gray-800 mb-4">Your Bookmarks</h3>
-      <ul className="space-y-3">
-        {bookmarks.map((bookmark) => (
-          <li key={bookmark.id} className="flex justify-between items-center bg-white p-4 rounded shadow-sm border border-gray-200 hover:shadow-md transition">
-            <a 
-              href={bookmark.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-600 hover:underline font-medium text-lg truncate max-w-xs"
-            >
-              {bookmark.title}
-            </a>
-            <button
-              onClick={() => deleteBookmark(bookmark.id)}
-              className="text-red-600 hover:text-red-800 text-sm font-semibold px-3 py-1 border border-red-200 rounded hover:bg-red-50 transition"
-            >
-              Delete
-            </button>
-          </li>
-        ))}
-        {bookmarks.length === 0 && (
-          <p className="text-center text-gray-500 py-8 italic">You don't have any bookmarks yet.</p>
-        )}
-      </ul>
+      {/* BOOKMARK GRID */}
+      <div className="mb-6 flex items-center justify-between">
+        <h3 className="text-2xl font-bold text-gray-900">Your Collection</h3>
+        <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+          {bookmarks.length} saved
+        </span>
+      </div>
+
+      {bookmarks.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+          <p className="text-gray-500 text-lg">Your collection is empty. Add your first bookmark above!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {bookmarks.map((bookmark) => {
+            const domain = getDomain(bookmark.url);
+            
+            return (
+              <div 
+                key={bookmark.id} 
+                className="group relative flex flex-col justify-between bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200"
+              >
+                {/* Top Section: Logo, Title, and URL */}
+                <div className="flex items-start gap-4 mb-4">
+                  {/* Google's free Favicon fetching service */}
+                  <img 
+                    src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`} 
+                    alt={`${domain} logo`}
+                    className="w-10 h-10 rounded-md object-contain bg-gray-50 p-1 border border-gray-100"
+                    onError={(e) => {
+                      // Fallback if logo fails to load
+                      (e.target as HTMLImageElement).src = 'https://www.google.com/s2/favicons?domain=example.com&sz=128'
+                    }}
+                  />
+                  <div className="overflow-hidden">
+                    <a 
+                      href={bookmark.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-lg font-semibold text-gray-900 hover:text-blue-600 truncate block transition-colors"
+                      title={bookmark.title}
+                    >
+                      {bookmark.title}
+                    </a>
+                    <a 
+                      href={bookmark.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-gray-500 hover:text-gray-700 truncate block mt-0.5"
+                      title={bookmark.url}
+                    >
+                      {domain}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Bottom Section: Actions */}
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => deleteBookmark(bookmark.id)}
+                    className="text-sm font-medium text-red-500 hover:text-white hover:bg-red-500 px-3 py-1.5 rounded-md transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
