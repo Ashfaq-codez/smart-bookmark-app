@@ -34,11 +34,11 @@ export default function LoginPage() {
         {/* Playful Branding Header */}
         <div className="flex flex-col items-center text-center">
           {/* Logo element from the navbar */}
-          <div className="mb-6 flex -space-x-1.5">
-            <div className="h-6 w-6 rounded-full border-2 border-gray-900 bg-pink-400"></div>
-            <div className="h-6 w-6 rounded-full border-2 border-gray-900 bg-yellow-400"></div>
-            <div className="h-6 w-6 rounded-full border-2 border-gray-900 bg-cyan-400"></div>
-          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" 
+          viewBox="0 0 24 24" 
+          className="mb-4 w-12 h-12 fill-yellow-400 stroke-gray-900 stroke-[2.5px] drop-shadow-[4px_4px_0px_rgba(17,24,39,1)]">
+          <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
+          </svg>
           
           <h2 className="text-3xl font-black uppercase tracking-tight text-gray-900">
             Smart Bookmarks

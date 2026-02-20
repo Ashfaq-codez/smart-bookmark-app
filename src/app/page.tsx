@@ -25,12 +25,9 @@ export default async function Home() {
             
             {/* Colorful Logo Area */}
             <div className="flex items-center gap-2">
-              <div className="flex -space-x-1.5">
-                {/* Dots slightly smaller on mobile */}
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-pink-400 border-2 border-gray-900"></div>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-yellow-400 border-2 border-gray-900"></div>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-cyan-400 border-2 border-gray-900"></div>
-              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 fill-yellow-400 stroke-gray-900 stroke-[2.5px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)]">
+                <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
+              </svg>
               <h1 className="text-base sm:text-xl font-black tracking-tight text-gray-900 ml-1">
                 SMART BOOKMARKS
               </h1>
