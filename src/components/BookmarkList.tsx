@@ -124,7 +124,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             const isEditing = editingId === bookmark.id;
             const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
             
-            // Assign a stable randomized color theme to the card
             const theme = colorThemes[bookmark.id % colorThemes.length];
             
             return (
@@ -149,9 +148,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 <div className="p-4 flex flex-col flex-1">
                   {isEditing ? (
                     <div className="flex flex-col gap-2 w-full">
-                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-black text-sm text-gray-900 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Title" />
-                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md  text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="URL" />
-                      <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md  text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Category" />
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-sm text-gray-900 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Title" />
+                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="URL" />
+                      <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Category" />
                       <div className="flex gap-2 mt-1">
                           <button onClick={() => saveEdit(bookmark.id)} className={`flex-1 py-1 ${theme.btn} ${theme.hover} text-gray-900 font-black text-xs uppercase border-2 border-gray-900 rounded-md shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:translate-x-px active:shadow-none transition-colors`}>Save</button>
                           <button onClick={() => setEditingId(null)} className="flex-1 py-1 bg-white text-gray-900 font-black text-xs uppercase border-2 border-gray-900 rounded-md shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:translate-x-px active:shadow-none transition-colors">Cancel</button>
@@ -160,20 +159,20 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                   ) : (
                     <div className="flex justify-between items-start gap-2 h-full">
                       
-                      {/* Text Links Group - No hover color shift as requested */}
-                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block outline-none flex-1 min-w-0 pt-1 group/link">
-                        <h4 className="text-[15px] font-black text-gray-900 line-clamp-1" title={bookmark.title}>
+                      {/* Text Links Group - Font weights reduced to font-medium, hover color changes removed */}
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block outline-none flex-1 min-w-0 pt-1">
+                        <h4 className="text-[15px] font-medium text-gray-900 line-clamp-1" title={bookmark.title}>
                             {bookmark.title}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-60 group-hover/link:grayscale-0 group-hover/link:opacity-100 transition-all" />
-                          <p className="text-[11px] font-black text-gray-500 uppercase tracking-wide truncate">
+                          <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-60" />
+                          <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide truncate">
                             {domain} <span className="mx-1 opacity-50">•</span> {bookmark.category || 'Uncategorized'}
                           </p>
                         </div>
                       </a>
 
-                      {/* Action Buttons styled dynamically by the card's theme */}
+                      {/* Action Buttons */}
                       <div className="flex gap-1.5 shrink-0 ml-2">
                         <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || 'Uncategorized') }} className={`p-1.5 ${theme.btn} ${theme.hover} text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none`} title="Edit"><EditIcon /></button>
                         <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-white hover:bg-rose-400 hover:text-white text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Delete"><TrashIcon /></button>
