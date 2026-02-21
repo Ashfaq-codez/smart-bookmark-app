@@ -7,7 +7,7 @@ type Bookmark = {
   id: number
   title: string
   url: string
-  category: string // Added category here
+  category: string
   created_at: string
   user_id: string
 }
@@ -28,13 +28,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   // Add Form States
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [category, setCategory] = useState('') // New category state
+  const [category, setCategory] = useState('')
   
   // Edit Form States
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editUrl, setEditUrl] = useState('')
-  const [editCategory, setEditCategory] = useState('') // New edit category state
+  const [editCategory, setEditCategory] = useState('')
 
   // Filtering State
   const [activeFilter, setActiveFilter] = useState('All')
@@ -65,19 +65,15 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     setupRealtime()
   }, [supabase])
 
-  // --- Dynamic Categories Logic ---
-  // This automatically finds all unique categories you've typed and makes a list of them
   const uniqueCategories = useMemo(() => {
     const categories = bookmarks.map(b => b.category || 'Uncategorized')
     return ['All', ...Array.from(new Set(categories))]
   }, [bookmarks])
 
-  // This filters the view based on what button you clicked
   const filteredBookmarks = useMemo(() => {
     if (activeFilter === 'All') return bookmarks
     return bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter)
   }, [bookmarks, activeFilter])
-
 
   const formatUrl = (rawUrl: string) => {
     return (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) ? 'https://' + rawUrl : rawUrl
@@ -132,7 +128,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      {/* INPUT FORM - Now with a Category Field */}
+      {/* INPUT FORM */}
       <div className="bg-white p-6 sm:p-8 rounded-2xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto">
         <h2 className="text-2xl font-black text-gray-900 mb-6 uppercase">Drop a Link</h2>
         <form onSubmit={addBookmark} className="flex flex-col gap-4">
@@ -155,7 +151,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 onClick={() => setActiveFilter(cat)}
                 className={`shrink-0 px-5 py-2.5 rounded-full border-2 border-gray-900 font-black uppercase tracking-widest text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
                   ${activeFilter === cat 
-                    ? 'bg-gray-900 text-white shadow-[3px_3px_0px_0px_rgba(253,224,71,1)]' // Yellow shadow when active
+                    ? 'bg-gray-900 text-white shadow-[3px_3px_0px_0px_rgba(253,224,71,1)]' 
                     : 'bg-white text-gray-900 hover:bg-gray-50 shadow-[3px_3px_0px_0px_rgba(17,24,39,1)]'
                   }`}
               >
@@ -185,9 +181,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredBookmarks.map((bookmark, index) => {
+          {/* Changed 'index' to just 'bookmark' to rely purely on the ID */}
+          {filteredBookmarks.map((bookmark) => {
             const domain = getDomain(bookmark.url);
-            const cardColorClass = cardColors[index % cardColors.length];
+            
+            // THE FIX: Assign color statically based on the database ID, not the array index
+            const cardColorClass = cardColors[bookmark.id % cardColors.length];
+            
             const isEditing = editingId === bookmark.id;
             
             return (
@@ -213,7 +213,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 {/* --- CONTENT AREA --- */}
                 <div className="p-5 flex flex-col flex-1 bg-inherit">
                   <div className="flex justify-between items-start mb-4 gap-2">
-                    {/* Tiny Category Badge above the Favicon */}
                     <div className="flex flex-col items-start gap-2">
                       <span className="inline-block px-2 py-0.5 bg-gray-900 text-white border-2 border-gray-900 text-[10px] font-black uppercase tracking-widest rounded-md shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)]">
                         {bookmark.category || 'Uncategorized'}
