@@ -4,39 +4,25 @@ import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState, useMemo } from 'react'
 
 type Bookmark = {
-  id: number
-  title: string
-  url: string
-  category: string
-  created_at: string
-  user_id: string
+  id: number; title: string; url: string; category: string; created_at: string; user_id: string
 }
 
-// --- Icons ---
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+// Minimal, sharper icons
+const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 
-const cardColors = ['bg-[#FFE8EF]', 'bg-[#E8F0FE]', 'bg-[#FFF4E0]', 'bg-[#E6F8F3]', 'bg-[#F0E8FE]']
+// Handcrafted pastel accents for categories instead of full card backgrounds
+const pillColors = ['bg-pink-100', 'bg-blue-100', 'bg-yellow-100', 'bg-emerald-100', 'bg-purple-100']
 
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
-  
-  // Add Form States
-  const [title, setTitle] = useState('')
-  const [url, setUrl] = useState('')
-  const [category, setCategory] = useState('')
-  
-  // Edit Form States
+  const [title, setTitle] = useState(''); const [url, setUrl] = useState(''); const [category, setCategory] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editTitle, setEditTitle] = useState('')
-  const [editUrl, setEditUrl] = useState('')
-  const [editCategory, setEditCategory] = useState('')
-
-  // Filtering State
+  const [editTitle, setEditTitle] = useState(''); const [editUrl, setEditUrl] = useState(''); const [editCategory, setEditCategory] = useState('')
   const [activeFilter, setActiveFilter] = useState('All')
 
   const supabase = createClient()
@@ -45,219 +31,129 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-
-      const channel = supabase
-        .channel('realtime bookmarks')
+      const channel = supabase.channel('realtime bookmarks')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
-            if (payload.eventType === 'INSERT') {
-              setBookmarks((prev) => [payload.new as Bookmark, ...prev])
-            } else if (payload.eventType === 'DELETE') {
-              setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
-            } else if (payload.eventType === 'UPDATE') {
-              setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
-            }
-          }
-        )
-        .subscribe()
-
+            if (payload.eventType === 'INSERT') setBookmarks((prev) => [payload.new as Bookmark, ...prev])
+            else if (payload.eventType === 'DELETE') setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
+            else if (payload.eventType === 'UPDATE') setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
+          }).subscribe()
       return () => { supabase.removeChannel(channel) }
     }
     setupRealtime()
   }, [supabase])
 
-  const uniqueCategories = useMemo(() => {
-    const categories = bookmarks.map(b => b.category || 'Uncategorized')
-    return ['All', ...Array.from(new Set(categories))]
-  }, [bookmarks])
-
-  const filteredBookmarks = useMemo(() => {
-    if (activeFilter === 'All') return bookmarks
-    return bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter)
-  }, [bookmarks, activeFilter])
-
-  const formatUrl = (rawUrl: string) => {
-    return (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) ? 'https://' + rawUrl : rawUrl
-  }
+  const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
+  const filteredBookmarks = useMemo(() => activeFilter === 'All' ? bookmarks : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter), [bookmarks, activeFilter])
+  const formatUrl = (rawUrl: string) => (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) ? 'https://' + rawUrl : rawUrl
 
   const addBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
-    
-    const finalCategory = category.trim() === '' ? 'Uncategorized' : category.trim()
-    
-    const { error } = await supabase.from('bookmarks').insert([{ 
-      title, 
-      url: formatUrl(url),
-      category: finalCategory
-    }])
-    
+    const { error } = await supabase.from('bookmarks').insert([{ title, url: formatUrl(url), category: category.trim() || 'Uncategorized' }])
     if (error) alert(error.message)
     else { setTitle(''); setUrl(''); setCategory('') }
   }
 
-  const deleteBookmark = async (id: number) => {
-    const { error } = await supabase.from('bookmarks').delete().eq('id', id)
-    if (error) alert(error.message)
-  }
-
-  const startEditing = (bookmark: Bookmark) => {
-    setEditingId(bookmark.id)
-    setEditTitle(bookmark.title)
-    setEditUrl(bookmark.url)
-    setEditCategory(bookmark.category || 'Uncategorized')
-  }
-
   const saveEdit = async (id: number) => {
     if (!editTitle || !editUrl) return
-    
-    const finalCategory = editCategory.trim() === '' ? 'Uncategorized' : editCategory.trim()
-
-    const { error } = await supabase.from('bookmarks').update({ 
-      title: editTitle, 
-      url: formatUrl(editUrl),
-      category: finalCategory
-    }).eq('id', id)
-    
+    const { error } = await supabase.from('bookmarks').update({ title: editTitle, url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized' }).eq('id', id)
     if (error) alert(error.message)
     else setEditingId(null)
   }
 
-  const getDomain = (link: string) => {
-    try { return new URL(link).hostname } catch { return 'link' }
-  }
+  const deleteBookmark = async (id: number) => { const { error } = await supabase.from('bookmarks').delete().eq('id', id); if (error) alert(error.message) }
+  const getDomain = (link: string) => { try { return new URL(link).hostname } catch { return 'link' } }
 
   return (
-    <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      {/* INPUT FORM */}
-      <div className="bg-white p-6 sm:p-8 rounded-2xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto">
-        <h2 className="text-2xl font-black text-gray-900 mb-6 uppercase">Drop a Link</h2>
-        <form onSubmit={addBookmark} className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input type="text" placeholder="Title (e.g. Next.js Docs)" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-yellow-300 text-gray-900 font-bold placeholder:text-gray-400 transition-all" required />
-            <input type="text" placeholder="URL (e.g. nextjs.org)" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-yellow-300 text-gray-900 font-bold placeholder:text-gray-400 transition-all" required />
-            <input type="text" placeholder="Category (e.g. Work, Tools)" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-pink-300 text-gray-900 font-bold placeholder:text-gray-400 transition-all" />
-          </div>
-          <button type="submit" className="flex w-full md:w-auto md:ml-auto items-center justify-center gap-2 bg-[#A855F7] hover:bg-[#9333EA] text-white font-black py-4 px-10 rounded-xl border-4 border-gray-900 transition-transform shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] active:translate-y-1 active:translate-x-1 active:shadow-none"><PlusIcon /><span>SAVE</span></button>
+    <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6">
+      
+      {/* COMPACT INPUT FORM */}
+      <div className="bg-white p-5 rounded-xl border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] mb-10">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Add a new link</h2>
+        <form onSubmit={addBookmark} className="flex flex-col sm:flex-row gap-3">
+          <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-3 py-2 bg-gray-50 border-2 border-gray-200 focus:border-gray-900 rounded-md text-sm font-medium outline-none transition-colors placeholder:text-gray-400" required />
+          <input type="text" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-3 py-2 bg-gray-50 border-2 border-gray-200 focus:border-gray-900 rounded-md text-sm font-medium outline-none transition-colors placeholder:text-gray-400" required />
+          <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full sm:w-32 px-3 py-2 bg-gray-50 border-2 border-gray-200 focus:border-gray-900 rounded-md text-sm font-medium outline-none transition-colors placeholder:text-gray-400" />
+          <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold py-2 px-5 rounded-md transition-colors"><PlusIcon /><span>Save</span></button>
         </form>
       </div>
 
-      {/* FILTER BUTTONS BAR */}
+      {/* FILTER BUTTONS */}
       {bookmarks.length > 0 && (
-        <div className="mb-10 overflow-x-auto pb-4 custom-scrollbar">
-          <div className="flex gap-3">
-            {uniqueCategories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveFilter(cat)}
-                className={`shrink-0 px-5 py-2.5 rounded-full border-2 border-gray-900 font-black uppercase tracking-widest text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
-                  ${activeFilter === cat 
-                    ? 'bg-gray-900 text-white shadow-[3px_3px_0px_0px_rgba(253,224,71,1)]' 
-                    : 'bg-white text-gray-900 hover:bg-gray-50 shadow-[3px_3px_0px_0px_rgba(17,24,39,1)]'
-                  }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+        <div className="mb-8 flex flex-wrap gap-2">
+          {uniqueCategories.map(cat => (
+            <button key={cat} onClick={() => setActiveFilter(cat)} className={`px-3 py-1.5 rounded-md border-2 text-xs font-bold transition-all ${activeFilter === cat ? 'border-gray-900 bg-gray-900 text-white shadow-[2px_2px_0px_0px_rgba(253,224,71,1)]' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-900'}`}>
+              {cat}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-8 px-1">
-        <h3 className="text-3xl font-black text-gray-900 tracking-tight">
-          {activeFilter === 'All' ? 'All Bookmarks' : `${activeFilter}`}
-        </h3>
-        <span className="text-sm font-black text-gray-900 bg-yellow-300 border-2 border-gray-900 px-4 py-1.5 rounded-full shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
-          {filteredBookmarks.length} LINKS
-        </span>
-      </div>
+      {/* HORIZONTAL CARDS GRID (1 col on mobile, 2 on desktop) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {filteredBookmarks.map((bookmark) => {
+          const domain = getDomain(bookmark.url);
+          const isEditing = editingId === bookmark.id;
+          const pillColor = pillColors[bookmark.id % pillColors.length];
+          
+          return (
+            <div key={bookmark.id} className="flex flex-col sm:flex-row bg-white rounded-lg border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(17,24,39,1)]">
+              
+              {/* LEFT: SCROLLING THUMBNAIL (Slimmer width) */}
+              <div className="w-full sm:w-36 h-32 sm:h-auto border-b-2 sm:border-b-0 sm:border-r-2 border-gray-900 relative group/thumb overflow-hidden bg-gray-100 shrink-0">
+                <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                  <img src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} alt="Preview" className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-95 group-hover/thumb:opacity-100" onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/400x800/f3f4f6/111827?text=${domain}`}} />
+                </a>
+              </div>
 
-      {/* EMPTY STATE */}
-      {filteredBookmarks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 px-4 bg-white border-4 border-dashed border-gray-300 rounded-3xl">
-          <div className="text-gray-300 mb-4 scale-150"><ExternalLinkIcon /></div>
-          <h4 className="text-2xl font-black text-gray-400 mb-2 uppercase">No Links Found</h4>
-          <p className="text-gray-500 font-bold text-center max-w-sm">Try adding a new bookmark or changing your category filter.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Changed 'index' to just 'bookmark' to rely purely on the ID */}
-          {filteredBookmarks.map((bookmark) => {
-            const domain = getDomain(bookmark.url);
-            
-            // THE FIX: Assign color statically based on the database ID, not the array index
-            const cardColorClass = cardColors[bookmark.id % cardColors.length];
-            
-            const isEditing = editingId === bookmark.id;
-            
-            return (
-              <div key={bookmark.id} className={`flex flex-col rounded-2xl border-4 border-gray-900 shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 ${!isEditing ? 'hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(17,24,39,1)]' : ''} ${cardColorClass}`}>
+              {/* RIGHT: CONTENT & ACTIONS */}
+              <div className="p-4 flex flex-col flex-1 min-w-0 justify-between">
                 
-                {/* --- THE MAGIC SCROLLING THUMBNAIL --- */}
-                <div className="h-40 w-full border-b-4 border-gray-900 relative group/thumb overflow-hidden bg-gray-800 shrink-0">
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                    <img 
-                      src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} 
-                      alt={`Preview of ${bookmark.title}`}
-                      className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-90 group-hover/thumb:opacity-100"
-                      onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/600x1200/111827/ffffff?text=${domain}`}}
-                    />
-                    <div className="absolute inset-0 bg-gray-900/30 opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
-                      <span className="bg-white text-gray-900 font-black px-4 py-2 rounded-xl border-2 border-gray-900 uppercase tracking-widest text-sm shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
-                        Visit Site
-                      </span>
-                    </div>
-                  </a>
-                </div>
-
-                {/* --- CONTENT AREA --- */}
-                <div className="p-5 flex flex-col flex-1 bg-inherit">
-                  <div className="flex justify-between items-start mb-4 gap-2">
-                    <div className="flex flex-col items-start gap-2">
-                      <span className="inline-block px-2 py-0.5 bg-gray-900 text-white border-2 border-gray-900 text-[10px] font-black uppercase tracking-widest rounded-md shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)]">
-                        {bookmark.category || 'Uncategorized'}
-                      </span>
-                      <div className="shrink-0 p-1.5 bg-white border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
-                        <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} alt="logo" className="w-5 h-5 object-contain" />
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 shrink-0">
-                      {isEditing ? (
-                        <>
-                          <button onClick={() => saveEdit(bookmark.id)} className="p-1.5 text-white bg-green-500 hover:bg-green-600 border-2 border-gray-900 rounded-xl transition-all shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Save"><CheckIcon /></button>
-                          <button onClick={() => setEditingId(null)} className="p-1.5 text-gray-900 bg-white hover:bg-gray-100 border-2 border-gray-900 rounded-xl transition-all shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Cancel"><XIcon /></button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => startEditing(bookmark)} className="p-1.5 text-gray-900 bg-white hover:bg-yellow-100 border-2 border-gray-900 rounded-xl transition-all shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Edit"><EditIcon /></button>
-                          <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 text-white bg-red-500 hover:bg-red-600 border-2 border-gray-900 rounded-xl transition-all shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Delete"><TrashIcon /></button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 flex flex-col justify-end">
+                {/* Top Row: Category Pill & Edit/Delete */}
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <span className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-900 border border-gray-900 rounded-sm ${pillColor}`}>
+                    {bookmark.category || 'Uncategorized'}
+                  </span>
+                  
+                  <div className="flex gap-1.5 shrink-0">
                     {isEditing ? (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1.5 bg-white border-2 border-gray-900 rounded-lg font-black text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-300" placeholder="Title" />
-                        <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1.5 bg-white border-2 border-gray-900 rounded-lg font-bold text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-300" placeholder="URL" />
-                        <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1.5 bg-white border-2 border-gray-900 rounded-lg font-bold text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-300" placeholder="Category" />
-                      </div>
+                      <>
+                        <button onClick={() => saveEdit(bookmark.id)} className="p-1 text-green-700 hover:bg-green-50 rounded transition-colors"><CheckIcon /></button>
+                        <button onClick={() => setEditingId(null)} className="p-1 text-gray-500 hover:bg-gray-100 rounded transition-colors"><XIcon /></button>
+                      </>
                     ) : (
                       <>
-                        <h4 className="text-xl font-black text-gray-900 line-clamp-2 leading-tight mb-1" title={bookmark.title}>{bookmark.title}</h4>
-                        <p className="text-xs font-bold text-gray-600 truncate" title={bookmark.url}>{domain}</p>
+                        <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || 'Uncategorized') }} className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"><EditIcon /></button>
+                        <button onClick={() => deleteBookmark(bookmark.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"><TrashIcon /></button>
                       </>
                     )}
                   </div>
                 </div>
 
+                {/* Main Content Area */}
+                <div className="flex-1">
+                  {isEditing ? (
+                    <div className="flex flex-col gap-2">
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-400 rounded text-sm font-bold text-gray-900 focus:outline-none focus:border-gray-900" placeholder="Title" />
+                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-400 rounded text-xs font-medium text-gray-600 focus:outline-none focus:border-gray-900" placeholder="URL" />
+                      <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 bg-white border border-gray-400 rounded text-xs font-medium text-gray-600 focus:outline-none focus:border-gray-900" placeholder="Category" />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col justify-center h-full">
+                      <h4 className="text-base font-bold text-gray-900 line-clamp-2 leading-tight mb-1" title={bookmark.title}>{bookmark.title}</h4>
+                      <div className="flex items-center gap-1.5">
+                        <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-70" />
+                        <p className="text-xs font-medium text-gray-500 truncate" title={bookmark.url}>{domain}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
-            )
-          })}
-        </div>
-      )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
