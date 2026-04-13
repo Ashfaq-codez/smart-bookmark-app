@@ -4,13 +4,21 @@ import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState, useMemo } from 'react'
 
 type Bookmark = {
-  id: number; title: string; url: string; category: string; created_at: string; user_id: string
+  id: number; 
+  title: string; 
+  url: string; 
+  category: string; 
+  created_at: string; 
+  user_id: string;
 }
 
+// Icons
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
 const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+const LayersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>
+const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
 
 // Robust randomized color themes
 const colorThemes = [
@@ -25,9 +33,25 @@ const colorThemes = [
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
   
-  const [title, setTitle] = useState(''); const [url, setUrl] = useState(''); const [category, setCategory] = useState('')
+  // Tab Management State
+  const [inputMode, setInputMode] = useState<'single' | 'bulk'>('single')
+  
+  // Single Input States
+  const [title, setTitle] = useState(''); 
+  const [url, setUrl] = useState(''); 
+  const [category, setCategory] = useState('')
+  
+  // Bulk Input States
+  const [bulkText, setBulkText] = useState('')
+  const [bulkCategory, setBulkCategory] = useState('Open Tabs')
+  
+  // Edit States
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editTitle, setEditTitle] = useState(''); const [editUrl, setEditUrl] = useState(''); const [editCategory, setEditCategory] = useState('')
+  const [editTitle, setEditTitle] = useState(''); 
+  const [editUrl, setEditUrl] = useState(''); 
+  const [editCategory, setEditCategory] = useState('')
+  
+  // Filter State
   const [activeFilter, setActiveFilter] = useState('All')
 
   const supabase = createClient()
@@ -52,14 +76,56 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
   const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
   
-  const formatUrl = (rawUrl: string) => (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) ? 'https://' + rawUrl : rawUrl
+  const formatUrl = (rawUrl: string) => {
+    const trimmed = rawUrl.trim()
+    return (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) ? 'https://' + trimmed : trimmed
+  }
 
-  const addBookmark = async (e: React.FormEvent) => {
+  const getDomain = (link: string) => { try { return new URL(link).hostname } catch { return 'link' } }
+
+  // --- SINGLE SAVE LOGIC ---
+  const addSingleBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
     const { error } = await supabase.from('bookmarks').insert([{ title, url: formatUrl(url), category: category.trim() || 'Uncategorized' }])
     if (error) alert(error.message)
     else { setTitle(''); setUrl(''); setCategory('') }
+  }
+
+  // --- BULK SAVE LOGIC ---
+  const addBulkBookmarks = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!bulkText.trim()) return
+
+    // Regex to find any web link in a block of text
+    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
+    const foundUrls = bulkText.match(urlRegex);
+
+    if (!foundUrls || foundUrls.length === 0) {
+        alert("No valid URLs found in the text.");
+        return;
+    }
+
+    // Build the array of database rows
+    const newRows = foundUrls.map((foundUrl) => {
+        const formattedUrl = formatUrl(foundUrl);
+        const domainTitle = getDomain(formattedUrl);
+        return {
+            title: `${domainTitle} Tab`, // Default title since we are bulk pasting
+            url: formattedUrl,
+            category: bulkCategory.trim() || 'Open Tabs'
+        }
+    });
+
+    const { error } = await supabase.from('bookmarks').insert(newRows)
+    
+    if (error) {
+        alert(error.message)
+    } else { 
+        setBulkText(''); 
+        setBulkCategory('Open Tabs');
+        alert(`Successfully saved ${newRows.length} tabs!`)
+    }
   }
 
   const saveEdit = async (id: number) => {
@@ -70,20 +136,54 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   }
 
   const deleteBookmark = async (id: number) => { const { error } = await supabase.from('bookmarks').delete().eq('id', id); if (error) alert(error.message) }
-  const getDomain = (link: string) => { try { return new URL(link).hostname } catch { return 'link' } }
 
   return (
     <div className="max-w-[1400px] mx-auto py-10 px-4 sm:px-6">
       
-      {/* CENTERED INPUT FORM */}
+      {/* --- TAB MANAGER INPUT SECTION --- */}
       <div className="bg-white p-6 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto flex flex-col items-center">
-        <h2 className="text-lg font-black text-gray-900 mb-4 uppercase tracking-wide text-center w-full">Add Link</h2>
-        <form onSubmit={addBookmark} className="flex flex-col md:flex-row w-full gap-3">
-          <input type="text" placeholder="Title (e.g. Next.js)" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
-          <input type="text" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
-          <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
-          <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-black uppercase py-2.5 px-6 rounded-xl border-[3px] border-gray-900 transition-transform active:translate-y-1 active:translate-x-1"><PlusIcon /><span>Save</span></button>
-        </form>
+        
+        {/* Toggle Buttons */}
+        <div className="flex gap-4 mb-6 w-full justify-center">
+            <button 
+                onClick={() => setInputMode('single')}
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
+                ${inputMode === 'single' ? 'bg-sky-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}
+            >
+                <LinkIcon /> Single Link
+            </button>
+            <button 
+                onClick={() => setInputMode('bulk')}
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
+                ${inputMode === 'bulk' ? 'bg-emerald-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}
+            >
+                <LayersIcon /> Bulk Paste
+            </button>
+        </div>
+
+        {/* Dynamic Form based on toggle */}
+        {inputMode === 'single' ? (
+            <form onSubmit={addSingleBookmark} className="flex flex-col md:flex-row w-full gap-3">
+                <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
+                <input type="text" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
+                <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
+                <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-sky-200 hover:bg-sky-300 text-gray-900 text-sm font-black uppercase py-2.5 px-6 rounded-xl border-[3px] border-gray-900 transition-transform active:translate-y-1 active:translate-x-1 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]"><PlusIcon /><span>Save</span></button>
+            </form>
+        ) : (
+            <form onSubmit={addBulkBookmarks} className="flex flex-col w-full gap-3">
+                <textarea 
+                    placeholder="Paste a wall of text containing multiple URLs. The app will automatically find all the links and save them as tabs..." 
+                    value={bulkText} 
+                    onChange={(e) => setBulkText(e.target.value)} 
+                    className="w-full h-32 px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-medium placeholder:text-gray-400 transition-all resize-none" 
+                    required 
+                />
+                <div className="flex flex-col md:flex-row gap-3">
+                    <input type="text" placeholder="Assign a Category to these tabs" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
+                    <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-emerald-200 hover:bg-emerald-300 text-gray-900 text-sm font-black uppercase py-2.5 px-8 rounded-xl border-[3px] border-gray-900 transition-transform active:translate-y-1 active:translate-x-1 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]"><LayersIcon /><span>Import Tabs</span></button>
+                </div>
+            </form>
+        )}
       </div>
 
       {/* FILTER BUTTONS BAR */}
@@ -114,23 +214,21 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       {matchCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-4 bg-white border-[3px] border-dashed border-gray-300 rounded-2xl max-w-4xl mx-auto">
           <div className="text-gray-300 mb-3 scale-125"><ExternalLinkIcon /></div>
-          <h4 className="text-lg font-black text-gray-400 mb-1 uppercase">No Links Found</h4>
+          <h4 className="text-lg font-black text-gray-400 mb-1 uppercase">No Tabs Saved</h4>
         </div>
       ) : (
-        /* 4-COLUMN TILING GRID */
+        /* TILING GRID */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {bookmarks.map((bookmark) => {
             const domain = getDomain(bookmark.url);
             const isEditing = editingId === bookmark.id;
             const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-            
-            // Assign a stable randomized color theme to the card
             const theme = colorThemes[bookmark.id % colorThemes.length];
             
             return (
               <div 
                 key={bookmark.id} 
-                className={`${isVisible ? 'flex' : 'hidden'} flex-col ${theme.card} rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)]`}
+                className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)]`}
               >
                 
                 {/* 16:10 SCROLLING THUMBNAIL */}
@@ -149,9 +247,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 <div className="p-4 flex flex-col flex-1">
                   {isEditing ? (
                     <div className="flex flex-col gap-2 w-full">
-                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-black text-sm text-gray-900 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Title" />
-                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md  text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="URL" />
-                      <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md  text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Category" />
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-sm text-gray-900 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Title" />
+                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="URL" />
+                      <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Category" />
                       <div className="flex gap-2 mt-1">
                           <button onClick={() => saveEdit(bookmark.id)} className={`flex-1 py-1 ${theme.btn} ${theme.hover} text-gray-900 font-black text-xs uppercase border-2 border-gray-900 rounded-md shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:translate-x-px active:shadow-none transition-colors`}>Save</button>
                           <button onClick={() => setEditingId(null)} className="flex-1 py-1 bg-white text-gray-900 font-black text-xs uppercase border-2 border-gray-900 rounded-md shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:translate-x-px active:shadow-none transition-colors">Cancel</button>
@@ -160,20 +258,18 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                   ) : (
                     <div className="flex justify-between items-start gap-2 h-full">
                       
-                      {/* Text Links Group - No hover color shift as requested */}
-                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block outline-none flex-1 min-w-0 pt-1 group/link">
-                        <h4 className="text-[15px] font-black text-gray-900 line-clamp-1" title={bookmark.title}>
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block outline-none flex-1 min-w-0 pt-1">
+                        <h4 className="text-[15px] font-medium text-gray-900 line-clamp-1" title={bookmark.title}>
                             {bookmark.title}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-60 group-hover/link:grayscale-0 group-hover/link:opacity-100 transition-all" />
-                          <p className="text-[11px] font-black text-gray-500 uppercase tracking-wide truncate">
+                          <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-60" />
+                          <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide truncate">
                             {domain} <span className="mx-1 opacity-50">•</span> {bookmark.category || 'Uncategorized'}
                           </p>
                         </div>
                       </a>
 
-                      {/* Action Buttons styled dynamically by the card's theme */}
                       <div className="flex gap-1.5 shrink-0 ml-2">
                         <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || 'Uncategorized') }} className={`p-1.5 ${theme.btn} ${theme.hover} text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none`} title="Edit"><EditIcon /></button>
                         <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-white hover:bg-rose-400 hover:text-white text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Delete"><TrashIcon /></button>
