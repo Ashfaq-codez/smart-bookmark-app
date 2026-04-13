@@ -22,7 +22,10 @@ const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height
 const MonitorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
 const ImageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
 
-// Robust randomized color themes
+// Summer Cool / Soft Palette for Filters
+const filterColors = ['bg-sky-200', 'bg-teal-200', 'bg-indigo-200', 'bg-rose-200', 'bg-orange-200']
+
+// Robust randomized color themes for Cards
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
   { card: 'bg-teal-100', btn: 'bg-teal-300', hover: 'hover:bg-teal-400' },
@@ -53,7 +56,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [editUrl, setEditUrl] = useState(''); 
   const [editCategory, setEditCategory] = useState('')
   
-  // NEW: State to track which cards are using Iframe vs Image
+  // State to track which cards are using Iframe vs Image
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
   
   const [activeFilter, setActiveFilter] = useState('All')
@@ -87,6 +90,16 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
   const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
   
+  // NEW: Calculate the exact count of links inside each category dynamically
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { 'All': bookmarks.length }
+    bookmarks.forEach(b => {
+      const cat = b.category || 'Uncategorized'
+      counts[cat] = (counts[cat] || 0) + 1
+    })
+    return counts
+  }, [bookmarks])
+
   const formatUrl = (rawUrl: string) => {
     const trimmed = rawUrl.trim()
     return (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) ? 'https://' + trimmed : trimmed
@@ -201,23 +214,28 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         )}
       </div>
 
-      {/* FILTER BUTTONS BAR */}
+      {/* FILTER BUTTONS BAR - NOW WITH COUNTS */}
       {bookmarks.length > 0 && (
         <div className="mb-8 overflow-x-auto pb-2">
           <div className="flex gap-2 justify-center">
             {uniqueCategories.map((cat, index) => {
-              const activeTheme = colorThemes[index % colorThemes.length];
+              const activeColor = filterColors[index % filterColors.length];
               return (
                 <button
                   key={cat}
                   onClick={() => setActiveFilter(cat)}
-                  className={`shrink-0 px-4 py-1.5 rounded-lg border-[3px] border-gray-900 font-black uppercase tracking-wider text-xs transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
                     ${activeFilter === cat 
-                      ? `${activeTheme.btn} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
+                      ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
                       : 'bg-white text-gray-600 hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]'
                     }`}
                 >
-                  {cat}
+                  <span className="font-black uppercase tracking-wider text-xs">{cat}</span>
+                  {/* Category Count Badge */}
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black border-2 border-gray-900 leading-none flex items-center justify-center
+                    ${activeFilter === cat ? 'bg-white text-gray-900' : 'bg-gray-100 text-gray-400'}`}>
+                    {categoryCounts[cat]}
+                  </span>
                 </button>
               )
             })}
@@ -229,7 +247,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       {matchCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-4 bg-white border-[3px] border-dashed border-gray-300 rounded-2xl max-w-4xl mx-auto">
           <div className="text-gray-300 mb-3 scale-125"><ExternalLinkIcon /></div>
-          <h4 className="text-lg font-black text-gray-400 mb-1 uppercase">No Tabs Saved</h4>
+          <h4 className="text-lg font-black text-gray-400 mb-1 uppercase">No Tabs Found</h4>
         </div>
       ) : (
         /* TILING GRID */
