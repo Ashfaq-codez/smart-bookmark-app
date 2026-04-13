@@ -57,21 +57,31 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const supabase = createClient()
 
   useEffect(() => {
+    // 1. Declare the channel variable outside the async block
+    let channel: any;
+
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       
-      const channel = supabase.channel('realtime bookmarks')
+      // 2. Assign the channel here
+      channel = supabase.channel('realtime bookmarks')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
             if (payload.eventType === 'INSERT') setBookmarks((prev) => [payload.new as Bookmark, ...prev])
             else if (payload.eventType === 'DELETE') setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
             else if (payload.eventType === 'UPDATE') setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
           }).subscribe()
-          
-      return () => { supabase.removeChannel(channel) }
     }
+    
     setupRealtime()
-  }, [supabase])
+
+    // 3. Return the cleanup function strictly to React, NOT inside the async block
+    return () => { 
+        if (channel) {
+            supabase.removeChannel(channel)
+        }
+    }
+  }, []) // 4. EMPTY dependency array ensures this runs exactly ONCE on mount.
 
   const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
   const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
@@ -97,7 +107,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     e.preventDefault()
     if (!bulkText.trim()) return
 
-    // Regex to find any web link in a block of text
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
 
@@ -106,12 +115,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         return;
     }
 
-    // Build the array of database rows
     const newRows = foundUrls.map((foundUrl) => {
         const formattedUrl = formatUrl(foundUrl);
         const domainTitle = getDomain(formattedUrl);
         return {
-            title: `${domainTitle} Tab`, // Default title since we are bulk pasting
+            title: `${domainTitle} Tab`, 
             url: formattedUrl,
             category: bulkCategory.trim() || 'Open Tabs'
         }
@@ -124,7 +132,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     } else { 
         setBulkText(''); 
         setBulkCategory('Open Tabs');
-        alert(`Successfully saved ${newRows.length} tabs!`)
+        // Small tweak: removed the alert so it feels instantly reactive!
     }
   }
 
