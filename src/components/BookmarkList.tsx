@@ -21,6 +21,8 @@ const LayersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" heig
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
 const MonitorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
 const ImageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+const SmallXIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 
 // Summer Cool Palette
 const filterColors = ['bg-sky-200', 'bg-teal-200', 'bg-indigo-200', 'bg-rose-200', 'bg-orange-200']
@@ -44,8 +46,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
   const [activeFilter, setActiveFilter] = useState('All')
   
-  // NEW: State to track which card is currently being dragged
+  // Drag and Drop State
   const [draggedId, setDraggedId] = useState<number | null>(null)
+  
+  // NEW: State for explicitly added tabs
+  const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   const supabase = createClient()
 
@@ -66,7 +73,12 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return () => { if (channel) supabase.removeChannel(channel) }
   }, [supabase]) 
 
-  const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
+  // Merge the dynamically generated categories with manually added custom categories
+  const uniqueCategories = useMemo(() => {
+      const derived = bookmarks.map(b => b.category || 'Uncategorized')
+      return ['All', ...Array.from(new Set([...customCategories, ...derived]))]
+  }, [bookmarks, customCategories])
+  
   const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
   
   const categoryCounts = useMemo(() => {
@@ -87,29 +99,48 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   const togglePreviewMode = (id: number) => { setIframeModes(prev => ({ ...prev, [id]: !prev[id] })) }
 
-  // --- HTML5 DRAG AND DROP HANDLERS ---
+  // --- TAB MANAGEMENT LOGIC ---
+  const handleAddCategory = () => {
+    const trimmed = newCategoryName.trim();
+    if (trimmed && !uniqueCategories.includes(trimmed)) {
+        setCustomCategories(prev => [...prev, trimmed]);
+        setActiveFilter(trimmed); // Automatically hop over to the new tab
+    }
+    setNewCategoryName('');
+    setIsAddingCategory(false);
+  }
+
+  const handleDeleteCategory = async (catToDelete: string) => {
+    if(window.confirm(`Delete the tab "${catToDelete}"? All links inside will be safely moved to "Uncategorized".`)) {
+        // 1. Remove from local custom list
+        setCustomCategories(prev => prev.filter(c => c !== catToDelete));
+        
+        // 2. Optimistic UI update for the cards
+        setBookmarks(prev => prev.map(b => b.category === catToDelete ? { ...b, category: 'Uncategorized' } : b));
+        
+        // 3. Background Database update
+        const { error } = await supabase.from('bookmarks').update({ category: 'Uncategorized' }).eq('category', catToDelete);
+        if (error) alert("Failed to delete tab: " + error.message);
+        
+        // 4. Kick user back to All tabs
+        if (activeFilter === catToDelete) setActiveFilter('All');
+    }
+  }
+
+  // --- DRAG AND DROP HANDLERS ---
   const handleDragStart = (e: React.DragEvent, id: number) => {
     e.dataTransfer.setData('bookmarkId', id.toString())
-    setDraggedId(id) // Dims the card being dragged
+    setDraggedId(id)
   }
-
-  const handleDragEnd = () => {
-    setDraggedId(null)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault() // Necessary to allow dropping
-  }
-
+  const handleDragEnd = () => { setDraggedId(null) }
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault() }
+  
   const handleDrop = async (e: React.DragEvent, targetCategory: string) => {
     e.preventDefault()
     const bookmarkId = parseInt(e.dataTransfer.getData('bookmarkId'))
     if (!bookmarkId || isNaN(bookmarkId)) return
 
-    // 1. Optimistic UI Update (Instant feedback)
     setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, category: targetCategory } : b))
-    
-    // 2. Database Update
     const { error } = await supabase.from('bookmarks').update({ category: targetCategory }).eq('id', bookmarkId)
     if (error) alert("Failed to move tab: " + error.message)
   }
@@ -175,36 +206,71 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       </div>
 
       {/* FILTER BUTTONS BAR (DROP ZONES) */}
-      {bookmarks.length > 0 && (
-        <div className="mb-8 overflow-x-auto pb-2">
-          <div className="flex gap-2 justify-center">
-            {uniqueCategories.map((cat, index) => {
-              const activeColor = filterColors[index % filterColors.length];
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveFilter(cat)}
-                  // NEW: Category pills become Drop Zones (Except the "All" tab)
-                  onDragOver={cat !== 'All' ? handleDragOver : undefined}
-                  onDrop={cat !== 'All' ? (e) => handleDrop(e, cat) : undefined}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
-                    ${activeFilter === cat 
-                      ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
-                      : 'bg-white text-gray-600 hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]'
-                    }`}
-                >
-                  <span className="font-black uppercase tracking-wider text-xs">{cat}</span>
-                  {/* CHANGED: Border classes removed from the count badge */}
-                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none flex items-center justify-center
-                    ${activeFilter === cat ? 'bg-white text-gray-900' : 'bg-gray-200 text-gray-500'}`}>
-                    {categoryCounts[cat]}
+      <div className="mb-8 overflow-x-auto pb-2 custom-scrollbar">
+        <div className="flex gap-3 justify-start md:justify-center min-w-max px-2">
+          {uniqueCategories.map((cat, index) => {
+            const activeColor = filterColors[index % filterColors.length];
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveFilter(cat)}
+                onDragOver={cat !== 'All' ? handleDragOver : undefined}
+                onDrop={cat !== 'All' ? (e) => handleDrop(e, cat) : undefined}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
+                  ${activeFilter === cat 
+                    ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
+                    : 'bg-white text-gray-600 hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]'
+                  }`}
+              >
+                <span className="font-black uppercase tracking-wider text-xs">{cat}</span>
+                
+                {/* Count Badge - Border completely removed! */}
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none flex items-center justify-center
+                  ${activeFilter === cat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                  {categoryCounts[cat] || 0}
+                </span>
+
+                {/* DELETE TAB BUTTON */}
+                {cat !== 'All' && cat !== 'Uncategorized' && (
+                  <span 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}
+                    className={`ml-0.5 p-1 rounded-md transition-colors ${activeFilter === cat ? 'hover:bg-gray-900 hover:text-white text-gray-900' : 'hover:bg-red-500 hover:text-white text-gray-400'}`}
+                    title="Delete Tab"
+                  >
+                    <SmallXIcon />
                   </span>
-                </button>
-              )
-            })}
-          </div>
+                )}
+              </button>
+            )
+          })}
+
+          {/* ADD NEW TAB BUTTON */}
+          {isAddingCategory ? (
+            <div className="shrink-0 flex items-center gap-2 px-2 py-1.5 rounded-lg border-[3px] border-gray-900 bg-white shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
+              <input 
+                type="text" 
+                autoFocus
+                value={newCategoryName} 
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => { if(e.key === 'Enter') handleAddCategory(); if(e.key === 'Escape') setIsAddingCategory(false); }}
+                placeholder="TAB NAME..." 
+                className="w-24 outline-none text-xs font-black uppercase tracking-wider text-gray-900 placeholder:text-gray-300 bg-transparent"
+              />
+              <button onClick={handleAddCategory} className="p-1 text-green-500 hover:bg-green-100 rounded-md"><CheckIcon /></button>
+              <button onClick={() => setIsAddingCategory(false)} className="p-1 text-red-500 hover:bg-red-100 rounded-md"><SmallXIcon /></button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setIsAddingCategory(true)}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-dashed border-gray-300 hover:border-gray-900 text-gray-400 hover:text-gray-900 transition-all"
+            >
+              <PlusIcon />
+              <span className="font-black uppercase tracking-wider text-xs">Add Tab</span>
+            </button>
+          )}
+
         </div>
-      )}
+      </div>
 
       {/* EMPTY STATE */}
       {matchCount === 0 ? (
@@ -221,25 +287,19 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
             const isIframeMode = iframeModes[bookmark.id] || false;
             const theme = colorThemes[bookmark.id % colorThemes.length];
-            
-            // Track if this exact card is the one currently being dragged
             const isBeingDragged = draggedId === bookmark.id;
             
             return (
               <div 
                 key={bookmark.id} 
-                // NEW: Make the card Draggable (Disabled if you are currently editing it)
                 draggable={!isEditing}
                 onDragStart={(e) => handleDragStart(e, bookmark.id)}
                 onDragEnd={handleDragEnd}
-                // Adds a cool visual effect (dimming) to the card while you are dragging it
-                className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] cursor-grab active:cursor-grabbing ${isBeingDragged ? 'opacity-40 scale-95' : 'opacity-100'}`}
+                className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 cursor-grab active:cursor-grabbing ${isBeingDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)]'}`}
               >
                 
-                {/* 16:10 SCROLLING THUMBNAIL */}
+                {/* PREVIEW CONTAINER */}
                 <div className="w-full aspect-[16/10] border-b-[3px] border-gray-900 relative group/thumb overflow-hidden bg-gray-50 shrink-0 pointer-events-none">
-                  
-                  {/* PREVIEW TOGGLE BUTTON */}
                   {!isEditing && (
                     <div className="absolute top-2 left-2 z-20 flex opacity-0 group-hover/thumb:opacity-100 transition-opacity pointer-events-auto">
                       <button 
@@ -278,24 +338,17 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                     </div>
                   ) : (
                     <div className="flex justify-between items-start gap-2 h-full">
-                      
                       <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block outline-none flex-1 min-w-0 pt-1">
-                        <h4 className="text-[15px] font-medium text-gray-900 line-clamp-1" title={bookmark.title}>
-                            {bookmark.title}
-                        </h4>
+                        <h4 className="text-[15px] font-medium text-gray-900 line-clamp-1" title={bookmark.title}>{bookmark.title}</h4>
                         <div className="flex items-center gap-1.5 mt-1">
                           <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-60" />
-                          <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide truncate">
-                            {domain} <span className="mx-1 opacity-50">•</span> {bookmark.category || 'Uncategorized'}
-                          </p>
+                          <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide truncate">{domain} <span className="mx-1 opacity-50">•</span> {bookmark.category || 'Uncategorized'}</p>
                         </div>
                       </a>
-
                       <div className="flex gap-1.5 shrink-0 ml-2">
                         <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || 'Uncategorized') }} className={`p-1.5 ${theme.btn} ${theme.hover} text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none`} title="Edit"><EditIcon /></button>
                         <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-white hover:bg-rose-400 hover:text-white text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Delete"><TrashIcon /></button>
                       </div>
-
                     </div>
                   )}
                 </div>
