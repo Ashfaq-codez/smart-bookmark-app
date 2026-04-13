@@ -22,10 +22,8 @@ const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height
 const MonitorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
 const ImageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
 
-// Summer Cool / Soft Palette for Filters
+// Summer Cool Palette
 const filterColors = ['bg-sky-200', 'bg-teal-200', 'bg-indigo-200', 'bg-rose-200', 'bg-orange-200']
-
-// Robust randomized color themes for Cards
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
   { card: 'bg-teal-100', btn: 'bg-teal-300', hover: 'hover:bg-teal-400' },
@@ -38,34 +36,21 @@ const colorThemes = [
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
   
-  // Tab Management State
   const [inputMode, setInputMode] = useState<'single' | 'bulk'>('single')
-  
-  // Single Input States
-  const [title, setTitle] = useState(''); 
-  const [url, setUrl] = useState(''); 
-  const [category, setCategory] = useState('')
-  
-  // Bulk Input States
-  const [bulkText, setBulkText] = useState('')
-  const [bulkCategory, setBulkCategory] = useState('Open Tabs')
-  
-  // Edit & View States
+  const [title, setTitle] = useState(''); const [url, setUrl] = useState(''); const [category, setCategory] = useState('')
+  const [bulkText, setBulkText] = useState(''); const [bulkCategory, setBulkCategory] = useState('Open Tabs')
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editTitle, setEditTitle] = useState(''); 
-  const [editUrl, setEditUrl] = useState(''); 
-  const [editCategory, setEditCategory] = useState('')
-  
-  // State to track which cards are using Iframe vs Image
+  const [editTitle, setEditTitle] = useState(''); const [editUrl, setEditUrl] = useState(''); const [editCategory, setEditCategory] = useState('')
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
-  
   const [activeFilter, setActiveFilter] = useState('All')
+  
+  // NEW: State to track which card is currently being dragged
+  const [draggedId, setDraggedId] = useState<number | null>(null)
 
   const supabase = createClient()
 
   useEffect(() => {
     let channel: any;
-
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
@@ -77,20 +62,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             else if (payload.eventType === 'UPDATE') setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
           }).subscribe()
     }
-    
     setupRealtime()
-
-    return () => { 
-        if (channel) {
-            supabase.removeChannel(channel)
-        }
-    }
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [supabase]) 
 
   const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
   const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
   
-  // NEW: Calculate the exact count of links inside each category dynamically
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { 'All': bookmarks.length }
     bookmarks.forEach(b => {
@@ -107,14 +85,36 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   const getDomain = (link: string) => { try { return new URL(link).hostname } catch { return 'link' } }
 
-  const togglePreviewMode = (id: number) => {
-    setIframeModes(prev => ({
-        ...prev,
-        [id]: !prev[id]
-    }))
+  const togglePreviewMode = (id: number) => { setIframeModes(prev => ({ ...prev, [id]: !prev[id] })) }
+
+  // --- HTML5 DRAG AND DROP HANDLERS ---
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    e.dataTransfer.setData('bookmarkId', id.toString())
+    setDraggedId(id) // Dims the card being dragged
   }
 
-  // --- SINGLE SAVE LOGIC ---
+  const handleDragEnd = () => {
+    setDraggedId(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault() // Necessary to allow dropping
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetCategory: string) => {
+    e.preventDefault()
+    const bookmarkId = parseInt(e.dataTransfer.getData('bookmarkId'))
+    if (!bookmarkId || isNaN(bookmarkId)) return
+
+    // 1. Optimistic UI Update (Instant feedback)
+    setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, category: targetCategory } : b))
+    
+    // 2. Database Update
+    const { error } = await supabase.from('bookmarks').update({ category: targetCategory }).eq('id', bookmarkId)
+    if (error) alert("Failed to move tab: " + error.message)
+  }
+
+  // --- CRUD LOGIC ---
   const addSingleBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
@@ -123,37 +123,19 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     else { setTitle(''); setUrl(''); setCategory('') }
   }
 
-  // --- BULK SAVE LOGIC ---
   const addBulkBookmarks = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!bulkText.trim()) return
-
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
-
-    if (!foundUrls || foundUrls.length === 0) {
-        alert("No valid URLs found in the text.");
-        return;
-    }
-
+    if (!foundUrls || foundUrls.length === 0) { alert("No valid URLs found in the text."); return; }
     const newRows = foundUrls.map((foundUrl) => {
         const formattedUrl = formatUrl(foundUrl);
-        const domainTitle = getDomain(formattedUrl);
-        return {
-            title: `${domainTitle} Tab`, 
-            url: formattedUrl,
-            category: bulkCategory.trim() || 'Open Tabs'
-        }
+        return { title: `${getDomain(formattedUrl)} Tab`, url: formattedUrl, category: bulkCategory.trim() || 'Open Tabs' }
     });
-
     const { error } = await supabase.from('bookmarks').insert(newRows)
-    
-    if (error) {
-        alert(error.message)
-    } else { 
-        setBulkText(''); 
-        setBulkCategory('Open Tabs');
-    }
+    if (error) alert(error.message)
+    else { setBulkText(''); setBulkCategory('Open Tabs'); }
   }
 
   const saveEdit = async (id: number) => {
@@ -168,28 +150,12 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   return (
     <div className="max-w-[1400px] mx-auto py-10 px-4 sm:px-6">
       
-      {/* --- TAB MANAGER INPUT SECTION --- */}
+      {/* INPUT SECTION */}
       <div className="bg-white p-6 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto flex flex-col items-center">
-        
-        {/* Toggle Buttons */}
         <div className="flex gap-4 mb-6 w-full justify-center">
-            <button 
-                onClick={() => setInputMode('single')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
-                ${inputMode === 'single' ? 'bg-sky-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}
-            >
-                <LinkIcon /> Single Link
-            </button>
-            <button 
-                onClick={() => setInputMode('bulk')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
-                ${inputMode === 'bulk' ? 'bg-emerald-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}
-            >
-                <LayersIcon /> Bulk Paste
-            </button>
+            <button onClick={() => setInputMode('single')} className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'single' ? 'bg-sky-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LinkIcon /> Single Link</button>
+            <button onClick={() => setInputMode('bulk')} className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'bulk' ? 'bg-emerald-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LayersIcon /> Bulk Paste</button>
         </div>
-
-        {/* Dynamic Form based on toggle */}
         {inputMode === 'single' ? (
             <form onSubmit={addSingleBookmark} className="flex flex-col md:flex-row w-full gap-3">
                 <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
@@ -199,22 +165,16 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             </form>
         ) : (
             <form onSubmit={addBulkBookmarks} className="flex flex-col w-full gap-3">
-                <textarea 
-                    placeholder="Paste a wall of text containing multiple URLs. The app will automatically find all the links and save them as tabs..." 
-                    value={bulkText} 
-                    onChange={(e) => setBulkText(e.target.value)} 
-                    className="w-full h-32 px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-medium placeholder:text-gray-400 transition-all resize-none" 
-                    required 
-                />
+                <textarea placeholder="Paste a wall of text containing multiple URLs..." value={bulkText} onChange={(e) => setBulkText(e.target.value)} className="w-full h-32 px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-medium placeholder:text-gray-400 transition-all resize-none" required />
                 <div className="flex flex-col md:flex-row gap-3">
-                    <input type="text" placeholder="Assign a Category to these tabs" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
+                    <input type="text" placeholder="Assign a Category" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
                     <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-emerald-200 hover:bg-emerald-300 text-gray-900 text-sm font-black uppercase py-2.5 px-8 rounded-xl border-[3px] border-gray-900 transition-transform active:translate-y-1 active:translate-x-1 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]"><LayersIcon /><span>Import Tabs</span></button>
                 </div>
             </form>
         )}
       </div>
 
-      {/* FILTER BUTTONS BAR - NOW WITH COUNTS */}
+      {/* FILTER BUTTONS BAR (DROP ZONES) */}
       {bookmarks.length > 0 && (
         <div className="mb-8 overflow-x-auto pb-2">
           <div className="flex gap-2 justify-center">
@@ -224,6 +184,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 <button
                   key={cat}
                   onClick={() => setActiveFilter(cat)}
+                  // NEW: Category pills become Drop Zones (Except the "All" tab)
+                  onDragOver={cat !== 'All' ? handleDragOver : undefined}
+                  onDrop={cat !== 'All' ? (e) => handleDrop(e, cat) : undefined}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
                     ${activeFilter === cat 
                       ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
@@ -231,9 +194,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                     }`}
                 >
                   <span className="font-black uppercase tracking-wider text-xs">{cat}</span>
-                  {/* Category Count Badge */}
-                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black border-2 border-gray-900 leading-none flex items-center justify-center
-                    ${activeFilter === cat ? 'bg-white text-gray-900' : 'bg-gray-100 text-gray-400'}`}>
+                  {/* CHANGED: Border classes removed from the count badge */}
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none flex items-center justify-center
+                    ${activeFilter === cat ? 'bg-white text-gray-900' : 'bg-gray-200 text-gray-500'}`}>
                     {categoryCounts[cat]}
                   </span>
                 </button>
@@ -259,20 +222,28 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             const isIframeMode = iframeModes[bookmark.id] || false;
             const theme = colorThemes[bookmark.id % colorThemes.length];
             
+            // Track if this exact card is the one currently being dragged
+            const isBeingDragged = draggedId === bookmark.id;
+            
             return (
               <div 
                 key={bookmark.id} 
-                className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)]`}
+                // NEW: Make the card Draggable (Disabled if you are currently editing it)
+                draggable={!isEditing}
+                onDragStart={(e) => handleDragStart(e, bookmark.id)}
+                onDragEnd={handleDragEnd}
+                // Adds a cool visual effect (dimming) to the card while you are dragging it
+                className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] cursor-grab active:cursor-grabbing ${isBeingDragged ? 'opacity-40 scale-95' : 'opacity-100'}`}
               >
                 
-                {/* PREVIEW CONTAINER */}
-                <div className="w-full aspect-[16/10] border-b-[3px] border-gray-900 relative group/thumb overflow-hidden bg-gray-50 shrink-0">
+                {/* 16:10 SCROLLING THUMBNAIL */}
+                <div className="w-full aspect-[16/10] border-b-[3px] border-gray-900 relative group/thumb overflow-hidden bg-gray-50 shrink-0 pointer-events-none">
                   
                   {/* PREVIEW TOGGLE BUTTON */}
                   {!isEditing && (
-                    <div className="absolute top-2 left-2 z-20 flex opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                    <div className="absolute top-2 left-2 z-20 flex opacity-0 group-hover/thumb:opacity-100 transition-opacity pointer-events-auto">
                       <button 
-                        onClick={(e) => { e.preventDefault(); togglePreviewMode(bookmark.id); }} 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePreviewMode(bookmark.id); }} 
                         className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-900 text-white hover:bg-gray-700 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
                         title={isIframeMode ? "Switch to Image Preview" : "Switch to Live Iframe"}
                       >
@@ -282,25 +253,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                     </div>
                   )}
 
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative">
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative pointer-events-auto">
                     {isIframeMode ? (
-                      /* IFRAME MODE (Scaled down to look like a thumbnail) */
                       <div className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none">
-                        <iframe 
-                            src={bookmark.url} 
-                            className="w-full h-full border-none pointer-events-none" 
-                            sandbox="allow-scripts allow-same-origin"
-                            loading="lazy"
-                        />
+                        <iframe src={bookmark.url} className="w-full h-full border-none pointer-events-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
                       </div>
                     ) : (
-                      /* IMAGE MODE (Thum.io scrolling image) */
-                      <img 
-                        src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-95 group-hover/thumb:opacity-100" 
-                        onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/600x600/f8fafc/111827?text=${domain}`}} 
-                      />
+                      <img src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} alt="Preview" className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-95 group-hover/thumb:opacity-100" onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/600x600/f8fafc/111827?text=${domain}`}} />
                     )}
                   </a>
                 </div>
