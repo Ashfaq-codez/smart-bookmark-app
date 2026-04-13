@@ -19,6 +19,8 @@ const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
 const LayersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+const MonitorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+const ImageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
 
 // Robust randomized color themes
 const colorThemes = [
@@ -45,26 +47,26 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [bulkText, setBulkText] = useState('')
   const [bulkCategory, setBulkCategory] = useState('Open Tabs')
   
-  // Edit States
+  // Edit & View States
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState(''); 
   const [editUrl, setEditUrl] = useState(''); 
   const [editCategory, setEditCategory] = useState('')
   
-  // Filter State
+  // NEW: State to track which cards are using Iframe vs Image
+  const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
+  
   const [activeFilter, setActiveFilter] = useState('All')
 
   const supabase = createClient()
 
   useEffect(() => {
-    // 1. Declare the channel variable outside the async block
     let channel: any;
 
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       
-      // 2. Assign the channel here
       channel = supabase.channel('realtime bookmarks')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
             if (payload.eventType === 'INSERT') setBookmarks((prev) => [payload.new as Bookmark, ...prev])
@@ -75,13 +77,12 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     
     setupRealtime()
 
-    // 3. Return the cleanup function strictly to React, NOT inside the async block
     return () => { 
         if (channel) {
             supabase.removeChannel(channel)
         }
     }
-  }, []) // 4. EMPTY dependency array ensures this runs exactly ONCE on mount.
+  }, [supabase]) 
 
   const uniqueCategories = useMemo(() => ['All', ...Array.from(new Set(bookmarks.map(b => b.category || 'Uncategorized')))], [bookmarks])
   const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
@@ -92,6 +93,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   }
 
   const getDomain = (link: string) => { try { return new URL(link).hostname } catch { return 'link' } }
+
+  const togglePreviewMode = (id: number) => {
+    setIframeModes(prev => ({
+        ...prev,
+        [id]: !prev[id]
+    }))
+  }
 
   // --- SINGLE SAVE LOGIC ---
   const addSingleBookmark = async (e: React.FormEvent) => {
@@ -132,7 +140,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     } else { 
         setBulkText(''); 
         setBulkCategory('Open Tabs');
-        // Small tweak: removed the alert so it feels instantly reactive!
     }
   }
 
@@ -231,6 +238,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             const domain = getDomain(bookmark.url);
             const isEditing = editingId === bookmark.id;
             const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
+            const isIframeMode = iframeModes[bookmark.id] || false;
             const theme = colorThemes[bookmark.id % colorThemes.length];
             
             return (
@@ -239,15 +247,43 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)]`}
               >
                 
-                {/* 16:10 SCROLLING THUMBNAIL */}
+                {/* PREVIEW CONTAINER */}
                 <div className="w-full aspect-[16/10] border-b-[3px] border-gray-900 relative group/thumb overflow-hidden bg-gray-50 shrink-0">
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                    <img 
-                      src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} 
-                      alt="Preview" 
-                      className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-95 group-hover/thumb:opacity-100" 
-                      onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/600x600/f8fafc/111827?text=${domain}`}} 
-                    />
+                  
+                  {/* PREVIEW TOGGLE BUTTON */}
+                  {!isEditing && (
+                    <div className="absolute top-2 left-2 z-20 flex opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => { e.preventDefault(); togglePreviewMode(bookmark.id); }} 
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-900 text-white hover:bg-gray-700 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
+                        title={isIframeMode ? "Switch to Image Preview" : "Switch to Live Iframe"}
+                      >
+                        {isIframeMode ? <ImageIcon /> : <MonitorIcon />}
+                        <span className="text-[10px] font-black uppercase">{isIframeMode ? 'Image' : 'Live'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative">
+                    {isIframeMode ? (
+                      /* IFRAME MODE (Scaled down to look like a thumbnail) */
+                      <div className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none">
+                        <iframe 
+                            src={bookmark.url} 
+                            className="w-full h-full border-none pointer-events-none" 
+                            sandbox="allow-scripts allow-same-origin"
+                            loading="lazy"
+                        />
+                      </div>
+                    ) : (
+                      /* IMAGE MODE (Thum.io scrolling image) */
+                      <img 
+                        src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-95 group-hover/thumb:opacity-100" 
+                        onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/600x600/f8fafc/111827?text=${domain}`}} 
+                      />
+                    )}
                   </a>
                 </div>
 
