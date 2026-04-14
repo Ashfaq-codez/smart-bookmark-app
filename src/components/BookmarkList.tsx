@@ -46,34 +46,34 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
   const [activeFilter, setActiveFilter] = useState('All')
   
-  // Drag and Drop State
   const [draggedId, setDraggedId] = useState<number | null>(null)
   
-  // NEW: State for explicitly added tabs
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
 
+  // Create client once outside useEffect
   const supabase = createClient()
 
+  // FIXED: Synchronous WebSockets with safe duplicate checking
   useEffect(() => {
-    let channel: any;
-    const setupRealtime = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      
-      channel = supabase.channel('realtime bookmarks')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
-            if (payload.eventType === 'INSERT') setBookmarks((prev) => [payload.new as Bookmark, ...prev])
-            else if (payload.eventType === 'DELETE') setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
-            else if (payload.eventType === 'UPDATE') setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
-          }).subscribe()
-    }
-    setupRealtime()
-    return () => { if (channel) supabase.removeChannel(channel) }
-  }, [supabase]) 
+    const channel = supabase.channel('realtime_bookmarks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+              // Only add if it doesn't already exist from our instant state update
+              setBookmarks((prev) => prev.some(b => b.id === payload.new.id) ? prev : [payload.new as Bookmark, ...prev])
+          }
+          else if (payload.eventType === 'DELETE') {
+              setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
+          }
+          else if (payload.eventType === 'UPDATE') {
+              setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
+          }
+        }).subscribe()
 
-  // Merge the dynamically generated categories with manually added custom categories
+    return () => { supabase.removeChannel(channel) }
+  }, []) // Empty dependency array ensures this never tears down mid-session
+
   const uniqueCategories = useMemo(() => {
       const derived = bookmarks.map(b => b.category || 'Uncategorized')
       return ['All', ...Array.from(new Set([...customCategories, ...derived]))]
@@ -99,12 +99,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   const togglePreviewMode = (id: number) => { setIframeModes(prev => ({ ...prev, [id]: !prev[id] })) }
 
-  // --- TAB MANAGEMENT LOGIC ---
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
     if (trimmed && !uniqueCategories.includes(trimmed)) {
         setCustomCategories(prev => [...prev, trimmed]);
-        setActiveFilter(trimmed); // Automatically hop over to the new tab
+        setActiveFilter(trimmed); 
     }
     setNewCategoryName('');
     setIsAddingCategory(false);
@@ -112,17 +111,10 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   const handleDeleteCategory = async (catToDelete: string) => {
     if(window.confirm(`Delete the tab "${catToDelete}"? All links inside will be safely moved to "Uncategorized".`)) {
-        // 1. Remove from local custom list
         setCustomCategories(prev => prev.filter(c => c !== catToDelete));
-        
-        // 2. Optimistic UI update for the cards
         setBookmarks(prev => prev.map(b => b.category === catToDelete ? { ...b, category: 'Uncategorized' } : b));
-        
-        // 3. Background Database update
         const { error } = await supabase.from('bookmarks').update({ category: 'Uncategorized' }).eq('category', catToDelete);
         if (error) alert("Failed to delete tab: " + error.message);
-        
-        // 4. Kick user back to All tabs
         if (activeFilter === catToDelete) setActiveFilter('All');
     }
   }
@@ -140,18 +132,30 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     const bookmarkId = parseInt(e.dataTransfer.getData('bookmarkId'))
     if (!bookmarkId || isNaN(bookmarkId)) return
 
+    // INSTANT UPDATE
     setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, category: targetCategory } : b))
     const { error } = await supabase.from('bookmarks').update({ category: targetCategory }).eq('id', bookmarkId)
     if (error) alert("Failed to move tab: " + error.message)
   }
 
-  // --- CRUD LOGIC ---
+  // --- FIXED INSTANT CRUD LOGIC ---
+
   const addSingleBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
-    const { error } = await supabase.from('bookmarks').insert([{ title, url: formatUrl(url), category: category.trim() || 'Uncategorized' }])
-    if (error) alert(error.message)
-    else { setTitle(''); setUrl(''); setCategory('') }
+    
+    // Notice `.select()` - this returns the generated row immediately!
+    const { data, error } = await supabase.from('bookmarks')
+        .insert([{ title, url: formatUrl(url), category: category.trim() || 'Uncategorized' }])
+        .select();
+
+    if (error) {
+        alert(error.message)
+    } else if (data && data.length > 0) {
+        // INSTANTLY update state so it pops onto the screen
+        setBookmarks(prev => [data[0], ...prev])
+        setTitle(''); setUrl(''); setCategory('')
+    }
   }
 
   const addBulkBookmarks = async (e: React.FormEvent) => {
@@ -160,32 +164,56 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
     if (!foundUrls || foundUrls.length === 0) { alert("No valid URLs found in the text."); return; }
+    
     const newRows = foundUrls.map((foundUrl) => {
         const formattedUrl = formatUrl(foundUrl);
         return { title: `${getDomain(formattedUrl)} Tab`, url: formattedUrl, category: bulkCategory.trim() || 'Open Tabs' }
     });
-    const { error } = await supabase.from('bookmarks').insert(newRows)
-    if (error) alert(error.message)
-    else { setBulkText(''); setBulkCategory('Open Tabs'); }
+
+    const { data, error } = await supabase.from('bookmarks').insert(newRows).select()
+    if (error) {
+        alert(error.message)
+    } else if (data) {
+        // INSTANTLY update state
+        setBookmarks(prev => [...data, ...prev])
+        setBulkText(''); setBulkCategory('Open Tabs');
+    }
   }
 
   const saveEdit = async (id: number) => {
     if (!editTitle || !editUrl) return
-    const { error } = await supabase.from('bookmarks').update({ title: editTitle, url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized' }).eq('id', id)
-    if (error) alert(error.message)
-    else setEditingId(null)
+
+    const { data, error } = await supabase.from('bookmarks')
+        .update({ title: editTitle, url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized' })
+        .eq('id', id)
+        .select()
+
+    if (error) {
+        alert(error.message)
+    } else if (data && data.length > 0) {
+        // INSTANTLY update state
+        setBookmarks(prev => prev.map(b => b.id === id ? data[0] : b))
+        setEditingId(null)
+    }
   }
 
-  const deleteBookmark = async (id: number) => { const { error } = await supabase.from('bookmarks').delete().eq('id', id); if (error) alert(error.message) }
+  const deleteBookmark = async (id: number) => { 
+      // INSTANTLY hide the card from the UI
+      setBookmarks(prev => prev.filter(b => b.id !== id))
+      
+      // Then delete from the database in the background
+      const { error } = await supabase.from('bookmarks').delete().eq('id', id); 
+      if (error) alert("Failed to delete from database: " + error.message) 
+  }
 
   return (
-    <div className="max-w-[1400px] mx-auto py-10 px-4 sm:px-6">
+    <div className="max-w-[1400px] mx-auto py-8 sm:py-10 px-4 sm:px-6">
       
       {/* INPUT SECTION */}
-      <div className="bg-white p-6 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto flex flex-col items-center">
-        <div className="flex gap-4 mb-6 w-full justify-center">
-            <button onClick={() => setInputMode('single')} className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'single' ? 'bg-sky-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LinkIcon /> Single Link</button>
-            <button onClick={() => setInputMode('bulk')} className={`flex items-center gap-2 px-6 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'bulk' ? 'bg-emerald-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LayersIcon /> Bulk Paste</button>
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto flex flex-col items-center">
+        <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 w-full justify-center">
+            <button onClick={() => setInputMode('single')} className={`flex items-center gap-2 px-5 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-xs sm:text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'single' ? 'bg-sky-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LinkIcon /> Single Link</button>
+            <button onClick={() => setInputMode('bulk')} className={`flex items-center gap-2 px-5 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-xs sm:text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'bulk' ? 'bg-emerald-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LayersIcon /> Bulk Paste</button>
         </div>
         {inputMode === 'single' ? (
             <form onSubmit={addSingleBookmark} className="flex flex-col md:flex-row w-full gap-3">
@@ -206,71 +234,73 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       </div>
 
       {/* FILTER BUTTONS BAR (DROP ZONES) */}
-      <div className="mb-8 overflow-x-auto pb-2 custom-scrollbar">
-        <div className="flex gap-3 justify-start md:justify-center min-w-max px-2">
-          {uniqueCategories.map((cat, index) => {
-            const activeColor = filterColors[index % filterColors.length];
-            return (
-              <button
-                key={cat}
-                onClick={() => setActiveFilter(cat)}
-                onDragOver={cat !== 'All' ? handleDragOver : undefined}
-                onDrop={cat !== 'All' ? (e) => handleDrop(e, cat) : undefined}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
-                  ${activeFilter === cat 
-                    ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
-                    : 'bg-white text-gray-600 hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]'
-                  }`}
-              >
-                <span className="font-black uppercase tracking-wider text-xs">{cat}</span>
-                
-                {/* Count Badge - Border completely removed! */}
-                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none flex items-center justify-center
-                  ${activeFilter === cat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                  {categoryCounts[cat] || 0}
-                </span>
-
-                {/* DELETE TAB BUTTON */}
-                {cat !== 'All' && cat !== 'Uncategorized' && (
-                  <span 
-                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}
-                    className={`ml-0.5 p-1 rounded-md transition-colors ${activeFilter === cat ? 'hover:bg-gray-900 hover:text-white text-gray-900' : 'hover:bg-red-500 hover:text-white text-gray-400'}`}
-                    title="Delete Tab"
-                  >
-                    <SmallXIcon />
+      {bookmarks.length > 0 && (
+        <div className="mb-8 w-full -mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="flex gap-3 overflow-x-auto pb-4 pt-2 items-center justify-start md:justify-center snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {uniqueCategories.map((cat, index) => {
+              const activeColor = filterColors[index % filterColors.length];
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveFilter(cat)}
+                  onDragOver={cat !== 'All' ? handleDragOver : undefined}
+                  onDrop={cat !== 'All' ? (e) => handleDrop(e, cat) : undefined}
+                  className={`shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
+                    ${activeFilter === cat 
+                      ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
+                      : 'bg-white text-gray-600 hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]'
+                    }`}
+                >
+                  <span className="font-black uppercase tracking-wider text-xs whitespace-nowrap">{cat}</span>
+                  
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none flex items-center justify-center
+                    ${activeFilter === cat ? 'bg-white text-gray-900' : 'bg-gray-100 text-gray-400'}`}>
+                    {categoryCounts[cat] || 0}
                   </span>
-                )}
+
+                  {cat !== 'All' && cat !== 'Uncategorized' && (
+                    <span 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}
+                      className={`ml-0.5 p-1 rounded-md transition-colors ${activeFilter === cat ? 'hover:bg-gray-900 hover:text-white text-gray-900' : 'hover:bg-red-500 hover:text-white text-gray-400'}`}
+                      title="Delete Tab"
+                    >
+                      <SmallXIcon />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+
+            {/* ADD NEW TAB BUTTON */}
+            {isAddingCategory ? (
+              <div className="shrink-0 snap-start flex items-center gap-2 px-2 py-1.5 rounded-lg border-[3px] border-gray-900 bg-white shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
+                <input 
+                  type="text" 
+                  autoFocus
+                  value={newCategoryName} 
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter') handleAddCategory(); if(e.key === 'Escape') setIsAddingCategory(false); }}
+                  placeholder="TAB NAME..." 
+                  className="w-24 outline-none text-xs font-black uppercase tracking-wider text-gray-900 placeholder:text-gray-300 bg-transparent"
+                />
+                <button onClick={handleAddCategory} className="p-1 text-green-500 hover:bg-green-100 rounded-md"><CheckIcon /></button>
+                <button onClick={() => setIsAddingCategory(false)} className="p-1 text-red-500 hover:bg-red-100 rounded-md"><SmallXIcon /></button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsAddingCategory(true)}
+                className="shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-dashed border-gray-300 hover:border-gray-900 text-gray-400 hover:text-gray-900 transition-all"
+              >
+                <PlusIcon />
+                <span className="font-black uppercase tracking-wider text-xs whitespace-nowrap">Add Tab</span>
               </button>
-            )
-          })}
+            )}
+            
+            <div className="w-1 shrink-0 md:hidden"></div>
 
-          {/* ADD NEW TAB BUTTON */}
-          {isAddingCategory ? (
-            <div className="shrink-0 flex items-center gap-2 px-2 py-1.5 rounded-lg border-[3px] border-gray-900 bg-white shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
-              <input 
-                type="text" 
-                autoFocus
-                value={newCategoryName} 
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => { if(e.key === 'Enter') handleAddCategory(); if(e.key === 'Escape') setIsAddingCategory(false); }}
-                placeholder="TAB NAME..." 
-                className="w-24 outline-none text-xs font-black uppercase tracking-wider text-gray-900 placeholder:text-gray-300 bg-transparent"
-              />
-              <button onClick={handleAddCategory} className="p-1 text-green-500 hover:bg-green-100 rounded-md"><CheckIcon /></button>
-              <button onClick={() => setIsAddingCategory(false)} className="p-1 text-red-500 hover:bg-red-100 rounded-md"><SmallXIcon /></button>
-            </div>
-          ) : (
-            <button 
-              onClick={() => setIsAddingCategory(true)}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-dashed border-gray-300 hover:border-gray-900 text-gray-400 hover:text-gray-900 transition-all"
-            >
-              <PlusIcon />
-              <span className="font-black uppercase tracking-wider text-xs">Add Tab</span>
-            </button>
-          )}
-
+          </div>
         </div>
-      </div>
+      )}
 
       {/* EMPTY STATE */}
       {matchCount === 0 ? (
