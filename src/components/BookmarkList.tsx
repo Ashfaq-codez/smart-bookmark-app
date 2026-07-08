@@ -276,10 +276,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   return (
     <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
       
-      {/* ----------------------------------------------------- */}
-      {/* LEFT SIDEBAR: FOLDERS & SUBFOLDERS                    */}
-      {/* ----------------------------------------------------- */}
-      {/* FIX 1: Added self-start so the sticky element doesn't stretch and jump! */}
+      {/* LEFT SIDEBAR: FOLDERS & SUBFOLDERS */}
       <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-8 self-start space-y-6">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Folders</h2>
@@ -405,9 +402,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         </div>
       </aside>
 
-      {/* ----------------------------------------------------- */}
-      {/* RIGHT MAIN AREA: FORMS & BOOKMARK GRID                */}
-      {/* ----------------------------------------------------- */}
+      {/* RIGHT MAIN AREA: FORMS & BOOKMARK GRID */}
       <main className="flex-1 space-y-8 min-w-0">
         
         <datalist id="category-options">
@@ -476,12 +471,10 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             return (
               <div
                 key={bookmark.id}
-                draggable={!iframeModes[bookmark.id]}
+                draggable
                 onDragStart={(e) => handleDragStart(e, bookmark.id)}
                 onDragEnd={handleDragEnd}
-                className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all ${
-                  !iframeModes[bookmark.id] ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
-                } ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}`}
+                className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}`}
               >
                 
                 <button 
@@ -493,11 +486,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 </button>
 
                 <div className={`w-full aspect-video border-b-2 border-gray-900 overflow-hidden relative ${theme.card}`}>
-                  {/* FIX 2: Added "transition-all" back to the image class so it pans smoothly on hover! */}
+                  {/* RESTORED pointer-events-none to prevent clicking inside and allow dragging */}
                   {iframeModes[bookmark.id] ? (
-                    <iframe src={bookmark.url} className="w-full h-full border-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
-                  ) : (
                     
+                    <iframe src={bookmark.url} className="w-full h-full border-none pointer-events-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
+                  ) : (
                     <img src={`https://image.thum.io/get/width/600/crop/1200/noanimate/${bookmark.url}`} alt={bookmark.title} className="w-full h-[300%] object-cover object-top group-hover:object-bottom transition-all duration-[4000ms] ease-linear" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
                   )}
                 </div>
