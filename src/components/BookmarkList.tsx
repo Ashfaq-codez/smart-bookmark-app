@@ -54,6 +54,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [moveSubCategory, setMoveSubCategory] = useState('')
   
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
+  const [isCheckingPreview, setIsCheckingPreview] = useState<Record<number, boolean>>({}) // <-- ADD THIS 
   
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
@@ -138,7 +139,28 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     try { return new URL(link).hostname } catch { return 'link' }
   }
 
-  const togglePreviewMode = (id: number) => {
+  const togglePreviewMode = async (id: number, url: string) => {
+    // If we are currently on Image mode and trying to switch to Live mode
+    if (!iframeModes[id]) {
+      setIsCheckingPreview(prev => ({ ...prev, [id]: true })) // Start loading
+      
+      try {
+        // Ask our Next.js backend if the site allows iframes
+        const res = await fetch(`/api/check-frame?url=${encodeURIComponent(url)}`)
+        const data = await res.json()
+        
+        if (!data.allowIframe) {
+          alert("This website's security settings block live previews. You must click the title to visit it directly.")
+          setIsCheckingPreview(prev => ({ ...prev, [id]: false }))
+          return; // Stop here, do not switch to iframe!
+        }
+      } catch (error) {
+        console.error("Failed to check iframe status", error)
+      }
+      setIsCheckingPreview(prev => ({ ...prev, [id]: false })) // Stop loading
+    }
+    
+    // If we passed the check (or are switching back to Image), toggle it
     setIframeModes(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
@@ -478,11 +500,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
               >
                 
                 <button 
-                  onClick={() => togglePreviewMode(bookmark.id)} 
+                  onClick={() => togglePreviewMode(bookmark.id, bookmark.url)} 
                   title={iframeModes[bookmark.id] ? "Switch back to screenshot" : "Try Live Preview"}
                   className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700 cursor-pointer hover:bg-gray-800"
                 >
-                  {iframeModes[bookmark.id] ? 'IMAGE' : 'LIVE'}
+                  {isCheckingPreview[bookmark.id] ? 'CHECKING...' : (iframeModes[bookmark.id] ? 'IMAGE' : 'LIVE')}
                 </button>
 
                 <div className={`w-full aspect-video border-b-2 border-gray-900 overflow-hidden relative ${theme.card}`}>
