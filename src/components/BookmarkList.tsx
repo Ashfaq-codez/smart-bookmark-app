@@ -504,7 +504,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 onDragEnd={handleDragEnd}
                 className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}`}
               >
-                <button onClick={() => togglePreviewMode(bookmark.id)} className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700">
+                <button 
+                  onClick={() => togglePreviewMode(bookmark.id)} 
+                  className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700"
+                  title={iframeModes[bookmark.id] ? "Switch back to screenshot" : "Try Live Preview (May be blocked by some sites' security settings)"}
+                >
                   {iframeModes[bookmark.id] ? 'IMAGE' : 'LIVE'}
                 </button>
 
