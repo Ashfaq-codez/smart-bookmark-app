@@ -279,7 +279,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       {/* ----------------------------------------------------- */}
       {/* LEFT SIDEBAR: FOLDERS & SUBFOLDERS                    */}
       {/* ----------------------------------------------------- */}
-      <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-8 h-fit space-y-6">
+      {/* FIX 1: Added self-start so the sticky element doesn't stretch and jump! */}
+      <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-8 self-start space-y-6">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Folders</h2>
         </div>
@@ -475,7 +476,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             return (
               <div
                 key={bookmark.id}
-                // FIXED 1: Only allow dragging if NOT in Live Preview mode
                 draggable={!iframeModes[bookmark.id]}
                 onDragStart={(e) => handleDragStart(e, bookmark.id)}
                 onDragEnd={handleDragEnd}
@@ -484,20 +484,21 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 } ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}`}
               >
                 
-                {/* Fixed preview button to explicitly have cursor-pointer */}
                 <button 
                   onClick={() => togglePreviewMode(bookmark.id)} 
-                  title={iframeModes[bookmark.id] ? "Switch back to screenshot" : "Try Live Preview (May be blocked by some sites' security settings)"}
+                  title={iframeModes[bookmark.id] ? "Switch back to screenshot" : "Try Live Preview"}
                   className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700 cursor-pointer hover:bg-gray-800"
                 >
                   {iframeModes[bookmark.id] ? 'IMAGE' : 'LIVE'}
                 </button>
 
                 <div className={`w-full aspect-video border-b-2 border-gray-900 overflow-hidden relative ${theme.card}`}>
+                  {/* FIX 2: Added "transition-all" back to the image class so it pans smoothly on hover! */}
                   {iframeModes[bookmark.id] ? (
                     <iframe src={bookmark.url} className="w-full h-full border-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
                   ) : (
-                    <img src={`https://image.thum.io/get/width/600/crop/1200/noanimate/${bookmark.url}`} alt={bookmark.title} className="w-full h-[300%] object-cover object-top group-hover:object-bottom duration-[4000ms] ease-linear" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+                    
+                    <img src={`https://image.thum.io/get/width/600/crop/1200/noanimate/${bookmark.url}`} alt={bookmark.title} className="w-full h-[300%] object-cover object-top group-hover:object-bottom transition-all duration-[4000ms] ease-linear" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
                   )}
                 </div>
 
@@ -531,10 +532,10 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                       </div>
                     </div>
 
-                  /* FIXED 2: MOVE UI - Better vertical spacing (space-y-3) and padding */
+                  /* MOVE UI */
                   ) : movingId === bookmark.id ? (
                     <div className="space-y-3 w-full mt-1 flex flex-col flex-1 justify-center">
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Move to Folder</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-5">Move to Folder</p>
                       <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-gray-900 rounded bg-white outline-none" placeholder="Main Folder" />
                       <input type="text" list="subcategory-options" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Subfolder (Optional)" />
                       <div className="flex gap-2 mt-auto pt-2">
