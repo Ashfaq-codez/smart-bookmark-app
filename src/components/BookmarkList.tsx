@@ -494,7 +494,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 </button>
 
                 <div className={`w-full aspect-video border-b-2 border-gray-900 overflow-hidden relative ${theme.card}`}>
-                  {/* FIXED: Removed pointer-events-none so iframe is actually clickable! */}
                   {iframeModes[bookmark.id] ? (
                     <iframe src={bookmark.url} className="w-full h-full border-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
                   ) : (
