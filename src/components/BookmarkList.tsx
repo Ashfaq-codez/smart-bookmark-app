@@ -291,11 +291,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
         {/* The Input Form Container */}
         <div className="bg-white border-2 border-gray-900 rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-          {/* ... Keep your existing Form toggle buttons (Single/Bulk) and Form logic here ... */}
-          {/* Example of updated single input with the datalist attached: */}
           <form onSubmit={addSingleBookmark} className="flex flex-col sm:flex-row gap-4">
-             <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl..." />
-             <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl..." />
+             <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl" />
+             <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl" />
              
              {/* THE NEW CATEGORY INPUT WITH AUTOFILL */}
              <input 
@@ -313,12 +311,146 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           </form>
         </div>
 
-        {/* The 4-Column Bookmark Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* ... Keep your existing bookmarks.map(...) logic exactly the same ... */}
-        </div>
+        {/* The 4-Column Bookmark Grid (Now safely inside the main tag) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          {bookmarks.map((bookmark) => {
+            const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter
+            const theme = colorThemes[bookmark.id % colorThemes.length]
 
+            return (
+              <div
+                key={bookmark.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, bookmark.id)}
+                onDragEnd={handleDragEnd}
+                className={`
+                  relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden
+                  shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing
+                  ${isVisible ? 'flex' : 'hidden'}
+                  ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}
+                `}
+              >
+                {/* Live Preview Toggle Button */}
+                <button
+                  onClick={() => togglePreviewMode(bookmark.id)}
+                  className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700"
+                >
+                  {iframeModes[bookmark.id] ? 'IMAGE' : 'LIVE'}
+                </button>
+
+                <div className={`w-full aspect-video border-b-2 border-gray-900 overflow-hidden relative ${theme.card}`}>
+                  {iframeModes[bookmark.id] ? (
+                    <iframe
+                      src={bookmark.url}
+                      className="w-full h-full border-none pointer-events-none"
+                      sandbox="allow-scripts allow-same-origin"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <img
+                      src={`https://image.thum.io/get/width/600/crop/1200/noanimate/${bookmark.url}`}
+                      alt={bookmark.title}
+                      className="w-full h-[300%] object-cover object-top group-hover:object-bottom duration-[4000ms] ease-linear"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1`
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="p-3 flex flex-col min-h-[90px] relative">
+                  {/* Action Buttons inside Namespace */}
+                  <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingId(bookmark.id);
+                        setEditTitle(bookmark.title);
+                        setEditUrl(bookmark.url);
+                        setEditCategory(bookmark.category || '');
+                      }}
+                      className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors"
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      onClick={() => deleteBookmark(bookmark.id)}
+                      className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+
+                  {editingId === bookmark.id ? (
+                    <div className="space-y-2 w-full mt-1">
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-2 py-1 text-sm border-2 border-gray-900 rounded bg-white outline-none"
+                        placeholder="Title"
+                      />
+                      <input
+                        type="url"
+                        value={editUrl}
+                        onChange={(e) => setEditUrl(e.target.value)}
+                        className="w-full px-2 py-1 text-[10px] border-2 border-gray-900 rounded bg-white outline-none"
+                        placeholder="URL"
+                      />
+                      <input
+                        type="text"
+                        list="category-options"
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value)}
+                        className="w-full px-2 py-1 text-[10px] border-2 border-gray-900 rounded bg-white outline-none"
+                        placeholder="Category"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(bookmark.id)}
+                          className="flex-1 py-1 bg-[#E06D53] text-white text-xs font-bold border-2 border-gray-900 rounded hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="flex-1 py-1 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block max-w-[75%]">
+                        <h3 className="font-medium text-sm text-gray-900 truncate leading-tight">
+                          {bookmark.title}
+                        </h3>
+                      </a>
+                      <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
+                        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 min-w-0">
+                          <img
+                            src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}`}
+                            alt="favicon"
+                            className="w-3 h-3 opacity-60 shrink-0"
+                          />
+                          <p className="text-[10px] font-medium text-gray-500 truncate">
+                            {getDomain(bookmark.url)}
+                          </p>
+                        </a>
+                        <span className="text-[10px] text-gray-400 shrink-0">•</span>
+                        <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider truncate shrink-0">
+                          {bookmark.category || 'Uncategorized'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </main>
     </div>
   )
 }
+    
