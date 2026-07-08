@@ -19,6 +19,7 @@ const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="non
 const SmallXIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
 const ChevronRight = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
 const ChevronDown = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+const MoveIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6"/><path d="M9 14l3 3 3-3"/></svg>
 
 // Summer Cool Palette
 const colorThemes = [
@@ -46,12 +47,17 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [bulkText, setBulkText] = useState('');
   const [bulkCategory, setBulkCategory] = useState('Open Tabs')
   
-  // Edit & Display States
+  // Edit States
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [editCategory, setEditCategory] = useState('')
   const [editSubCategory, setEditSubCategory] = useState('')
+
+  // Move States
+  const [movingId, setMovingId] = useState<number | null>(null)
+  const [moveCategory, setMoveCategory] = useState('')
+  const [moveSubCategory, setMoveSubCategory] = useState('')
   
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
   
@@ -94,45 +100,48 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return () => { if (channel) supabase.removeChannel(channel) }
   }, [supabase])
 
-  // Core Hierarchy Logic: Maps Parent Folders to an array of their Subfolders
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {};
-
-    // 1. Initialize base categories
     const baseCats = Array.from(new Set([...customCategories, ...bookmarks.map(b => b.category || 'Uncategorized')]));
-    baseCats.forEach(cat => {
-      if (cat !== 'All') tree[cat] = [];
-    });
+    baseCats.forEach(cat => { if (cat !== 'All') tree[cat] = []; });
 
-    // 2. Populate subfolders from existing bookmarks
     bookmarks.forEach(b => {
       const parent = b.category || 'Uncategorized';
       if (b.sub_category) {
         if (!tree[parent]) tree[parent] = [];
-        if (!tree[parent].includes(b.sub_category)) {
-          tree[parent].push(b.sub_category);
-        }
+        if (!tree[parent].includes(b.sub_category)) tree[parent].push(b.sub_category);
       }
     });
 
-    // 3. Merge custom manually created subfolders
     Object.entries(customSubCategories).forEach(([parent, subs]) => {
       if (!tree[parent]) tree[parent] = [];
-      subs.forEach(sub => {
-        if (!tree[parent].includes(sub)) tree[parent].push(sub);
-      });
+      subs.forEach(sub => { if (!tree[parent].includes(sub)) tree[parent].push(sub); });
     });
 
     return tree;
   }, [bookmarks, customCategories, customSubCategories])
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { 'All': bookmarks.length }
+  // UPDATED: Precise Counting Logic
+  const getCounts = useMemo(() => {
+    const counts: Record<string, number> = { 'All': bookmarks.length };
+    
     bookmarks.forEach(b => {
-      const cat = b.category || 'Uncategorized'
-      counts[cat] = (counts[cat] || 0) + 1
-    })
-    return counts
+      const cat = b.category || 'Uncategorized';
+      const sub = b.sub_category;
+      
+      // If it has NO subfolder, count it towards the main folder
+      if (!sub) {
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+      
+      // If it HAS a subfolder, count it towards the specific Subfolder only
+      if (sub) {
+        const subKey = `${cat}::${sub}`;
+        counts[subKey] = (counts[subKey] || 0) + 1;
+      }
+    });
+    
+    return counts;
   }, [bookmarks])
 
   const formatUrl = (rawUrl: string) => {
@@ -211,11 +220,10 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     if (error) alert(error.message)
   }
 
-  // --- CRUD LOGIC WITH VALIDATION ---
+  // --- CRUD LOGIC ---
   const addSingleBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
-    
     const formatted = formatUrl(url);
     const finalCategory = category.trim() || 'Uncategorized';
     const finalSubCategory = subCategory.trim() || null;
@@ -226,16 +234,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       return;
     }
 
-    const { data, error } = await supabase.from('bookmarks').insert([{ 
-      title, 
-      url: formatted, 
-      category: finalCategory,
-      sub_category: finalSubCategory
-    }]).select()
-
-    if (error) {
-      alert(error.message)
-    } else if (data) {
+    const { data, error } = await supabase.from('bookmarks').insert([{ title, url: formatted, category: finalCategory, sub_category: finalSubCategory }]).select()
+    if (error) alert(error.message)
+    else if (data) {
       setBookmarks(prev => [...prev, data[0]])
       setTitle(''); setUrl(''); setCategory(''); setSubCategory('');
     }
@@ -244,29 +245,16 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const addBulkBookmarks = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!bulkText.trim()) return
-    
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
-    if (!foundUrls || foundUrls.length === 0) {
-      alert("No valid URLs found in the text.");
-      return;
-    }
+    if (!foundUrls || foundUrls.length === 0) return alert("No valid URLs found in the text.");
 
     const uniqueNewUrls = Array.from(new Set(foundUrls.map(formatUrl)));
     const finalUrlsToSave = uniqueNewUrls.filter(u => !bookmarks.some(b => b.url === u));
 
-    if (finalUrlsToSave.length === 0) {
-      alert("All URLs found in the text are already saved in your collection!");
-      return;
-    }
+    if (finalUrlsToSave.length === 0) return alert("All URLs found in the text are already saved in your collection!");
 
-    const newRows = finalUrlsToSave.map((formattedUrl) => ({ 
-      title: `${getDomain(formattedUrl)} Tab`, 
-      url: formattedUrl, 
-      category: bulkCategory.trim() || 'Open Tabs',
-      sub_category: null
-    }));
-
+    const newRows = finalUrlsToSave.map((formattedUrl) => ({ title: `${getDomain(formattedUrl)} Tab`, url: formattedUrl, category: bulkCategory.trim() || 'Open Tabs', sub_category: null }));
     const { data, error } = await supabase.from('bookmarks').insert(newRows).select()
     if (error) alert(error.message)
     else if (data) {
@@ -277,22 +265,23 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   const saveEdit = async (id: number) => {
     if (!editTitle || !editUrl) return
-    
-    const finalCategory = editCategory.trim() || 'Uncategorized';
-    const finalSubCategory = editSubCategory.trim() || null;
-
-    const { data, error } = await supabase.from('bookmarks').update({ 
-      title: editTitle, 
-      url: formatUrl(editUrl), 
-      category: finalCategory,
-      sub_category: finalSubCategory
-    }).eq('id', id).select()
-    
-    if (error) {
-      alert(error.message)
-    } else if (data) {
+    const { data, error } = await supabase.from('bookmarks').update({ title: editTitle, url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null }).eq('id', id).select()
+    if (error) alert(error.message)
+    else if (data) {
       setBookmarks(prev => prev.map(b => b.id === id ? data[0] : b))
       setEditingId(null)
+    }
+  }
+
+  const saveMove = async (id: number) => {
+    const finalCat = moveCategory.trim() || 'Uncategorized';
+    const finalSub = moveSubCategory.trim() || null;
+    const { data, error } = await supabase.from('bookmarks').update({ category: finalCat, sub_category: finalSub }).eq('id', id).select();
+    
+    if (error) alert(error.message)
+    else if (data) {
+      setBookmarks(prev => prev.map(b => b.id === id ? data[0] : b))
+      setMovingId(null)
     }
   }
 
@@ -315,23 +304,24 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
         <div className="flex flex-col gap-2 overflow-x-hidden md:overflow-visible pb-2 md:pb-0">
           
-          {/* Static 'All' Tab */}
           <div 
             onClick={() => { setActiveFilter('All'); setActiveSubFilter(null); }}
-            className={`flex items-center px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${activeFilter === 'All' ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'border-gray-300 bg-white hover:border-gray-900 text-gray-700'}`}
+            className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${activeFilter === 'All' ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'border-gray-300 bg-white hover:border-gray-900 text-gray-700'}`}
           >
              <span className="font-medium text-sm">All Bookmarks</span>
+             <span className={`text-xs px-2 py-1 rounded-md ${activeFilter === 'All' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-500'}`}>
+                {getCounts['All']}
+             </span>
           </div>
 
-          {/* Dynamic Nested Folder List */}
           {Object.keys(folderHierarchy).map(parentFolder => {
             const isParentActive = activeFilter === parentFolder;
             const isExpanded = expandedFolders[parentFolder];
             const subfolders = folderHierarchy[parentFolder];
+            const parentCount = getCounts[parentFolder] || 0;
 
             return (
               <div key={parentFolder} className="flex flex-col gap-1">
-                {/* Parent Folder Row */}
                 <div 
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, parentFolder)}
@@ -349,7 +339,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`text-xs px-2 py-1 rounded-md ${isParentActive && !activeSubFilter ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-500'}`}>
-                      {categoryCounts[parentFolder] || 0}
+                      {parentCount}
                     </span>
                     {customCategories.includes(parentFolder) && (
                       <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(parentFolder); }} className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
@@ -359,25 +349,27 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                   </div>
                 </div>
 
-                {/* Subfolder Expanded View */}
                 {isExpanded && (
                   <div className="ml-6 pl-2 border-l-2 border-gray-200 flex flex-col gap-1 py-1">
                     {subfolders.map(sub => {
                       const isSubActive = isParentActive && activeSubFilter === sub;
+                      const subCount = getCounts[`${parentFolder}::${sub}`] || 0;
                       return (
                         <div
                           key={sub}
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, parentFolder, sub)}
                           onClick={() => { setActiveFilter(parentFolder); setActiveSubFilter(sub); }}
-                          className={`px-3 py-2 text-sm rounded-lg border-2 cursor-pointer transition-all ${isSubActive ? 'border-gray-900 bg-gray-100 text-gray-900 font-bold' : 'border-transparent bg-transparent hover:border-gray-300 text-gray-600 hover:bg-white'}`}
+                          className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg border-2 cursor-pointer transition-all ${isSubActive ? 'border-gray-900 bg-gray-100 text-gray-900 font-bold' : 'border-transparent bg-transparent hover:border-gray-300 text-gray-600 hover:bg-white'}`}
                         >
-                          {sub}
+                          <span className="truncate pr-2">{sub}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${isSubActive ? 'bg-gray-300 text-gray-800' : 'bg-gray-200 text-gray-500'}`}>
+                            {subCount}
+                          </span>
                         </div>
                       )
                     })}
 
-                    {/* Inline Subfolder Creation */}
                     {creatingSubFor === parentFolder ? (
                       <div className="flex gap-2 mt-1">
                         <input 
@@ -406,7 +398,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           })}
         </div>
 
-        {/* Add Parent Folder */}
         <div className="pt-4 border-t-2 border-gray-200 border-dashed hidden md:block">
           {isAddingCategory ? (
             <div className="flex items-center gap-2">
@@ -443,12 +434,12 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         </datalist>
 
         <datalist id="subcategory-options">
-          {(folderHierarchy[category] || []).map(sub => (
+          {/* Universal Subcategory list for the Move feature to use */}
+          {Object.values(folderHierarchy).flat().filter((value, index, array) => array.indexOf(value) === index).map(sub => (
             <option key={sub} value={sub} />
           ))}
         </datalist>
 
-        {/* Form Container */}
         <div className="bg-white border-2 border-gray-900 rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
           <div className="flex gap-4 mb-6">
             <button onClick={() => setInputMode('single')} className={`pb-2 text-sm font-bold transition-all ${inputMode === 'single' ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -466,29 +457,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <input 
-                  type="text" 
-                  list="category-options"
-                  placeholder="Main Folder" 
-                  value={category} 
-                  onChange={(e) => setCategory(e.target.value)} 
-                  className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" 
-                />
-                
-                {/* Dynamically show Subfolder input if a Category is typed in */}
+                <input type="text" list="category-options" placeholder="Main Folder" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
                 {category.trim().length > 0 && (
-                  <input 
-                    type="text" 
-                    list="subcategory-options"
-                    placeholder="Subfolder (Optional)" 
-                    value={subCategory} 
-                    onChange={(e) => setSubCategory(e.target.value)} 
-                    className="flex-1 px-4 py-3 border-2 border-dashed border-gray-400 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" 
-                  />
+                  <input type="text" list="subcategory-options" placeholder="Subfolder (Optional)" value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-dashed border-gray-400 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
                 )}
-                <button type="submit" className="px-8 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
-                  Save
-                </button>
+                <button type="submit" className="px-8 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
               </div>
             </form>
           ) : (
@@ -496,9 +469,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
               <textarea placeholder="Paste text containing URLs here..." value={bulkText} onChange={(e) => setBulkText(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl h-32 resize-y outline-none bg-slate-50 focus:bg-white transition-all" />
               <div className="flex flex-col sm:flex-row gap-4">
                 <input type="text" list="category-options" placeholder="Folder for these tabs" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
-                <button type="submit" className="px-6 py-3 bg-indigo-500 text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
-                  Extract & Save
-                </button>
+                <button type="submit" className="px-6 py-3 bg-indigo-500 text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Extract & Save</button>
               </div>
             </form>
           )}
@@ -507,9 +478,18 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         {/* The Bookmark Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {bookmarks.map((bookmark) => {
-            // Updated filtering logic to account for subfolders
+            // UPDATED: Strict Filtering Logic
             const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-            const matchSubCategory = !activeSubFilter || bookmark.sub_category === activeSubFilter;
+            
+            // If we are looking at 'All Bookmarks', show everything.
+            // If we are looking at a Subfolder, match the exact subfolder.
+            // If we are looking at a Main folder ONLY (activeSubFilter is null), only show bookmarks that have NO subfolder.
+            const matchSubCategory = activeFilter === 'All' 
+              ? true 
+              : (activeSubFilter 
+                  ? bookmark.sub_category === activeSubFilter 
+                  : !bookmark.sub_category);
+
             const isVisible = matchCategory && matchSubCategory;
 
             if (!isVisible) return null;
@@ -537,15 +517,21 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 </div>
 
                 <div className="p-3 flex flex-col min-h-[95px] relative">
-                  <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || ''); setEditSubCategory(bookmark.sub_category || ''); }} className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors">
+                  
+                  {/* Action Buttons */}
+                  <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button onClick={() => { setMovingId(bookmark.id); setMoveCategory(bookmark.category || ''); setMoveSubCategory(bookmark.sub_category || ''); setEditingId(null); }} className="p-1.5 bg-yellow-100 text-yellow-700 border border-gray-900 rounded-md hover:bg-yellow-200 transition-colors" title="Move to Folder">
+                      <MoveIcon />
+                    </button>
+                    <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || ''); setEditSubCategory(bookmark.sub_category || ''); setMovingId(null); }} className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors" title="Edit">
                       <EditIcon />
                     </button>
-                    <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors">
+                    <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors" title="Delete">
                       <TrashIcon />
                     </button>
                   </div>
 
+                  {/* EDIT UI */}
                   {editingId === bookmark.id ? (
                     <div className="space-y-2 w-full mt-1">
                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 text-sm border-2 border-gray-900 rounded bg-white outline-none" placeholder="Title" />
@@ -559,6 +545,20 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                         <button onClick={() => setEditingId(null)} className="flex-1 py-1 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded">Cancel</button>
                       </div>
                     </div>
+
+                  /* MOVE UI */
+                  ) : movingId === bookmark.id ? (
+                    <div className="space-y-2 w-full mt-1">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Move to Folder</p>
+                      <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-1.5 text-xs border-2 border-gray-900 rounded bg-white outline-none" placeholder="Main Folder" />
+                      <input type="text" list="subcategory-options" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-2 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Subfolder (Optional)" />
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={() => saveMove(bookmark.id)} className="flex-1 py-1 bg-yellow-400 text-gray-900 text-xs font-bold border-2 border-gray-900 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all">Confirm Move</button>
+                        <button onClick={() => setMovingId(null)} className="flex-1 py-1 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded">Cancel</button>
+                      </div>
+                    </div>
+
+                  /* STANDARD VIEW */
                   ) : (
                     <>
                       <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block max-w-[75%]">
@@ -570,7 +570,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                           <p className="text-[10px] font-medium text-gray-500 truncate">{getDomain(bookmark.url)}</p>
                         </a>
                       </div>
-                      {/* Badge Display for Folders */}
                       <div className="mt-2 flex flex-wrap gap-1">
                          <span className="text-[9px] font-bold text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300 uppercase tracking-wider truncate max-w-full">
                            {bookmark.category || 'Uncategorized'}
