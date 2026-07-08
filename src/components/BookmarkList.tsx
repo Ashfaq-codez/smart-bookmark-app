@@ -1,31 +1,23 @@
 'use client'
-
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState, useMemo } from 'react'
 
 type Bookmark = {
-  id: number; 
-  title: string; 
-  url: string; 
-  category: string; 
-  created_at: string; 
+  id: number;
+  title: string;
+  url: string;
+  category: string;
+  created_at: string;
   user_id: string;
 }
 
 // Icons
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-const LayersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>
-const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-const MonitorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-const ImageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-const SmallXIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+const SmallXIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
 
 // Summer Cool Palette
-const filterColors = ['bg-sky-200', 'bg-teal-200', 'bg-indigo-200', 'bg-rose-200', 'bg-orange-200']
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
   { card: 'bg-teal-100', btn: 'bg-teal-300', hover: 'hover:bg-teal-400' },
@@ -38,49 +30,60 @@ const colorThemes = [
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
   
+  // Tab Management State
   const [inputMode, setInputMode] = useState<'single' | 'bulk'>('single')
-  const [title, setTitle] = useState(''); const [url, setUrl] = useState(''); const [category, setCategory] = useState('')
-  const [bulkText, setBulkText] = useState(''); const [bulkCategory, setBulkCategory] = useState('Open Tabs')
+  
+  // Single Input States
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const [category, setCategory] = useState('')
+  
+  // Bulk Input States
+  const [bulkText, setBulkText] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('Open Tabs')
+  
+  // Edit & Display States
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editTitle, setEditTitle] = useState(''); const [editUrl, setEditUrl] = useState(''); const [editCategory, setEditCategory] = useState('')
+  const [editTitle, setEditTitle] = useState('');
+  const [editUrl, setEditUrl] = useState('');
+  const [editCategory, setEditCategory] = useState('')
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
   const [activeFilter, setActiveFilter] = useState('All')
-  
+
+  // Drag and Drop State
   const [draggedId, setDraggedId] = useState<number | null>(null)
   
+  // Custom Tabs State
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
 
-  // Create client once outside useEffect
   const supabase = createClient()
 
-  // FIXED: Synchronous WebSockets with safe duplicate checking
   useEffect(() => {
-    const channel = supabase.channel('realtime_bookmarks')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
-          if (payload.eventType === 'INSERT') {
-              // Only add if it doesn't already exist from our instant state update
-              setBookmarks((prev) => prev.some(b => b.id === payload.new.id) ? prev : [payload.new as Bookmark, ...prev])
-          }
-          else if (payload.eventType === 'DELETE') {
-              setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id))
-          }
-          else if (payload.eventType === 'UPDATE') {
-              setBookmarks((prev) => prev.map((b) => b.id === payload.new.id ? (payload.new as Bookmark) : b))
-          }
-        }).subscribe()
+    let channel: any;
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
 
-    return () => { supabase.removeChannel(channel) }
-  }, []) // Empty dependency array ensures this never tears down mid-session
+      channel = supabase
+        .channel('realtime_bookmarks')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks' }, (payload) => {
+          if (payload.eventType === 'INSERT') setBookmarks(prev => [...prev, payload.new as Bookmark])
+          if (payload.eventType === 'DELETE') setBookmarks(prev => prev.filter(b => b.id !== payload.old.id))
+          if (payload.eventType === 'UPDATE') setBookmarks(prev => prev.map(b => b.id === payload.new.id ? payload.new as Bookmark : b))
+        })
+        .subscribe()
+    }
+    setupRealtime()
+    return () => { if (channel) supabase.removeChannel(channel) }
+  }, [supabase])
 
   const uniqueCategories = useMemo(() => {
-      const derived = bookmarks.map(b => b.category || 'Uncategorized')
-      return ['All', ...Array.from(new Set([...customCategories, ...derived]))]
+    const derived = bookmarks.map(b => b.category || 'Uncategorized')
+    return ['All', ...Array.from(new Set([...customCategories, ...derived]))]
   }, [bookmarks, customCategories])
-  
-  const matchCount = useMemo(() => activeFilter === 'All' ? bookmarks.length : bookmarks.filter(b => (b.category || 'Uncategorized') === activeFilter).length, [bookmarks, activeFilter])
-  
+
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { 'All': bookmarks.length }
     bookmarks.forEach(b => {
@@ -95,27 +98,29 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) ? 'https://' + trimmed : trimmed
   }
 
-  const getDomain = (link: string) => { try { return new URL(link).hostname } catch { return 'link' } }
+  const getDomain = (link: string) => {
+    try { return new URL(link).hostname } catch { return 'link' }
+  }
 
-  const togglePreviewMode = (id: number) => { setIframeModes(prev => ({ ...prev, [id]: !prev[id] })) }
+  const togglePreviewMode = (id: number) => {
+    setIframeModes(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
+  // --- TAB MANAGEMENT LOGIC ---
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
     if (trimmed && !uniqueCategories.includes(trimmed)) {
-        setCustomCategories(prev => [...prev, trimmed]);
-        setActiveFilter(trimmed); 
+      setCustomCategories(prev => [...prev, trimmed]);
+      setActiveFilter(trimmed);
     }
     setNewCategoryName('');
     setIsAddingCategory(false);
   }
 
   const handleDeleteCategory = async (catToDelete: string) => {
-    if(window.confirm(`Delete the tab "${catToDelete}"? All links inside will be safely moved to "Uncategorized".`)) {
-        setCustomCategories(prev => prev.filter(c => c !== catToDelete));
-        setBookmarks(prev => prev.map(b => b.category === catToDelete ? { ...b, category: 'Uncategorized' } : b));
-        const { error } = await supabase.from('bookmarks').update({ category: 'Uncategorized' }).eq('category', catToDelete);
-        if (error) alert("Failed to delete tab: " + error.message);
-        if (activeFilter === catToDelete) setActiveFilter('All');
+    if(window.confirm(`Delete the folder "${catToDelete}"? All links inside will remain in "Uncategorized".`)) {
+      setCustomCategories(prev => prev.filter(c => c !== catToDelete));
+      if (activeFilter === catToDelete) setActiveFilter('All');
     }
   }
 
@@ -124,101 +129,108 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     e.dataTransfer.setData('bookmarkId', id.toString())
     setDraggedId(id)
   }
-  const handleDragEnd = () => { setDraggedId(null) }
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault() }
+  const handleDragEnd = () => setDraggedId(null)
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault()
   
   const handleDrop = async (e: React.DragEvent, targetCategory: string) => {
     e.preventDefault()
     const bookmarkId = parseInt(e.dataTransfer.getData('bookmarkId'))
     if (!bookmarkId || isNaN(bookmarkId)) return
 
-    // INSTANT UPDATE
-    setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, category: targetCategory } : b))
-    const { error } = await supabase.from('bookmarks').update({ category: targetCategory }).eq('id', bookmarkId)
-    if (error) alert("Failed to move tab: " + error.message)
+    const actualTarget = targetCategory === 'All' ? 'Uncategorized' : targetCategory
+    setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, category: actualTarget } : b))
+    
+    const { error } = await supabase.from('bookmarks').update({ category: actualTarget }).eq('id', bookmarkId)
+    if (error) alert(error.message)
   }
 
-  // --- FIXED INSTANT CRUD LOGIC ---
-
+  // --- CRUD LOGIC WITH VALIDATION ---
   const addSingleBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
     
-    // Notice `.select()` - this returns the generated row immediately!
-    const { data, error } = await supabase.from('bookmarks')
-        .insert([{ title, url: formatUrl(url), category: category.trim() || 'Uncategorized' }])
-        .select();
+    const formatted = formatUrl(url);
+    
+    // VALIDATION: Check if URL already exists
+    const existingBookmark = bookmarks.find(b => b.url === formatted);
+    if (existingBookmark) {
+      alert(`This bookmark is already saved in the '${existingBookmark.category || 'Uncategorized'}' folder!`);
+      return;
+    }
 
-    if (error) {
-        alert(error.message)
-    } else if (data && data.length > 0) {
-        // INSTANTLY update state so it pops onto the screen
-        setBookmarks(prev => [data[0], ...prev])
-        setTitle(''); setUrl(''); setCategory('')
+    const { data, error } = await supabase.from('bookmarks').insert([{ title, url: formatted, category: category.trim() || 'Uncategorized' }]).select()
+    if (error) alert(error.message)
+    else if (data) {
+      setBookmarks(prev => [...prev, data[0]])
+      setTitle(''); setUrl(''); setCategory('');
     }
   }
 
   const addBulkBookmarks = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!bulkText.trim()) return
+    
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
-    if (!foundUrls || foundUrls.length === 0) { alert("No valid URLs found in the text."); return; }
-    
-    const newRows = foundUrls.map((foundUrl) => {
-        const formattedUrl = formatUrl(foundUrl);
-        return { title: `${getDomain(formattedUrl)} Tab`, url: formattedUrl, category: bulkCategory.trim() || 'Open Tabs' }
+    if (!foundUrls || foundUrls.length === 0) {
+      alert("No valid URLs found in the text.");
+      return;
+    }
+
+    // VALIDATION: Filter out duplicates
+    const uniqueNewUrls = Array.from(new Set(foundUrls.map(formatUrl)));
+    const finalUrlsToSave = uniqueNewUrls.filter(u => !bookmarks.some(b => b.url === u));
+
+    if (finalUrlsToSave.length === 0) {
+      alert("All URLs found in the text are already saved in your collection!");
+      return;
+    }
+
+    const duplicatesCount = uniqueNewUrls.length - finalUrlsToSave.length;
+    if (duplicatesCount > 0) {
+      alert(`Skipped ${duplicatesCount} duplicates. Saving ${finalUrlsToSave.length} new bookmarks.`);
+    }
+
+    const newRows = finalUrlsToSave.map((formattedUrl) => {
+      return { title: `${getDomain(formattedUrl)} Tab`, url: formattedUrl, category: bulkCategory.trim() || 'Open Tabs' }
     });
 
     const { data, error } = await supabase.from('bookmarks').insert(newRows).select()
-    if (error) {
-        alert(error.message)
-    } else if (data) {
-        // INSTANTLY update state
-        setBookmarks(prev => [...data, ...prev])
-        setBulkText(''); setBulkCategory('Open Tabs');
+    if (error) alert(error.message)
+    else if (data) {
+      setBookmarks(prev => [...prev, ...data])
+      setBulkText(''); setBulkCategory('Open Tabs');
     }
   }
 
   const saveEdit = async (id: number) => {
     if (!editTitle || !editUrl) return
-
-    const { data, error } = await supabase.from('bookmarks')
-        .update({ title: editTitle, url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized' })
-        .eq('id', id)
-        .select()
-
-    if (error) {
-        alert(error.message)
-    } else if (data && data.length > 0) {
-        // INSTANTLY update state
-        setBookmarks(prev => prev.map(b => b.id === id ? data[0] : b))
-        setEditingId(null)
+    const { data, error } = await supabase.from('bookmarks').update({ title: editTitle, url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized' }).eq('id', id).select()
+    if (error) alert(error.message)
+    else if (data) {
+      setBookmarks(prev => prev.map(b => b.id === id ? data[0] : b))
+      setEditingId(null)
     }
   }
 
-  const deleteBookmark = async (id: number) => { 
-      // INSTANTLY hide the card from the UI
-      setBookmarks(prev => prev.filter(b => b.id !== id))
-      
-      // Then delete from the database in the background
-      const { error } = await supabase.from('bookmarks').delete().eq('id', id); 
-      if (error) alert("Failed to delete from database: " + error.message) 
+  const deleteBookmark = async (id: number) => {
+    setBookmarks(prev => prev.filter(b => b.id !== id))
+    const { error } = await supabase.from('bookmarks').delete().eq('id', id);
+    if (error) alert(error.message)
   }
 
- return (
-    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[2600px] mx-auto p-4 md:p-8">
+  return (
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
       
       {/* ----------------------------------------------------- */}
-      {/* LEFT SIDEBAR: CATEGORIES & DROP ZONES                 */}
+      {/* LEFT SIDEBAR: FOLDERS & DROP ZONES                    */}
       {/* ----------------------------------------------------- */}
       <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-8 h-fit space-y-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Folders</h2>
         </div>
 
-        {/* The Category Drop Zones */}
-        <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 hide-scrollbar">
+        <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 [&::-webkit-scrollbar]:hidden -mx-4 px-4 md:mx-0 md:px-0 snap-x">
           {uniqueCategories.map(cat => (
             <div 
               key={cat}
@@ -226,7 +238,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
               onDrop={(e) => handleDrop(e, cat)}
               onClick={() => setActiveFilter(cat)}
               className={`
-                group flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all shrink-0 md:shrink
+                group flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all shrink-0 md:shrink snap-start
                 ${activeFilter === cat 
                   ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' 
                   : 'border-gray-300 bg-white hover:border-gray-900 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-gray-700'
@@ -238,7 +250,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 <span className={`text-xs px-2 py-1 rounded-md ${activeFilter === cat ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-500'}`}>
                   {categoryCounts[cat] || 0}
                 </span>
-                {/* Delete custom tab button */}
                 {customCategories.includes(cat) && (
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}
@@ -252,8 +263,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           ))}
         </div>
 
-        {/* Add New Category Tab */}
-        <div className="pt-4 border-t-2 border-gray-200 border-dashed">
+        <div className="pt-4 border-t-2 border-gray-200 border-dashed hidden md:block">
           {isAddingCategory ? (
             <div className="flex items-center gap-2">
               <input 
@@ -282,36 +292,75 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       {/* ----------------------------------------------------- */}
       <main className="flex-1 space-y-8 min-w-0">
         
-        {/* Hidden Datalist for Native Autofill / Dropdown */}
+        {/* Hidden Datalist for Native Dropdown Autofill */}
         <datalist id="category-options">
           {uniqueCategories.filter(c => c !== 'All').map(cat => (
             <option key={cat} value={cat} />
           ))}
         </datalist>
 
-        {/* The Input Form Container */}
+        {/* Form Container (Keeps your exact Neo-brutalist theme and bulk feature) */}
         <div className="bg-white border-2 border-gray-900 rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-          <form onSubmit={addSingleBookmark} className="flex flex-col sm:flex-row gap-4">
-             <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl" />
-             <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl" />
-             
-             {/* THE NEW CATEGORY INPUT WITH AUTOFILL */}
-             <input 
-               type="text" 
-               list="category-options" 
-               placeholder="Folder / Category" 
-               value={category} 
-               onChange={(e) => setCategory(e.target.value)} 
-               className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" 
-             />
-             
-             <button type="submit" className="px-6 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+          <div className="flex gap-4 mb-6">
+            <button 
+              onClick={() => setInputMode('single')}
+              className={`pb-2 text-sm font-bold transition-all ${inputMode === 'single' ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Single Link
+            </button>
+            <button 
+              onClick={() => setInputMode('bulk')}
+              className={`pb-2 text-sm font-bold transition-all ${inputMode === 'bulk' ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Bulk Extract
+            </button>
+          </div>
+
+          {inputMode === 'single' ? (
+            <form onSubmit={addSingleBookmark} className="flex flex-col sm:flex-row gap-4">
+              <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" />
+              <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" />
+              
+              {/* Category input using the native datalist */}
+              <input 
+                type="text" 
+                list="category-options"
+                placeholder="Folder" 
+                value={category} 
+                onChange={(e) => setCategory(e.target.value)} 
+                className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" 
+              />
+              <button type="submit" className="px-6 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
                 Save
-             </button>
-          </form>
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={addBulkBookmarks} className="flex flex-col gap-4">
+              <textarea 
+                placeholder="Paste a wall of text here. I will extract all the URLs automatically..." 
+                value={bulkText} 
+                onChange={(e) => setBulkText(e.target.value)} 
+                className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl h-32 resize-y outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" 
+              />
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Bulk Category input using the native datalist */}
+                <input 
+                  type="text" 
+                  list="category-options"
+                  placeholder="Folder for these tabs (e.g., Open Tabs)" 
+                  value={bulkCategory} 
+                  onChange={(e) => setBulkCategory(e.target.value)} 
+                  className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" 
+                />
+                <button type="submit" className="px-6 py-3 bg-indigo-500 text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+                  Extract & Save
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
-        {/* The 4-Column Bookmark Grid (Now safely inside the main tag) */}
+        {/* The 4-Column Bookmark Grid (Keeps exact themes and DOM retention) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {bookmarks.map((bookmark) => {
             const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter
@@ -330,7 +379,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                   ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}
                 `}
               >
-                {/* Live Preview Toggle Button */}
                 <button
                   onClick={() => togglePreviewMode(bookmark.id)}
                   className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700"
@@ -359,7 +407,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 </div>
 
                 <div className="p-3 flex flex-col min-h-[90px] relative">
-                  {/* Action Buttons inside Namespace */}
                   <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => {
@@ -402,7 +449,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                         value={editCategory}
                         onChange={(e) => setEditCategory(e.target.value)}
                         className="w-full px-2 py-1 text-[10px] border-2 border-gray-900 rounded bg-white outline-none"
-                        placeholder="Category"
+                        placeholder="Folder"
                       />
                       <div className="flex gap-2">
                         <button
@@ -453,4 +500,3 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     </div>
   )
 }
-    
