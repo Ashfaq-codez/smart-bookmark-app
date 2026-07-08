@@ -206,7 +206,40 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       if (error) alert("Failed to delete from database: " + error.message) 
   }
 
- return (
+  return (
+    <div className="max-w-[1400px] mx-auto py-8 sm:py-10 px-4 sm:px-6">
+      
+      {/* INPUT SECTION */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] mb-10 max-w-4xl mx-auto flex flex-col items-center">
+        <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 w-full justify-center">
+            <button onClick={() => setInputMode('single')} className={`flex items-center gap-2 px-5 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-xs sm:text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'single' ? 'bg-sky-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LinkIcon /> Single Link</button>
+            <button onClick={() => setInputMode('bulk')} className={`flex items-center gap-2 px-5 py-2 rounded-xl border-[3px] border-gray-900 font-black uppercase text-xs sm:text-sm transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${inputMode === 'bulk' ? 'bg-emerald-200 text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]' : 'bg-gray-50 text-gray-400'}`}><LayersIcon /> Bulk Paste</button>
+        </div>
+        {inputMode === 'single' ? (
+            <form onSubmit={addSingleBookmark} className="flex flex-col md:flex-row w-full gap-3">
+                <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
+                <input type="text" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" required />
+                <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
+                <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-sky-200 hover:bg-sky-300 text-gray-900 text-sm font-black uppercase py-2.5 px-6 rounded-xl border-[3px] border-gray-900 transition-transform active:translate-y-1 active:translate-x-1 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]"><PlusIcon /><span>Save</span></button>
+            </form>
+        ) : (
+            <form onSubmit={addBulkBookmarks} className="flex flex-col w-full gap-3">
+                <textarea placeholder="Paste a wall of text containing multiple URLs..." value={bulkText} onChange={(e) => setBulkText(e.target.value)} className="w-full h-32 px-4 py-3 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-medium placeholder:text-gray-400 transition-all resize-none" required />
+                <div className="flex flex-col md:flex-row gap-3">
+                    <input type="text" placeholder="Assign a Category" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-900 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-200 text-sm font-bold placeholder:text-gray-400 transition-all" />
+                    <button type="submit" className="flex shrink-0 items-center justify-center gap-1.5 bg-emerald-200 hover:bg-emerald-300 text-gray-900 text-sm font-black uppercase py-2.5 px-8 rounded-xl border-[3px] border-gray-900 transition-transform active:translate-y-1 active:translate-x-1 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]"><LayersIcon /><span>Import Tabs</span></button>
+                </div>
+            </form>
+        )}
+      </div>
+
+      {/* FILTER BUTTONS BAR (DROP ZONES) */}
+      {bookmarks.length > 0 && (
+        <div className="mb-8 w-full -mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="flex gap-3 overflow-x-auto pb-4 pt-2 items-center justify-start md:justify-center snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {uniqueCategories.map((cat, index) => {
+              const activeColor = filterColors[index % filterColors.length];
+              return (
     <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
       
       {/* ----------------------------------------------------- */}
@@ -319,6 +352,127 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         </div>
 
       </main>
+    </div>
+  )
+            })}
+
+            {/* ADD NEW TAB BUTTON */}
+            {isAddingCategory ? (
+              <div className="shrink-0 snap-start flex items-center gap-2 px-2 py-1.5 rounded-lg border-[3px] border-gray-900 bg-white shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]">
+                <input 
+                  type="text" 
+                  autoFocus
+                  value={newCategoryName} 
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter') handleAddCategory(); if(e.key === 'Escape') setIsAddingCategory(false); }}
+                  placeholder="TAB NAME..." 
+                  className="w-24 outline-none text-xs font-black uppercase tracking-wider text-gray-900 placeholder:text-gray-300 bg-transparent"
+                />
+                <button onClick={handleAddCategory} className="p-1 text-green-500 hover:bg-green-100 rounded-md"><CheckIcon /></button>
+                <button onClick={() => setIsAddingCategory(false)} className="p-1 text-red-500 hover:bg-red-100 rounded-md"><SmallXIcon /></button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsAddingCategory(true)}
+                className="shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-dashed border-gray-300 hover:border-gray-900 text-gray-400 hover:text-gray-900 transition-all"
+              >
+                <PlusIcon />
+                <span className="font-black uppercase tracking-wider text-xs whitespace-nowrap">Add Tab</span>
+              </button>
+            )}
+            
+            <div className="w-1 shrink-0 md:hidden"></div>
+
+          </div>
+        </div>
+      )}
+
+      {/* EMPTY STATE */}
+      {matchCount === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4 bg-white border-[3px] border-dashed border-gray-300 rounded-2xl max-w-4xl mx-auto">
+          <div className="text-gray-300 mb-3 scale-125"><ExternalLinkIcon /></div>
+          <h4 className="text-lg font-black text-gray-400 mb-1 uppercase">No Tabs Found</h4>
+        </div>
+      ) : (
+        /* TILING GRID */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {bookmarks.map((bookmark) => {
+            const domain = getDomain(bookmark.url);
+            const isEditing = editingId === bookmark.id;
+            const isVisible = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
+            const isIframeMode = iframeModes[bookmark.id] || false;
+            const theme = colorThemes[bookmark.id % colorThemes.length];
+            const isBeingDragged = draggedId === bookmark.id;
+            
+            return (
+              <div 
+                key={bookmark.id} 
+                draggable={!isEditing}
+                onDragStart={(e) => handleDragStart(e, bookmark.id)}
+                onDragEnd={handleDragEnd}
+                className={`${isVisible ? 'flex' : 'hidden'} flex-col bg-white rounded-xl border-[3px] border-gray-900 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] overflow-hidden transition-all duration-200 cursor-grab active:cursor-grabbing ${isBeingDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)]'}`}
+              >
+                
+                {/* PREVIEW CONTAINER */}
+                <div className="w-full aspect-[16/10] border-b-[3px] border-gray-900 relative group/thumb overflow-hidden bg-gray-50 shrink-0 pointer-events-none">
+                  {!isEditing && (
+                    <div className="absolute top-2 left-2 z-20 flex opacity-0 group-hover/thumb:opacity-100 transition-opacity pointer-events-auto">
+                      <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePreviewMode(bookmark.id); }} 
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-900 text-white hover:bg-gray-700 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
+                        title={isIframeMode ? "Switch to Image Preview" : "Switch to Live Iframe"}
+                      >
+                        {isIframeMode ? <ImageIcon /> : <MonitorIcon />}
+                        <span className="text-[10px] font-black uppercase">{isIframeMode ? 'Image' : 'Live'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative pointer-events-auto">
+                    {isIframeMode ? (
+                      <div className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none">
+                        <iframe src={bookmark.url} className="w-full h-full border-none pointer-events-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
+                      </div>
+                    ) : (
+                      <img src={`https://image.thum.io/get/width/600/crop/1200/${bookmark.url}`} alt="Preview" className="w-full h-full object-cover object-top transition-all duration-[4000ms] ease-in-out group-hover/thumb:object-bottom opacity-95 group-hover/thumb:opacity-100" onError={(e) => {(e.target as HTMLImageElement).src = `https://placehold.co/600x600/f8fafc/111827?text=${domain}`}} />
+                    )}
+                  </a>
+                </div>
+
+                {/* CONTENT AREA */}
+                <div className="p-4 flex flex-col flex-1">
+                  {isEditing ? (
+                    <div className="flex flex-col gap-2 w-full">
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-sm text-gray-900 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Title" />
+                      <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="URL" />
+                      <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 bg-white border-2 border-gray-900 rounded-md font-medium text-xs text-gray-600 outline-none focus:ring-2 focus:ring-sky-200" placeholder="Category" />
+                      <div className="flex gap-2 mt-1">
+                          <button onClick={() => saveEdit(bookmark.id)} className={`flex-1 py-1 ${theme.btn} ${theme.hover} text-gray-900 font-black text-xs uppercase border-2 border-gray-900 rounded-md shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:translate-x-px active:shadow-none transition-colors`}>Save</button>
+                          <button onClick={() => setEditingId(null)} className="flex-1 py-1 bg-white text-gray-900 font-black text-xs uppercase border-2 border-gray-900 rounded-md shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:translate-x-px active:shadow-none transition-colors">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-start gap-2 h-full">
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block outline-none flex-1 min-w-0 pt-1">
+                        <h4 className="text-[15px] font-medium text-gray-900 line-clamp-1" title={bookmark.title}>{bookmark.title}</h4>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt="logo" className="w-3.5 h-3.5 object-contain grayscale opacity-60" />
+                          <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide truncate">{domain} <span className="mx-1 opacity-50">•</span> {bookmark.category || 'Uncategorized'}</p>
+                        </div>
+                      </a>
+                      <div className="flex gap-1.5 shrink-0 ml-2">
+                        <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || 'Uncategorized') }} className={`p-1.5 ${theme.btn} ${theme.hover} text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none`} title="Edit"><EditIcon /></button>
+                        <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-white hover:bg-rose-400 hover:text-white text-gray-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none" title="Delete"><TrashIcon /></button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
