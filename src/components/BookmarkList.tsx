@@ -240,35 +240,120 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             {uniqueCategories.map((cat, index) => {
               const activeColor = filterColors[index % filterColors.length];
               return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveFilter(cat)}
-                  onDragOver={cat !== 'All' ? handleDragOver : undefined}
-                  onDrop={cat !== 'All' ? (e) => handleDrop(e, cat) : undefined}
-                  className={`shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[3px] border-gray-900 transition-all active:translate-y-1 active:translate-x-1 active:shadow-none
-                    ${activeFilter === cat 
-                      ? `${activeColor} text-gray-900 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]` 
-                      : 'bg-white text-gray-600 hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(17,24,39,1)]'
-                    }`}
-                >
-                  <span className="font-black uppercase tracking-wider text-xs whitespace-nowrap">{cat}</span>
-                  
-                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none flex items-center justify-center
-                    ${activeFilter === cat ? 'bg-white text-gray-900' : 'bg-gray-100 text-gray-400'}`}>
-                    {categoryCounts[cat] || 0}
-                  </span>
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
+      
+      {/* ----------------------------------------------------- */}
+      {/* LEFT SIDEBAR: CATEGORIES & DROP ZONES                 */}
+      {/* ----------------------------------------------------- */}
+      <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-8 h-fit space-y-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Folders</h2>
+        </div>
 
-                  {cat !== 'All' && cat !== 'Uncategorized' && (
-                    <span 
-                      onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}
-                      className={`ml-0.5 p-1 rounded-md transition-colors ${activeFilter === cat ? 'hover:bg-gray-900 hover:text-white text-gray-900' : 'hover:bg-red-500 hover:text-white text-gray-400'}`}
-                      title="Delete Tab"
-                    >
-                      <SmallXIcon />
-                    </span>
-                  )}
-                </button>
-              )
+        {/* The Category Drop Zones */}
+        <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 hide-scrollbar">
+          {uniqueCategories.map(cat => (
+            <div 
+              key={cat}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, cat)}
+              onClick={() => setActiveFilter(cat)}
+              className={`
+                group flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all shrink-0 md:shrink
+                ${activeFilter === cat 
+                  ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' 
+                  : 'border-gray-300 bg-white hover:border-gray-900 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-gray-700'
+                }
+              `}
+            >
+              <span className="font-medium text-sm truncate pr-2">{cat}</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-1 rounded-md ${activeFilter === cat ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-500'}`}>
+                  {categoryCounts[cat] || 0}
+                </span>
+                {/* Delete custom tab button */}
+                {customCategories.includes(cat) && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+                  >
+                    <SmallXIcon />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Add New Category Tab */}
+        <div className="pt-4 border-t-2 border-gray-200 border-dashed">
+          {isAddingCategory ? (
+            <div className="flex items-center gap-2">
+              <input 
+                autoFocus
+                type="text"
+                placeholder="Folder name..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                className="w-full px-3 py-2 text-sm border-2 border-gray-900 rounded-lg outline-none bg-white focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+              />
+            </div>
+          ) : (
+            <button 
+              onClick={() => setIsAddingCategory(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-gray-900 hover:text-gray-900 hover:bg-white transition-all"
+            >
+              <PlusIcon /> Add Folder
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* ----------------------------------------------------- */}
+      {/* RIGHT MAIN AREA: FORMS & BOOKMARK GRID                */}
+      {/* ----------------------------------------------------- */}
+      <main className="flex-1 space-y-8 min-w-0">
+        
+        {/* Hidden Datalist for Native Autofill / Dropdown */}
+        <datalist id="category-options">
+          {uniqueCategories.filter(c => c !== 'All').map(cat => (
+            <option key={cat} value={cat} />
+          ))}
+        </datalist>
+
+        {/* The Input Form Container */}
+        <div className="bg-white border-2 border-gray-900 rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          {/* ... Keep your existing Form toggle buttons (Single/Bulk) and Form logic here ... */}
+          {/* Example of updated single input with the datalist attached: */}
+          <form onSubmit={addSingleBookmark} className="flex flex-col sm:flex-row gap-4">
+             <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl..." />
+             <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl..." />
+             
+             {/* THE NEW CATEGORY INPUT WITH AUTOFILL */}
+             <input 
+               type="text" 
+               list="category-options" 
+               placeholder="Folder / Category" 
+               value={category} 
+               onChange={(e) => setCategory(e.target.value)} 
+               className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" 
+             />
+             
+             <button type="submit" className="px-6 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+                Save
+             </button>
+          </form>
+        </div>
+
+        {/* The 4-Column Bookmark Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {/* ... Keep your existing bookmarks.map(...) logic exactly the same ... */}
+        </div>
+
+      </main>
+    </div>
+  )
             })}
 
             {/* ADD NEW TAB BUTTON */}
