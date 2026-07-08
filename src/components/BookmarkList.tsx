@@ -34,46 +34,36 @@ const colorThemes = [
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
   
-  // Tab Management State
   const [inputMode, setInputMode] = useState<'single' | 'bulk'>('single')
-  
-  // Single Input States
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [category, setCategory] = useState('')
   const [subCategory, setSubCategory] = useState('')
   
-  // Bulk Input States
   const [bulkText, setBulkText] = useState('');
   const [bulkCategory, setBulkCategory] = useState('Open Tabs')
   
-  // Edit States
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [editCategory, setEditCategory] = useState('')
   const [editSubCategory, setEditSubCategory] = useState('')
 
-  // Move States
   const [movingId, setMovingId] = useState<number | null>(null)
   const [moveCategory, setMoveCategory] = useState('')
   const [moveSubCategory, setMoveSubCategory] = useState('')
   
   const [iframeModes, setIframeModes] = useState<Record<number, boolean>>({})
   
-  // Filter States
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
 
-  // Drag and Drop State
   const [draggedId, setDraggedId] = useState<number | null>(null)
   
-  // Custom Folder States
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   
-  // Subfolder UI States
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
@@ -121,7 +111,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return tree;
   }, [bookmarks, customCategories, customSubCategories])
 
-  // UPDATED: Precise Counting Logic
   const getCounts = useMemo(() => {
     const counts: Record<string, number> = { 'All': bookmarks.length };
     
@@ -129,12 +118,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       const cat = b.category || 'Uncategorized';
       const sub = b.sub_category;
       
-      // If it has NO subfolder, count it towards the main folder
-      if (!sub) {
-        counts[cat] = (counts[cat] || 0) + 1;
-      }
+      if (!sub) counts[cat] = (counts[cat] || 0) + 1;
       
-      // If it HAS a subfolder, count it towards the specific Subfolder only
       if (sub) {
         const subKey = `${cat}::${sub}`;
         counts[subKey] = (counts[subKey] || 0) + 1;
@@ -157,7 +142,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     setIframeModes(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  // --- FOLDER & SUBFOLDER MANAGEMENT ---
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
     if (trimmed && !Object.keys(folderHierarchy).includes(trimmed)) {
@@ -198,7 +182,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
   }
 
-  // --- DRAG AND DROP HANDLERS ---
   const handleDragStart = (e: React.DragEvent, id: number) => {
     e.dataTransfer.setData('bookmarkId', id.toString())
     setDraggedId(id)
@@ -220,7 +203,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     if (error) alert(error.message)
   }
 
-  // --- CRUD LOGIC ---
   const addSingleBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
@@ -434,7 +416,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         </datalist>
 
         <datalist id="subcategory-options">
-          {/* Universal Subcategory list for the Move feature to use */}
           {Object.values(folderHierarchy).flat().filter((value, index, array) => array.indexOf(value) === index).map(sub => (
             <option key={sub} value={sub} />
           ))}
@@ -478,12 +459,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         {/* The Bookmark Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {bookmarks.map((bookmark) => {
-            // UPDATED: Strict Filtering Logic
             const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-            
-            // If we are looking at 'All Bookmarks', show everything.
-            // If we are looking at a Subfolder, match the exact subfolder.
-            // If we are looking at a Main folder ONLY (activeSubFilter is null), only show bookmarks that have NO subfolder.
             const matchSubCategory = activeFilter === 'All' 
               ? true 
               : (activeSubFilter 
@@ -499,22 +475,28 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
             return (
               <div
                 key={bookmark.id}
-                draggable
+                // FIXED 1: Only allow dragging if NOT in Live Preview mode
+                draggable={!iframeModes[bookmark.id]}
                 onDragStart={(e) => handleDragStart(e, bookmark.id)}
                 onDragEnd={handleDragEnd}
-                className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}`}
+                className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all ${
+                  !iframeModes[bookmark.id] ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+                } ${draggedId === bookmark.id ? 'opacity-50 scale-95' : ''}`}
               >
+                
+                {/* Fixed preview button to explicitly have cursor-pointer */}
                 <button 
                   onClick={() => togglePreviewMode(bookmark.id)} 
-                  className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700"
                   title={iframeModes[bookmark.id] ? "Switch back to screenshot" : "Try Live Preview (May be blocked by some sites' security settings)"}
+                  className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700 cursor-pointer hover:bg-gray-800"
                 >
                   {iframeModes[bookmark.id] ? 'IMAGE' : 'LIVE'}
                 </button>
 
                 <div className={`w-full aspect-video border-b-2 border-gray-900 overflow-hidden relative ${theme.card}`}>
+                  {/* FIXED: Removed pointer-events-none so iframe is actually clickable! */}
                   {iframeModes[bookmark.id] ? (
-                    <iframe src={bookmark.url} className="w-full h-full border-none pointer-events-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
+                    <iframe src={bookmark.url} className="w-full h-full border-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
                   ) : (
                     <img src={`https://image.thum.io/get/width/600/crop/1200/noanimate/${bookmark.url}`} alt={bookmark.title} className="w-full h-[300%] object-cover object-top group-hover:object-bottom duration-[4000ms] ease-linear" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
                   )}
@@ -524,54 +506,54 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                   
                   {/* Action Buttons */}
                   <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button onClick={() => { setMovingId(bookmark.id); setMoveCategory(bookmark.category || ''); setMoveSubCategory(bookmark.sub_category || ''); setEditingId(null); }} className="p-1.5 bg-yellow-100 text-yellow-700 border border-gray-900 rounded-md hover:bg-yellow-200 transition-colors" title="Move to Folder">
+                    <button onClick={() => { setMovingId(bookmark.id); setMoveCategory(bookmark.category || ''); setMoveSubCategory(bookmark.sub_category || ''); setEditingId(null); }} className="p-1.5 bg-yellow-100 text-yellow-700 border border-gray-900 rounded-md hover:bg-yellow-200 transition-colors cursor-pointer" title="Move to Folder">
                       <MoveIcon />
                     </button>
-                    <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || ''); setEditSubCategory(bookmark.sub_category || ''); setMovingId(null); }} className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors" title="Edit">
+                    <button onClick={() => { setEditingId(bookmark.id); setEditTitle(bookmark.title); setEditUrl(bookmark.url); setEditCategory(bookmark.category || ''); setEditSubCategory(bookmark.sub_category || ''); setMovingId(null); }} className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors cursor-pointer" title="Edit">
                       <EditIcon />
                     </button>
-                    <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors" title="Delete">
+                    <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors cursor-pointer" title="Delete">
                       <TrashIcon />
                     </button>
                   </div>
 
                   {/* EDIT UI */}
                   {editingId === bookmark.id ? (
-                    <div className="space-y-2 w-full mt-1">
-                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 text-sm border-2 border-gray-900 rounded bg-white outline-none" placeholder="Title" />
-                      <input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1 text-[10px] border-2 border-gray-900 rounded bg-white outline-none" placeholder="URL" />
+                    <div className="space-y-2 w-full mt-1 flex flex-col">
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1.5 text-sm border-2 border-gray-900 rounded bg-white outline-none" placeholder="Title" />
+                      <input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-gray-900 rounded bg-white outline-none" placeholder="URL" />
                       <div className="flex gap-2">
-                        <input type="text" list="category-options" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1 text-[10px] border-2 border-gray-900 rounded bg-white outline-none" placeholder="Folder" />
-                        <input type="text" list="subcategory-options" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2 py-1 text-[10px] border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Sub (Opt)" />
+                        <input type="text" list="category-options" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-gray-900 rounded bg-white outline-none" placeholder="Folder" />
+                        <input type="text" list="subcategory-options" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Sub (Opt)" />
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(bookmark.id)} className="flex-1 py-1 bg-[#E06D53] text-white text-xs font-bold border-2 border-gray-900 rounded">Save</button>
-                        <button onClick={() => setEditingId(null)} className="flex-1 py-1 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded">Cancel</button>
+                      <div className="flex gap-2 mt-1">
+                        <button onClick={() => saveEdit(bookmark.id)} className="flex-1 py-1.5 bg-[#E06D53] text-white text-xs font-bold border-2 border-gray-900 rounded cursor-pointer">Save</button>
+                        <button onClick={() => setEditingId(null)} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded cursor-pointer">Cancel</button>
                       </div>
                     </div>
 
-                  /* MOVE UI */
+                  /* FIXED 2: MOVE UI - Better vertical spacing (space-y-3) and padding */
                   ) : movingId === bookmark.id ? (
-                    <div className="space-y-2 w-full mt-1">
+                    <div className="space-y-3 w-full mt-1 flex flex-col flex-1 justify-center">
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Move to Folder</p>
-                      <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-1.5 text-xs border-2 border-gray-900 rounded bg-white outline-none" placeholder="Main Folder" />
-                      <input type="text" list="subcategory-options" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-2 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Subfolder (Optional)" />
-                      <div className="flex gap-2 mt-2">
-                        <button onClick={() => saveMove(bookmark.id)} className="flex-1 py-1 bg-yellow-400 text-gray-900 text-xs font-bold border-2 border-gray-900 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all">Confirm Move</button>
-                        <button onClick={() => setMovingId(null)} className="flex-1 py-1 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded">Cancel</button>
+                      <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-gray-900 rounded bg-white outline-none" placeholder="Main Folder" />
+                      <input type="text" list="subcategory-options" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Subfolder (Optional)" />
+                      <div className="flex gap-2 mt-auto pt-2">
+                        <button onClick={() => saveMove(bookmark.id)} className="flex-1 py-1.5 bg-yellow-400 text-gray-900 text-xs font-bold border-2 border-gray-900 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer">Confirm</button>
+                        <button onClick={() => setMovingId(null)} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded cursor-pointer">Cancel</button>
                       </div>
                     </div>
 
                   /* STANDARD VIEW */
                   ) : (
                     <>
-                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block max-w-[75%]">
-                        <h3 className="font-medium text-sm text-gray-900 truncate leading-tight">{bookmark.title}</h3>
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block max-w-[75%] cursor-pointer">
+                        <h3 className="font-medium text-sm text-gray-900 truncate leading-tight hover:underline">{bookmark.title}</h3>
                       </a>
                       <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
-                        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 min-w-0">
+                        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 min-w-0 cursor-pointer">
                           <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}`} alt="favicon" className="w-3 h-3 opacity-60 shrink-0" />
-                          <p className="text-[10px] font-medium text-gray-500 truncate">{getDomain(bookmark.url)}</p>
+                          <p className="text-[10px] font-medium text-gray-500 truncate hover:text-gray-700">{getDomain(bookmark.url)}</p>
                         </a>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
