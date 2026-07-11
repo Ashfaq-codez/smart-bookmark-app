@@ -520,7 +520,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                 <div className="p-3 flex flex-col min-h-[95px] relative">
                   
                   {/* Action Buttons */}
-                  <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="absolute right-3 top-3 flex gap-2 opacity-0 mb-5 group-hover:opacity-100 transition-opacity z-10">
                     <button onClick={() => { setMovingId(bookmark.id); setMoveCategory(bookmark.category || ''); setMoveSubCategory(bookmark.sub_category || ''); setEditingId(null); }} className="p-1.5 bg-yellow-100 text-yellow-700 border border-gray-900 rounded-md hover:bg-yellow-200 transition-colors cursor-pointer" title="Move to Folder">
                       <MoveIcon />
                     </button>
