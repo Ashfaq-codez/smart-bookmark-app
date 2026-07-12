@@ -72,19 +72,29 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return tree;
   }, [bookmarks, customCategories, customSubCategories])
 
+ // 1. UPDATED COUNTING LOGIC: Parent gets +1 for EVERY item inside it
   const getCounts = useMemo(() => {
     const counts: Record<string, number> = { 'All': bookmarks.length };
+    
     bookmarks.forEach(b => {
       const cat = b.category || 'Uncategorized';
       const sub = b.sub_category;
-      if (!sub) counts[cat] = (counts[cat] || 0) + 1;
+      
+      // Increment the main category regardless of whether it has a subcategory
+      counts[cat] = (counts[cat] || 0) + 1;
+      
+      // Increment the specific subcategory
       if (sub) {
         const subKey = `${cat}::${sub}`;
         counts[subKey] = (counts[subKey] || 0) + 1;
       }
     });
+    
     return counts;
   }, [bookmarks])
+
+
+  
 
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
@@ -122,8 +132,12 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     }
   }
 
+  // 2. UPDATED ACCORDION LOGIC: Opening one closes the rest
   const toggleFolderExpand = (folder: string) => {
-    setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
+    setExpandedFolders(prev => {
+      // If clicked folder is already open, close it. Otherwise, open ONLY this folder.
+      return prev[folder] ? {} : { [folder]: true };
+    });
   }
 
   const handleDragStart = (e: React.DragEvent, id: number) => {

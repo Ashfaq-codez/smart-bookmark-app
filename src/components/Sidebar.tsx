@@ -122,15 +122,20 @@ export default function Sidebar({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, parentFolder)}
-                  className={`group flex items-center justify-between px-3 py-2 rounded-xl border-2 transition-all ${isParentActive && !activeSubFilter ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'border-gray-300 bg-white hover:border-gray-900 text-gray-700'}`}
+                  // ---> MOVED ONCLICK TO FULL ROW: Filters AND toggles dropdown
+                  onClick={() => { 
+                    setActiveFilter(parentFolder); 
+                    setActiveSubFilter(null); 
+                    toggleFolderExpand(parentFolder);
+                    // Note: We do NOT close the mobile menu here so the user can see the subfolders open!
+                  }}
+                  className={`group flex items-center justify-between px-3 py-2 rounded-xl border-2 cursor-pointer transition-all ${isParentActive && !activeSubFilter ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'border-gray-300 bg-white hover:border-gray-900 text-gray-700'}`}
                 >
-                  <div className="flex items-center gap-2 overflow-hidden cursor-pointer flex-1" onClick={() => { setActiveFilter(parentFolder); setActiveSubFilter(null); setIsMobileMenuOpen(false); }}>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleFolderExpand(parentFolder); }}
-                      className={`p-1 rounded hover:bg-gray-200/20 transition-colors ${isParentActive && !activeSubFilter ? 'text-white' : 'text-gray-500'}`}
-                    >
+                  <div className="flex items-center gap-2 overflow-hidden flex-1">
+                    {/* ---> REMOVED BUTTON: Arrow is now just an icon responding to the row click */}
+                    <div className={`p-1 rounded transition-colors ${isParentActive && !activeSubFilter ? 'text-white' : 'text-gray-500'}`}>
                       {isExpanded ? <ChevronDown /> : <ChevronRight />}
-                    </button>
+                    </div>
                     <span className="font-medium text-sm truncate">{parentFolder}</span>
                   </div>
 
@@ -139,7 +144,10 @@ export default function Sidebar({
                       {parentCount}
                     </span>
                     {customCategories.includes(parentFolder) && (
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(parentFolder); }} className="opacity-0 md:group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-400">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCategory(parentFolder); }} 
+                        className="opacity-0 md:group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-400"
+                      >
                         <SmallXIcon />
                       </button>
                     )}
@@ -156,7 +164,13 @@ export default function Sidebar({
                           key={sub}
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, parentFolder, sub)}
-                          onClick={() => { setActiveFilter(parentFolder); setActiveSubFilter(sub); setIsMobileMenuOpen(false); }}
+                          // ---> SUBFOLDER CLICK: Stops parent click, filters, and closes mobile menu
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            setActiveFilter(parentFolder); 
+                            setActiveSubFilter(sub); 
+                            setIsMobileMenuOpen(false); 
+                          }}
                           className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg border-2 cursor-pointer transition-all ${isSubActive ? 'border-gray-900 bg-gray-100 text-gray-900 font-bold' : 'border-transparent bg-transparent hover:border-gray-300 text-gray-600 hover:bg-white'}`}
                         >
                           <span className="truncate pr-2">{sub}</span>
@@ -178,11 +192,11 @@ export default function Sidebar({
                           onKeyDown={(e) => e.key === 'Enter' && handleAddSubfolder(parentFolder)}
                           className="w-full px-2 py-1.5 text-xs border-2 border-gray-900 rounded outline-none bg-white"
                         />
-                        <button onClick={() => setCreatingSubFor(null)} className="px-2 text-xs font-bold text-gray-500 hover:text-gray-900">X</button>
+                        <button onClick={(e) => { e.stopPropagation(); setCreatingSubFor(null); }} className="px-2 text-xs font-bold text-gray-500 hover:text-gray-900">X</button>
                       </div>
                     ) : (
                       <button
-                        onClick={() => setCreatingSubFor(parentFolder)}
+                        onClick={(e) => { e.stopPropagation(); setCreatingSubFor(parentFolder); }}
                         className="flex items-center gap-2 px-3 py-1.5 mt-1 text-xs font-bold text-gray-400 hover:text-gray-900 transition-colors text-left"
                       >
                         <PlusIcon /> Add Subfolder
