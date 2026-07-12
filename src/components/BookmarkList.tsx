@@ -161,8 +161,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
     ), { 
-      duration: Infinity, // Stays open until they click a button
-      style: { border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } 
+      duration: Infinity, 
+      style: { 
+        background: '#fef08a', // FIX: Added bold yellow background (yellow-200)
+        border: '4px solid #111827', 
+        borderRadius: '1rem', 
+        padding: '1.5rem', 
+        boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' 
+      }
     });
   }
 

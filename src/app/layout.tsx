@@ -30,15 +30,40 @@ export default function RootLayout({
         {children}
         {/* Place this at the bottom of the body */}
         <Toaster 
-          position="bottom-right" 
+          position="bottom-right"
           toastOptions={{
-            duration: 3000,
+            // Default styling for all standard toasts
             style: {
-              background: '#333',
-              color: '#fff',
-              fontWeight: 'bold',
+              border: '4px solid #111827',
+              borderRadius: '1rem',
+              background: '#ffffff',
+              color: '#111827',
+              fontWeight: '900',
+              boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)',
             },
-          }} 
+            // Specific styling for toast.error()
+            error: {
+              style: {
+                background: '#fca5a5', // Punchy red (red-300)
+                color: '#7f1d1d', // Dark red text
+              },
+              iconTheme: {
+                primary: '#7f1d1d',
+                secondary: '#fca5a5',
+              },
+            },
+            // Specific styling for toast.success() if you use it later
+            success: {
+              style: {
+                background: '#86efac', // Punchy green (green-300)
+                color: '#14532d',
+              },
+              iconTheme: {
+                primary: '#14532d',
+                secondary: '#86efac',
+              },
+            },
+          }}
         />
       </body>
     </html>

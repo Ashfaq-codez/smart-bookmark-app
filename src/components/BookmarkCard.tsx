@@ -93,7 +93,7 @@ export default function BookmarkCard({
     toast((t) => (
       <div className="flex flex-col gap-3 font-sans">
         <span className="text-lg font-black text-gray-900 uppercase tracking-tight">Delete Bookmark?</span>
-        <span className="text-sm font-bold text-gray-600 truncate max-w-[200px]">{bookmark.title}</span>
+        <span className="text-sm font-bold text-gray-800 truncate max-w-[200px]">{bookmark.title}</span>
         <div className="flex gap-3 mt-2">
           <button 
             onClick={() => {
@@ -114,7 +114,13 @@ export default function BookmarkCard({
       </div>
     ), { 
       duration: Infinity, 
-      style: { border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } 
+      style: { 
+        background: '#fef08a', // FIX: Added bold yellow background (yellow-200)
+        border: '4px solid #111827', 
+        borderRadius: '1rem', 
+        padding: '1.5rem', 
+        boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' 
+      }
     });
   }
 
