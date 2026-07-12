@@ -17,7 +17,7 @@ const SearchIcon = () => (
 )
 
 const MenuIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
     <line x1="3" y1="12" x2="21" y2="12"></line>
     <line x1="3" y1="6" x2="21" y2="6"></line>
     <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -33,12 +33,12 @@ const colorThemes = [
   { card: 'bg-emerald-100', btn: 'bg-emerald-300', hover: 'hover:bg-emerald-400' },
 ]
 
-export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
+// FIX: Added userEmail to props
+export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, addBookmark, addBulkBookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
 
   const [isLoading, setIsLoading] = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
   const supabase = createClient()
 
   const [activeFilter, setActiveFilter] = useState('All')
@@ -58,13 +58,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600)
-    
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUserEmail(data.user.email || null)
-    })
-
     return () => clearTimeout(timer)
-  }, [supabase.auth])
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -173,112 +168,144 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 pt-12 md:p-8 md:pt-14">
+    <div className="flex flex-col w-full min-h-screen">
       
-      <Sidebar 
-        userEmail={userEmail}
-        handleSignOut={handleSignOut}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-        activeFilter={activeFilter}
-        setActiveFilter={setActiveFilter}
-        activeSubFilter={activeSubFilter}
-        setActiveSubFilter={setActiveSubFilter}
-        getCounts={getCounts}
-        folderHierarchy={folderHierarchy}
-        expandedFolders={expandedFolders}
-        toggleFolderExpand={toggleFolderExpand}
-        customCategories={customCategories}
-        handleDeleteCategory={handleDeleteCategory}
-        handleDragOver={handleDragOver}
-        handleDrop={handleDrop}
-        creatingSubFor={creatingSubFor}
-        setCreatingSubFor={setCreatingSubFor}
-        newSubfolderName={newSubfolderName}
-        setNewSubfolderName={setNewSubfolderName}
-        handleAddSubfolder={handleAddSubfolder}
-        isAddingCategory={isAddingCategory}
-        setIsAddingCategory={setIsAddingCategory}
-        newCategoryName={newCategoryName}
-        setNewCategoryName={setNewCategoryName}
-        handleAddCategory={handleAddCategory}
-      />
+      {/* ---> GLOBAL NAVBAR IMPORTED DIRECTLY INTO COMPONENT */}
+      <nav className="bg-white border-b-4 border-gray-900 py-3 px-4 sm:px-6 sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-y-4">
 
-      <main className="flex-1 space-y-8 min-w-0">
-        
-        <div className="md:hidden flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
-          <span className="font-black uppercase text-gray-900 tracking-tight">
-             {activeFilter === 'All' ? 'All Bookmarks' : activeFilter}
-          </span>
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 bg-yellow-300 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all"
-          >
-            <MenuIcon />
-          </button>
+            {/* Logo Area */}
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 fill-yellow-400 stroke-gray-900 stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)]">
+                <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
+              </svg>
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 ml-1 uppercase">
+                Smart Bookmarks
+              </h1>
+            </div>
+
+            {/* Desktop Auth Area (Hidden on Mobile) */}
+            <div className="hidden md:flex items-center justify-between gap-4">
+                <div
+                  className="bg-sky-100 border-[3px] border-gray-900 px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] max-w-xs"
+                  title={userEmail}
+                >
+                  <p className="text-sm font-bold text-gray-600 truncate">
+                    {userEmail}
+                  </p>
+                </div>
+                <button onClick={handleSignOut} className="text-sm font-black uppercase text-gray-900 bg-white border-[3px] border-gray-900 px-4 py-1.5 rounded-xl hover:bg-rose-200 transition-all shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] active:translate-y-1 active:translate-x-1 active:shadow-none cursor-pointer">
+                  Sign Out
+                </button>
+            </div>
+
+            {/* ---> NEW HAMBURGER MENU IN NAVBAR (Visible on Mobile) */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 bg-yellow-300 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
+            >
+              <MenuIcon />
+            </button>
+
         </div>
+      </nav>
 
-        <BookmarkForms 
-          bookmarks={bookmarks}
+      {/* Main Content Area */}
+      <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8 flex-1">
+        
+        <Sidebar 
+          userEmail={userEmail || null}
+          handleSignOut={handleSignOut}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
+          activeSubFilter={activeSubFilter}
+          setActiveSubFilter={setActiveSubFilter}
+          getCounts={getCounts}
           folderHierarchy={folderHierarchy}
-          addBookmark={addBookmark}
-          addBulkBookmarks={addBulkBookmarks}
+          expandedFolders={expandedFolders}
+          toggleFolderExpand={toggleFolderExpand}
+          customCategories={customCategories}
+          handleDeleteCategory={handleDeleteCategory}
+          handleDragOver={handleDragOver}
+          handleDrop={handleDrop}
+          creatingSubFor={creatingSubFor}
+          setCreatingSubFor={setCreatingSubFor}
+          newSubfolderName={newSubfolderName}
+          setNewSubfolderName={setNewSubfolderName}
+          handleAddSubfolder={handleAddSubfolder}
+          isAddingCategory={isAddingCategory}
+          setIsAddingCategory={setIsAddingCategory}
+          newCategoryName={newCategoryName}
+          setNewCategoryName={setNewCategoryName}
+          handleAddCategory={handleAddCategory}
         />
 
-        <div className="relative w-full">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
-            <SearchIcon />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by title, URL, or folder..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-medium placeholder-gray-400"
+        <main className="flex-1 space-y-8 min-w-0">
+          
+          <BookmarkForms 
+            bookmarks={bookmarks}
+            folderHierarchy={folderHierarchy}
+            addBookmark={addBookmark}
+            addBulkBookmarks={addBulkBookmarks}
           />
-        </div>
 
-        <div className="relative z-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {isLoading ? (
-            Array.from({ length: 8 }).map((_, index) => (
-              <BookmarkSkeleton key={index} />
-            ))
-          ) : (
-            bookmarks.map((bookmark) => {
-              const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-              const matchSubCategory = activeFilter === 'All'
-                ? true
-                : (activeSubFilter
-                    ? bookmark.sub_category === activeSubFilter
-                    : !bookmark.sub_category);
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+              <SearchIcon />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by title, URL, or folder..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-medium placeholder-gray-400"
+            />
+          </div>
 
-              const searchLower = searchQuery.toLowerCase();
-              const matchSearch = searchQuery === '' || 
-                bookmark.title.toLowerCase().includes(searchLower) ||
-                bookmark.url.toLowerCase().includes(searchLower) ||
-                (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
-                (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
+          <div className="relative z-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+            {isLoading ? (
+              Array.from({ length: 8 }).map((_, index) => (
+                <BookmarkSkeleton key={index} />
+              ))
+            ) : (
+              bookmarks.map((bookmark) => {
+                const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
+                const matchSubCategory = activeFilter === 'All'
+                  ? true
+                  : (activeSubFilter
+                      ? bookmark.sub_category === activeSubFilter
+                      : !bookmark.sub_category);
 
-              if (!(matchCategory && matchSubCategory && matchSearch)) return null;
+                const searchLower = searchQuery.toLowerCase();
+                const matchSearch = searchQuery === '' || 
+                  bookmark.title.toLowerCase().includes(searchLower) ||
+                  bookmark.url.toLowerCase().includes(searchLower) ||
+                  (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
+                  (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
 
-              const theme = colorThemes[bookmark.id % colorThemes.length]
+                if (!(matchCategory && matchSubCategory && matchSearch)) return null;
 
-              return (
-                <BookmarkCard 
-                  key={bookmark.id}
-                  bookmark={bookmark}
-                  theme={theme}
-                  isDragged={draggedId === bookmark.id}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  updateBookmark={updateBookmark}
-                  deleteBookmark={deleteBookmark}
-                />
-              )
-            })
-          )}
-        </div>
-      </main>
+                const theme = colorThemes[bookmark.id % colorThemes.length]
+
+                return (
+                  <BookmarkCard 
+                    key={bookmark.id}
+                    bookmark={bookmark}
+                    theme={theme}
+                    isDragged={draggedId === bookmark.id}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    updateBookmark={updateBookmark}
+                    deleteBookmark={deleteBookmark}
+                  />
+                )
+              })
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
