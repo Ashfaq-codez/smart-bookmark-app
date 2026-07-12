@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { Bookmark } from '@/types'
 import Sidebar from '@/components/Sidebar'
 import BookmarkForms from '@/components/BookmarkForms'
 import BookmarkCard from '@/components/BookmarkCard'
+import BookmarkSkeleton from '@/components/BookmarkSkeleton' // Import the Skeleton
 
 // --- Search Icon ---
 const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -29,11 +30,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     deleteBookmark 
   } = useBookmarks(initialBookmarks)
 
+  // ---> ADD LOADING STATE HERE
+  const [isLoading, setIsLoading] = useState(true)
+
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<number | null>(null)
   
-  // ---> ADD SEARCH STATE HERE
   const [searchQuery, setSearchQuery] = useState('')
 
   const [customCategories, setCustomCategories] = useState<string[]>([])
@@ -44,6 +47,14 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
+
+  // ---> SMOOTH HYDRATION EFFECT
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 600) // 600ms gives enough time for a smooth transition
+    return () => clearTimeout(timer)
+  }, [])
 
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {};
@@ -177,7 +188,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           addBulkBookmarks={addBulkBookmarks}
         />
 
-        {/* ---> ADD SEARCH BAR UI HERE */}
         <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
             <SearchIcon />
@@ -191,41 +201,46 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           />
         </div>
 
+        {/* ---> RENDER SKELETONS OR CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {bookmarks.map((bookmark) => {
-            const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-            const matchSubCategory = activeFilter === 'All'
-              ? true
-              : (activeSubFilter
-                  ? bookmark.sub_category === activeSubFilter
-                  : !bookmark.sub_category);
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <BookmarkSkeleton key={index} />
+            ))
+          ) : (
+            bookmarks.map((bookmark) => {
+              const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
+              const matchSubCategory = activeFilter === 'All'
+                ? true
+                : (activeSubFilter
+                    ? bookmark.sub_category === activeSubFilter
+                    : !bookmark.sub_category);
 
-            // ---> ADD SEARCH MATCHING LOGIC HERE
-            const searchLower = searchQuery.toLowerCase();
-            const matchSearch = searchQuery === '' || 
-              bookmark.title.toLowerCase().includes(searchLower) ||
-              bookmark.url.toLowerCase().includes(searchLower) ||
-              (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
-              (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
+              const searchLower = searchQuery.toLowerCase();
+              const matchSearch = searchQuery === '' || 
+                bookmark.title.toLowerCase().includes(searchLower) ||
+                bookmark.url.toLowerCase().includes(searchLower) ||
+                (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
+                (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
 
-            // Validate all filters
-            if (!(matchCategory && matchSubCategory && matchSearch)) return null;
+              if (!(matchCategory && matchSubCategory && matchSearch)) return null;
 
-            const theme = colorThemes[bookmark.id % colorThemes.length]
+              const theme = colorThemes[bookmark.id % colorThemes.length]
 
-            return (
-              <BookmarkCard 
-                key={bookmark.id}
-                bookmark={bookmark}
-                theme={theme}
-                isDragged={draggedId === bookmark.id}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                updateBookmark={updateBookmark}
-                deleteBookmark={deleteBookmark}
-              />
-            )
-          })}
+              return (
+                <BookmarkCard 
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  theme={theme}
+                  isDragged={draggedId === bookmark.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  updateBookmark={updateBookmark}
+                  deleteBookmark={deleteBookmark}
+                />
+              )
+            })
+          )}
         </div>
       </main>
     </div>
