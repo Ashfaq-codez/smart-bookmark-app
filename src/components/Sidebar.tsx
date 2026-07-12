@@ -77,7 +77,10 @@ export default function Sidebar({
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-[280px] bg-[#fafafa] border-r-4 border-gray-900 p-6 overflow-y-auto transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-[8px_0px_0px_0px_rgba(17,24,39,1)]' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:w-64 md:sticky md:top-8 md:p-0 md:border-none md:bg-transparent md:shadow-none md:z-0
+        
+        /* FIX: Removed md:relative. Added md:self-start and md:h-[calc(100vh-4rem)] */
+        md:sticky md:translate-x-0 md:w-64 md:top-8 md:self-start md:h-[calc(100vh-4rem)] md:p-0 md:border-none md:bg-transparent md:shadow-none md:z-0
+        
         flex flex-col space-y-6
       `}>
         
