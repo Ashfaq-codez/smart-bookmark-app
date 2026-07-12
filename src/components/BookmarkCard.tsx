@@ -88,11 +88,34 @@ export default function BookmarkCard({
     setIsMoving(false)
   }
 
-  // ---> NEW DELETION HANDLER
-  const handleDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete "${bookmark.title}"?`)) {
-      await deleteBookmark(bookmark.id);
-    }
+  const handleDelete = () => {
+    // Replaced window.confirm with the custom Neo-Brutalist toast modal
+    toast((t) => (
+      <div className="flex flex-col gap-3 font-sans">
+        <span className="text-lg font-black text-gray-900 uppercase tracking-tight">Delete Bookmark?</span>
+        <span className="text-sm font-bold text-gray-600 truncate max-w-[200px]">{bookmark.title}</span>
+        <div className="flex gap-3 mt-2">
+          <button 
+            onClick={() => {
+              deleteBookmark(bookmark.id);
+              toast.dismiss(t.id);
+            }}
+            className="flex-1 px-4 py-2 bg-red-400 text-gray-900 font-black uppercase text-sm border-2 border-gray-900 rounded-xl hover:shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] hover:-translate-y-0.5 transition-all cursor-pointer"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t.id)}
+            className="flex-1 px-4 py-2 bg-gray-100 text-gray-900 font-black uppercase text-sm border-2 border-gray-900 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { 
+      duration: Infinity, 
+      style: { border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } 
+    });
   }
 
   return (
