@@ -102,10 +102,11 @@ export default function BookmarkCard({
       onDragEnd={onDragEnd}
       className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing ${isDragged ? 'opacity-50 scale-95' : ''}`}
     >
+      {/* 1. FIXED PREVIEW BUTTON: Always visible on mobile, hover on desktop */}
       <button
         onClick={togglePreviewMode}
         title={isLive ? "Switch back to screenshot" : "Try Live Preview"}
-        className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700 cursor-pointer hover:bg-gray-800"
+        className="absolute top-2 left-2 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm border border-gray-700 cursor-pointer hover:bg-gray-800"
       >
         {isCheckingPreview ? 'CHECKING...' : (isLive ? 'IMAGE' : 'LIVE')}
       </button>
@@ -119,15 +120,15 @@ export default function BookmarkCard({
       </div>
 
       <div className="p-3 flex flex-col min-h-[95px] relative">
-        <div className="absolute right-3 top-3 flex gap-2 opacity-0 mb-5 group-hover:opacity-100 transition-opacity z-10">
+        
+        {/* 2. FIXED ACTION BUTTONS: Always visible on mobile, hover on desktop */}
+        <div className="absolute right-3 top-3 flex gap-2 opacity-100 md:opacity-0 mb-5 md:group-hover:opacity-100 transition-opacity z-10">
           <button onClick={() => { setIsMoving(true); setIsEditing(false); }} className="p-1.5 bg-yellow-100 text-yellow-700 border border-gray-900 rounded-md hover:bg-yellow-200 transition-colors cursor-pointer" title="Move to Folder">
             <MoveIcon />
           </button>
           <button onClick={() => { setIsEditing(true); setIsMoving(false); }} className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors cursor-pointer" title="Edit">
             <EditIcon />
           </button>
-          
-          {/* ---> ATTACHED NEW HANDLER HERE */}
           <button onClick={handleDelete} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors cursor-pointer" title="Delete">
             <TrashIcon />
           </button>

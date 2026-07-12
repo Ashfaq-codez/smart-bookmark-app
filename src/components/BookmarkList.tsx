@@ -152,7 +152,7 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
+    <div className="flex flex-col-reverse md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
       
       <Sidebar 
         activeFilter={activeFilter}
