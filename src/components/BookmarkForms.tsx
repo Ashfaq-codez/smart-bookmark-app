@@ -25,6 +25,8 @@ export default function BookmarkForms({
 
   const [bulkText, setBulkText] = useState('');
   const [bulkCategory, setBulkCategory] = useState('Open Tabs')
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isSubCategoryOpen, setIsSubCategoryOpen] = useState(false);
 
   const formatUrl = (rawUrl: string) => {
     const trimmed = rawUrl.trim()
@@ -102,17 +104,7 @@ export default function BookmarkForms({
 
   return (
     <>
-      <datalist id="category-options">
-        {Object.keys(folderHierarchy).map(cat => (
-          <option key={cat} value={cat} />
-        ))}
-      </datalist>
-
-      <datalist id="subcategory-options">
-        {Object.values(folderHierarchy).flat().filter((value, index, array) => array.indexOf(value) === index).map(sub => (
-          <option key={sub} value={sub} />
-        ))}
-      </datalist>
+       
 
       <div className="bg-white border-2 border-gray-900 rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex gap-4 mb-6">
@@ -132,12 +124,56 @@ export default function BookmarkForms({
               <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} required className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
-              <input type="text" list="category-options" placeholder="Main Folder" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
-              {category.trim().length > 0 && (
-                <input type="text" list="subcategory-options" placeholder="Subfolder (Optional)" value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-dashed border-gray-400 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
+            
+            {/* MAIN FOLDER DROPDOWN */}
+            <div className="relative flex-1">
+              <input 
+                type="text" 
+                placeholder="Main Folder" 
+                value={category} 
+                onChange={(e) => setCategory(e.target.value)} 
+                onFocus={() => setIsCategoryOpen(true)}
+                // setTimeout ensures the click event on the list item fires before the input loses focus
+                onBlur={() => setTimeout(() => setIsCategoryOpen(false), 200)}
+                className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" 
+              />
+              {isCategoryOpen && Object.keys(folderHierarchy).length > 0 && (
+                <ul className="absolute z-50 w-full mt-2 bg-white border-4 border-gray-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full">
+                  {Object.keys(folderHierarchy).filter(c => c.toLowerCase().includes(category.toLowerCase())).map(cat => (
+                    <li key={cat} onClick={() => { setCategory(cat); setIsCategoryOpen(false); }} className="px-4 py-3 hover:bg-yellow-100 cursor-pointer font-bold text-sm text-gray-900 border-b-2 border-gray-100 last:border-none transition-colors">
+                      {cat}
+                    </li>
+                  ))}
+                </ul>
               )}
-              <button type="submit" className="px-8 py-3 bg-[#c0ddf0] text-dark font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
             </div>
+
+            {/* SUBFOLDER DROPDOWN */}
+            {category.trim().length > 0 && (
+              <div className="relative flex-1">
+                <input 
+                  type="text" 
+                  placeholder="Subfolder (Optional)" 
+                  value={subCategory} 
+                  onChange={(e) => setSubCategory(e.target.value)} 
+                  onFocus={() => setIsSubCategoryOpen(true)}
+                  onBlur={() => setTimeout(() => setIsSubCategoryOpen(false), 200)}
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-400 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" 
+                />
+                {isSubCategoryOpen && folderHierarchy[category] && folderHierarchy[category].length > 0 && (
+                  <ul className="absolute z-50 w-full mt-2 bg-white border-4 border-gray-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full">
+                    {folderHierarchy[category].filter(sub => sub.toLowerCase().includes(subCategory.toLowerCase())).map(sub => (
+                      <li key={sub} onClick={() => { setSubCategory(sub); setIsSubCategoryOpen(false); }} className="px-4 py-3 hover:bg-sky-100 cursor-pointer font-bold text-sm text-gray-900 border-b-2 border-gray-100 last:border-none transition-colors">
+                        {sub}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            
+            <button type="submit" className="px-8 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
+          </div>
           </form>
         ) : (
           <form onSubmit={handleAddBulk} className="flex flex-col gap-4">

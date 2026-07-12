@@ -74,10 +74,19 @@ export default function Sidebar({
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[350px] bg-[#fafafa] border-r-4 border-gray-900 p-6 overflow-y-auto transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-[280px] overflow-y-auto transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-[8px_0px_0px_0px_rgba(17,24,39,1)]' : '-translate-x-full'}
-        md:sticky md:translate-x-0 md:w-64 md:top-28 md:self-start md:h-[calc(100vh-8rem)] md:p-0 md:border-none md:bg-transparent md:shadow-none md:z-0
-        flex flex-col space-y-6
+        
+        /* 1. UPGRADED DESKTOP STYLING: Solid white background, thick borders, and hard shadow */
+        md:sticky md:translate-x-0 md:w-72 md:top-28 md:self-start md:h-[calc(100vh-8rem)] 
+        md:bg-white md:border-4 md:border-gray-900 md:rounded-3xl md:shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] md:p-6 md:z-0
+        
+        /* 2. CUSTOM SCROLLBAR: Modern, thick-bordered scrollbar track and thumb */
+        [&::-webkit-scrollbar]:w-2.5 
+        [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:border-l-2 [&::-webkit-scrollbar-track]:border-gray-900 [&::-webkit-scrollbar-track]:rounded-r-3xl
+        [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full
+        
+        flex flex-col space-y-6 bg-[#fafafa] border-r-4 border-gray-900 p-6
       `}>
         
         <div className="flex items-center justify-between md:hidden pb-4 border-b-2 border-gray-200">
