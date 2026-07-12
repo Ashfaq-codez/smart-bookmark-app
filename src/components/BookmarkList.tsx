@@ -236,7 +236,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </nav>
 
       {/* Main Content Area */}
-      <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8 flex-1">
+      <div className="flex flex-col md:flex-row gap-8 w-full max-w-[2500px] mx-auto p-4 md:p-8 flex-1">
         
         <Sidebar 
           userEmail={userEmail || null}
