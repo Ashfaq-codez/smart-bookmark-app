@@ -37,7 +37,13 @@ export default function BookmarkForms({
 
   const handleAddSingle = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title || !url) return
+    
+    // FIX: Add a toast warning instead of failing silently
+    if (!title.trim() || !url.trim()) {
+      toast.error("Please provide both a Title and a URL.");
+      return;
+    }
+    
     const formatted = formatUrl(url);
     const finalCategory = category.trim() || 'Uncategorized';
     const finalSubCategory = subCategory.trim() || null;
@@ -49,7 +55,7 @@ export default function BookmarkForms({
     }
 
     await addBookmark({ 
-      title, 
+      title: title.trim(), 
       url: formatted, 
       category: finalCategory, 
       sub_category: finalSubCategory 
@@ -60,7 +66,13 @@ export default function BookmarkForms({
 
   const handleAddBulk = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!bulkText.trim()) return
+    
+    // FIX: Add a toast warning instead of failing silently
+    if (!bulkText.trim()) {
+      toast.error("Please paste some URLs to extract.");
+      return;
+    }
+    
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
     
@@ -115,8 +127,9 @@ export default function BookmarkForms({
         {inputMode === 'single' ? (
           <form onSubmit={handleAddSingle} className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
-              <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
-              <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
+              {/* FIX: Added 'required' attribute to inputs */}
+              <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
+              <input type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} required className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
               <input type="text" list="category-options" placeholder="Main Folder" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
@@ -128,7 +141,8 @@ export default function BookmarkForms({
           </form>
         ) : (
           <form onSubmit={handleAddBulk} className="flex flex-col gap-4">
-            <textarea placeholder="Paste text containing URLs here..." value={bulkText} onChange={(e) => setBulkText(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl h-32 resize-y outline-none bg-slate-50 focus:bg-white transition-all" />
+            {/* FIX: Added 'required' attribute to textarea */}
+            <textarea placeholder="Paste text containing URLs here..." value={bulkText} onChange={(e) => setBulkText(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl h-32 resize-y outline-none bg-slate-50 focus:bg-white transition-all" />
             <div className="flex flex-col sm:flex-row gap-4">
               <input type="text" list="category-options" placeholder="Folder for these tabs" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
               <button type="submit" className="px-6 py-3 bg-indigo-500 text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Extract & Save</button>
