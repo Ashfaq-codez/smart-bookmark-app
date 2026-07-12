@@ -2,17 +2,16 @@
 
 import React from 'react'
 
-// --- Sidebar Specific Icons ---
 const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
 const SmallXIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
 const ChevronRight = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
 const ChevronDown = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
 
 interface SidebarProps {
-  // ---> NEW MOBILE PROPS
+  userEmail: string | null;
+  handleSignOut: () => void;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (isOpen: boolean) => void;
-  // Existing Props
   activeFilter: string;
   setActiveFilter: (filter: string) => void;
   activeSubFilter: string | null;
@@ -38,6 +37,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
+  userEmail,
+  handleSignOut,
   isMobileMenuOpen,
   setIsMobileMenuOpen,
   activeFilter,
@@ -65,7 +66,6 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <>
-      {/* ---> MOBILE BACKDROP OVERLAY */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm md:hidden"
@@ -73,18 +73,13 @@ export default function Sidebar({
         />
       )}
 
-      {/* ---> RESPONSIVE SIDEBAR CONTAINER */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-[280px] bg-[#fafafa] border-r-4 border-gray-900 p-6 overflow-y-auto transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-[8px_0px_0px_0px_rgba(17,24,39,1)]' : '-translate-x-full'}
-        
-        /* FIX: Removed md:relative. Added md:self-start and md:h-[calc(100vh-4rem)] */
-        md:sticky md:translate-x-0 md:w-64 md:top-8 md:self-start md:h-[calc(100vh-4rem)] md:p-0 md:border-none md:bg-transparent md:shadow-none md:z-0
-        
+        md:sticky md:translate-x-0 md:w-64 md:top-28 md:self-start md:h-[calc(100vh-8rem)] md:p-0 md:border-none md:bg-transparent md:shadow-none md:z-0
         flex flex-col space-y-6
       `}>
         
-        {/* ---> MOBILE CLOSE HEADER */}
         <div className="flex items-center justify-between md:hidden pb-4 border-b-2 border-gray-200">
           <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Menu</h2>
           <button 
@@ -95,7 +90,6 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Desktop Header */}
         <div className="hidden md:flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Folders</h2>
         </div>
@@ -122,17 +116,14 @@ export default function Sidebar({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, parentFolder)}
-                  // ---> MOVED ONCLICK TO FULL ROW: Filters AND toggles dropdown
                   onClick={() => { 
                     setActiveFilter(parentFolder); 
                     setActiveSubFilter(null); 
                     toggleFolderExpand(parentFolder);
-                    // Note: We do NOT close the mobile menu here so the user can see the subfolders open!
                   }}
                   className={`group flex items-center justify-between px-3 py-2 rounded-xl border-2 cursor-pointer transition-all ${isParentActive && !activeSubFilter ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'border-gray-300 bg-white hover:border-gray-900 text-gray-700'}`}
                 >
                   <div className="flex items-center gap-2 overflow-hidden flex-1">
-                    {/* ---> REMOVED BUTTON: Arrow is now just an icon responding to the row click */}
                     <div className={`p-1 rounded transition-colors ${isParentActive && !activeSubFilter ? 'text-white' : 'text-gray-500'}`}>
                       {isExpanded ? <ChevronDown /> : <ChevronRight />}
                     </div>
@@ -164,7 +155,6 @@ export default function Sidebar({
                           key={sub}
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, parentFolder, sub)}
-                          // ---> SUBFOLDER CLICK: Stops parent click, filters, and closes mobile menu
                           onClick={(e) => { 
                             e.stopPropagation();
                             setActiveFilter(parentFolder); 
@@ -231,6 +221,19 @@ export default function Sidebar({
             </button>
           )}
         </div>
+
+        <div className="mt-auto pt-6 border-t-2 border-gray-200 md:hidden flex flex-col gap-3">
+          <div className="px-3 py-2 bg-gray-100 rounded-lg text-xs font-bold text-gray-500 truncate border-2 border-gray-200">
+            {userEmail || 'Loading...'}
+          </div>
+          <button 
+            onClick={handleSignOut}
+            className="w-full px-4 py-3 bg-red-100 text-red-700 font-bold uppercase tracking-wider text-sm border-2 border-gray-900 rounded-xl hover:bg-red-200 transition-colors shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none"
+          >
+            Sign Out
+          </button>
+        </div>
+
       </aside>
     </>
   )

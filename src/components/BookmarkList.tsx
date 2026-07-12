@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { Bookmark } from '@/types'
 import Sidebar from '@/components/Sidebar'
@@ -8,9 +9,20 @@ import BookmarkForms from '@/components/BookmarkForms'
 import BookmarkCard from '@/components/BookmarkCard'
 import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 
-const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-// ---> NEW HAMBURGER ICON
-const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+const SearchIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="11" cy="11" r="8"></circle>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+)
+
+const MenuIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+)
 
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
@@ -25,9 +37,9 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const { bookmarks, addBookmark, addBulkBookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
 
   const [isLoading, setIsLoading] = useState(true)
-  
-  // ---> MOBILE MENU STATE
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const supabase = createClient()
 
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
@@ -45,11 +57,19 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 600)
+    const timer = setTimeout(() => setIsLoading(false), 600)
+    
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUserEmail(data.user.email || null)
+    })
+
     return () => clearTimeout(timer)
-  }, [])
+  }, [supabase.auth])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/' 
+  }
 
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {};
@@ -72,7 +92,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return tree;
   }, [bookmarks, customCategories, customSubCategories])
 
- // 1. UPDATED COUNTING LOGIC: Parent gets +1 for EVERY item inside it
   const getCounts = useMemo(() => {
     const counts: Record<string, number> = { 'All': bookmarks.length };
     
@@ -80,10 +99,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
       const cat = b.category || 'Uncategorized';
       const sub = b.sub_category;
       
-      // Increment the main category regardless of whether it has a subcategory
       counts[cat] = (counts[cat] || 0) + 1;
       
-      // Increment the specific subcategory
       if (sub) {
         const subKey = `${cat}::${sub}`;
         counts[subKey] = (counts[subKey] || 0) + 1;
@@ -92,9 +109,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     
     return counts;
   }, [bookmarks])
-
-
-  
 
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
@@ -132,10 +146,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     }
   }
 
-  // 2. UPDATED ACCORDION LOGIC: Opening one closes the rest
   const toggleFolderExpand = (folder: string) => {
     setExpandedFolders(prev => {
-      // If clicked folder is already open, close it. Otherwise, open ONLY this folder.
       return prev[folder] ? {} : { [folder]: true };
     });
   }
@@ -161,10 +173,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   }
 
   return (
-    // ---> REVERTED BACK TO flex-col SO DESKTOP/MOBILE FLOW IS STANDARD
-    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 pt-24 md:p-8 md:pt-28">
       
       <Sidebar 
+        userEmail={userEmail}
+        handleSignOut={handleSignOut}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         activeFilter={activeFilter}
@@ -191,10 +204,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         handleAddCategory={handleAddCategory}
       />
 
-     <main className="flex-1 space-y-8 min-w-0">
+      <main className="flex-1 space-y-8 min-w-0">
         
-        {/* FIX: Removed 'sticky', 'top-4', and 'z-30'. 
-            It will now sit perfectly in the page flow and scroll naturally without overlapping your content. */}
         <div className="md:hidden flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
           <span className="font-black uppercase text-gray-900 tracking-tight">
              {activeFilter === 'All' ? 'All Bookmarks' : activeFilter}
@@ -227,9 +238,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           />
         </div>
 
-        {/* FIX 2: Added `relative z-0` to the grid wrapper. 
-            This traps all the cards (and their z-10 buttons) inside a base-level stacking context, 
-            forcing them to slide flawlessly underneath the z-50 menu. */}
         <div className="relative z-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
