@@ -115,7 +115,13 @@ export default function BookmarkCard({
         {isLive ? (
           <iframe src={bookmark.url} className="w-full h-full border-none pointer-events-none" sandbox="allow-scripts allow-same-origin" loading="lazy" />
         ) : (
-          <img src={`https://image.thum.io/get/width/600/crop/1200/noanimate/${bookmark.url}`} alt={bookmark.title} className="w-full h-[300%] object-cover object-top group-hover:object-bottom transition-all duration-[4000ms] ease-linear" onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+          <img 
+            // FIX: Replaced thum.io with WordPress mshots API and encoded the URL
+            src={`https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=600`} 
+            alt={bookmark.title} 
+            className="w-full h-[300%] object-cover object-top group-hover:object-bottom transition-all duration-[4000ms] ease-linear" 
+            onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} 
+          />
         )}
       </div>
 
