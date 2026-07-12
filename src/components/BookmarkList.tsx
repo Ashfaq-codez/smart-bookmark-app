@@ -179,8 +179,8 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
       <main className="flex-1 space-y-8 min-w-0">
         
-        {/* ---> MOBILE HAMBURGER BUTTON (Hidden on Desktop) */}
-        <div className="md:hidden flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
+        {/* FIX 1: Elevated z-index to z-50 to ensure it acts as an impenetrable roof */}
+        <div className="md:hidden sticky top-4 z-50 flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
           <span className="font-black uppercase text-gray-900 tracking-tight">
              {activeFilter === 'All' ? 'All Bookmarks' : activeFilter}
           </span>
@@ -212,7 +212,10 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* FIX 2: Added `relative z-0` to the grid wrapper. 
+            This traps all the cards (and their z-10 buttons) inside a base-level stacking context, 
+            forcing them to slide flawlessly underneath the z-50 menu. */}
+        <div className="relative z-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
               <BookmarkSkeleton key={index} />
