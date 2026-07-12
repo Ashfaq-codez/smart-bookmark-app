@@ -7,6 +7,9 @@ import Sidebar from '@/components/Sidebar'
 import BookmarkForms from '@/components/BookmarkForms'
 import BookmarkCard from '@/components/BookmarkCard'
 
+// --- Search Icon ---
+const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+
 // Summer Cool Palette
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
@@ -18,7 +21,6 @@ const colorThemes = [
 ]
 
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
-  // 1. Core Data Hook
   const { 
     bookmarks, 
     addBookmark, 
@@ -27,12 +29,13 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     deleteBookmark 
   } = useBookmarks(initialBookmarks)
 
-  // 2. Shared State (Filters & Dragging)
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<number | null>(null)
+  
+  // ---> ADD SEARCH STATE HERE
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // 3. Shared State (Category Management)
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [customSubCategories, setCustomSubCategories] = useState<Record<string, string[]>>({})
   
@@ -42,7 +45,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // 4. Derived Data (Hierarchy & Counts)
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {};
     const baseCats = Array.from(new Set([...customCategories, ...bookmarks.map(b => b.category || 'Uncategorized')]));
@@ -78,7 +80,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     return counts;
   }, [bookmarks])
 
-  // 5. Sidebar Handlers
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
     if (trimmed && !Object.keys(folderHierarchy).includes(trimmed)) {
@@ -119,7 +120,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
     setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
   }
 
-  // 6. Drag and Drop Handlers
   const handleDragStart = (e: React.DragEvent, id: number) => {
     e.dataTransfer.setData('bookmarkId', id.toString())
     setDraggedId(id)
@@ -143,7 +143,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   return (
     <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
       
-      {/* Extracted Sidebar Component */}
       <Sidebar 
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
@@ -171,7 +170,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
       <main className="flex-1 space-y-8 min-w-0">
         
-        {/* Extracted Forms Component */}
         <BookmarkForms 
           bookmarks={bookmarks}
           folderHierarchy={folderHierarchy}
@@ -179,7 +177,20 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           addBulkBookmarks={addBulkBookmarks}
         />
 
-        {/* Extracted Card Mapping */}
+        {/* ---> ADD SEARCH BAR UI HERE */}
+        <div className="relative w-full">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+            <SearchIcon />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by title, URL, or folder..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-medium placeholder-gray-400"
+          />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {bookmarks.map((bookmark) => {
             const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
@@ -189,7 +200,16 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
                   ? bookmark.sub_category === activeSubFilter
                   : !bookmark.sub_category);
 
-            if (!(matchCategory && matchSubCategory)) return null;
+            // ---> ADD SEARCH MATCHING LOGIC HERE
+            const searchLower = searchQuery.toLowerCase();
+            const matchSearch = searchQuery === '' || 
+              bookmark.title.toLowerCase().includes(searchLower) ||
+              bookmark.url.toLowerCase().includes(searchLower) ||
+              (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
+              (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
+
+            // Validate all filters
+            if (!(matchCategory && matchSubCategory && matchSearch)) return null;
 
             const theme = colorThemes[bookmark.id % colorThemes.length]
 
