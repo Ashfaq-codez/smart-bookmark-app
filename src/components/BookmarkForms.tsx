@@ -136,7 +136,7 @@ export default function BookmarkForms({
               {category.trim().length > 0 && (
                 <input type="text" list="subcategory-options" placeholder="Subfolder (Optional)" value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="flex-1 px-4 py-3 border-2 border-dashed border-gray-400 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 focus:bg-white transition-all" />
               )}
-              <button type="submit" className="px-8 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
+              <button type="submit" className="px-8 py-3 bg-[#c0ddf0] text-dark font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
             </div>
           </form>
         ) : (
