@@ -88,6 +88,13 @@ export default function BookmarkCard({
     setIsMoving(false)
   }
 
+  // ---> NEW DELETION HANDLER
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete "${bookmark.title}"?`)) {
+      await deleteBookmark(bookmark.id);
+    }
+  }
+
   return (
     <div
       draggable
@@ -119,7 +126,9 @@ export default function BookmarkCard({
           <button onClick={() => { setIsEditing(true); setIsMoving(false); }} className="p-1.5 bg-cyan-100 text-cyan-700 border border-gray-900 rounded-md hover:bg-cyan-200 transition-colors cursor-pointer" title="Edit">
             <EditIcon />
           </button>
-          <button onClick={() => deleteBookmark(bookmark.id)} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors cursor-pointer" title="Delete">
+          
+          {/* ---> ATTACHED NEW HANDLER HERE */}
+          <button onClick={handleDelete} className="p-1.5 bg-pink-100 text-pink-700 border border-gray-900 rounded-md hover:bg-pink-200 transition-colors cursor-pointer" title="Delete">
             <TrashIcon />
           </button>
         </div>
