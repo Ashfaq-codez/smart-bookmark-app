@@ -191,10 +191,11 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
         handleAddCategory={handleAddCategory}
       />
 
-      <main className="flex-1 space-y-8 min-w-0">
+     <main className="flex-1 space-y-8 min-w-0">
         
-        {/* FIX 1: Elevated z-index to z-50 to ensure it acts as an impenetrable roof */}
-        <div className="md:hidden sticky top-4 z-30 flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
+        {/* FIX: Removed 'sticky', 'top-4', and 'z-30'. 
+            It will now sit perfectly in the page flow and scroll naturally without overlapping your content. */}
+        <div className="md:hidden flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
           <span className="font-black uppercase text-gray-900 tracking-tight">
              {activeFilter === 'All' ? 'All Bookmarks' : activeFilter}
           </span>
