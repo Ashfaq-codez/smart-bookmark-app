@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Bookmark } from '@/types'
+import toast from 'react-hot-toast'
 
-// --- Icons (Local to Card) ---
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
 const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 const ChevronRight = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -28,7 +28,6 @@ export default function BookmarkCard({
   updateBookmark,
   deleteBookmark
 }: BookmarkCardProps) {
-  // Local state for this specific card
   const [isLive, setIsLive] = useState(false)
   const [isCheckingPreview, setIsCheckingPreview] = useState(false)
 
@@ -42,7 +41,6 @@ export default function BookmarkCard({
   const [moveCategory, setMoveCategory] = useState(bookmark.category || '')
   const [moveSubCategory, setMoveSubCategory] = useState(bookmark.sub_category || '')
 
-  // Helper functions
   const getDomain = (link: string) => {
     try { return new URL(link).hostname } catch { return 'link' }
   }
@@ -59,7 +57,7 @@ export default function BookmarkCard({
         const res = await fetch(`/api/check-frame?url=${encodeURIComponent(bookmark.url)}`)
         const data = await res.json()
         if (!data.allowIframe) {
-          alert("This website's security settings block live previews. You must click the title to visit it directly.")
+          toast.error("Site security blocks live previews. Click the title to visit directly.");
           setIsCheckingPreview(false)
           return
         }
@@ -114,7 +112,6 @@ export default function BookmarkCard({
       </div>
 
       <div className="p-3 flex flex-col min-h-[95px] relative">
-        {/* Action Buttons */}
         <div className="absolute right-3 top-3 flex gap-2 opacity-0 mb-5 group-hover:opacity-100 transition-opacity z-10">
           <button onClick={() => { setIsMoving(true); setIsEditing(false); }} className="p-1.5 bg-yellow-100 text-yellow-700 border border-gray-900 rounded-md hover:bg-yellow-200 transition-colors cursor-pointer" title="Move to Folder">
             <MoveIcon />
@@ -127,7 +124,6 @@ export default function BookmarkCard({
           </button>
         </div>
 
-        {/* EDIT UI */}
         {isEditing ? (
           <div className="space-y-2 w-full mt-1 flex flex-col">
             <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1.5 text-sm border-2 border-gray-900 rounded bg-white outline-none" placeholder="Title" />
@@ -142,7 +138,6 @@ export default function BookmarkCard({
             </div>
           </div>
         ) : isMoving ? (
-          /* MOVE UI */
           <div className="space-y-3 w-full mt-1 flex flex-col flex-1 justify-center">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-5">Move to Folder</p>
             <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-gray-900 rounded bg-white outline-none" placeholder="Main Folder" />
@@ -153,7 +148,6 @@ export default function BookmarkCard({
             </div>
           </div>
         ) : (
-          /* STANDARD VIEW */
           <>
             <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block max-w-[75%] cursor-pointer">
               <h3 className="font-medium text-sm text-gray-900 truncate leading-tight hover:underline">{bookmark.title}</h3>

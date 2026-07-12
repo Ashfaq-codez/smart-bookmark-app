@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Bookmark } from '@/types'
+import toast from 'react-hot-toast'
 
-// --- Props Interface ---
 interface BookmarkFormsProps {
   bookmarks: Bookmark[];
   folderHierarchy: Record<string, string[]>;
@@ -17,7 +17,6 @@ export default function BookmarkForms({
   addBookmark,
   addBulkBookmarks
 }: BookmarkFormsProps) {
-  // Local Form State
   const [inputMode, setInputMode] = useState<'single' | 'bulk'>('single')
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
@@ -27,7 +26,6 @@ export default function BookmarkForms({
   const [bulkText, setBulkText] = useState('');
   const [bulkCategory, setBulkCategory] = useState('Open Tabs')
 
-  // Helpers
   const formatUrl = (rawUrl: string) => {
     const trimmed = rawUrl.trim()
     return (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) ? 'https://' + trimmed : trimmed
@@ -37,7 +35,6 @@ export default function BookmarkForms({
     try { return new URL(link).hostname } catch { return 'link' }
   }
 
-  // Handlers
   const handleAddSingle = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !url) return
@@ -47,7 +44,7 @@ export default function BookmarkForms({
 
     const existingBookmark = bookmarks.find(b => b.url === formatted);
     if (existingBookmark) {
-      alert(`This bookmark is already saved in the '${existingBookmark.category}' folder!`);
+      toast.error(`This link is already saved in '${existingBookmark.category}'!`);
       return;
     }
 
@@ -66,12 +63,19 @@ export default function BookmarkForms({
     if (!bulkText.trim()) return
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
     const foundUrls = bulkText.match(urlRegex);
-    if (!foundUrls || foundUrls.length === 0) return alert("No valid URLs found in the text.");
+    
+    if (!foundUrls || foundUrls.length === 0) {
+      toast.error("No valid URLs found in the text.");
+      return;
+    }
 
     const uniqueNewUrls = Array.from(new Set(foundUrls.map(formatUrl)));
     const finalUrlsToSave = uniqueNewUrls.filter(u => !bookmarks.some(b => b.url === u));
 
-    if (finalUrlsToSave.length === 0) return alert("All URLs found in the text are already saved in your collection!");
+    if (finalUrlsToSave.length === 0) {
+      toast.error("All URLs found in this text are already saved!");
+      return;
+    }
 
     const newRows = finalUrlsToSave.map((formattedUrl) => ({ 
       title: `${getDomain(formattedUrl)} Tab`, 
