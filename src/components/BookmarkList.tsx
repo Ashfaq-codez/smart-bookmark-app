@@ -6,12 +6,12 @@ import { Bookmark } from '@/types'
 import Sidebar from '@/components/Sidebar'
 import BookmarkForms from '@/components/BookmarkForms'
 import BookmarkCard from '@/components/BookmarkCard'
-import BookmarkSkeleton from '@/components/BookmarkSkeleton' // Import the Skeleton
+import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 
-// --- Search Icon ---
 const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+// ---> NEW HAMBURGER ICON
+const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
 
-// Summer Cool Palette
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
   { card: 'bg-teal-100', btn: 'bg-teal-300', hover: 'hover:bg-teal-400' },
@@ -22,16 +22,12 @@ const colorThemes = [
 ]
 
 export default function BookmarkList({ initialBookmarks }: { initialBookmarks: Bookmark[] }) {
-  const { 
-    bookmarks, 
-    addBookmark, 
-    addBulkBookmarks,
-    updateBookmark, 
-    deleteBookmark 
-  } = useBookmarks(initialBookmarks)
+  const { bookmarks, addBookmark, addBulkBookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
 
-  // ---> ADD LOADING STATE HERE
   const [isLoading, setIsLoading] = useState(true)
+  
+  // ---> MOBILE MENU STATE
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
@@ -48,11 +44,10 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // ---> SMOOTH HYDRATION EFFECT
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false)
-    }, 600) // 600ms gives enough time for a smooth transition
+    }, 600)
     return () => clearTimeout(timer)
   }, [])
 
@@ -152,9 +147,12 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
   }
 
   return (
-    <div className="flex flex-col-reverse md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
+    // ---> REVERTED BACK TO flex-col SO DESKTOP/MOBILE FLOW IS STANDARD
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-[1600px] mx-auto p-4 md:p-8">
       
       <Sidebar 
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
         activeSubFilter={activeSubFilter}
@@ -181,6 +179,19 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
 
       <main className="flex-1 space-y-8 min-w-0">
         
+        {/* ---> MOBILE HAMBURGER BUTTON (Hidden on Desktop) */}
+        <div className="md:hidden flex items-center justify-between bg-white border-2 border-gray-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)]">
+          <span className="font-black uppercase text-gray-900 tracking-tight">
+             {activeFilter === 'All' ? 'All Bookmarks' : activeFilter}
+          </span>
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 bg-yellow-300 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all"
+          >
+            <MenuIcon />
+          </button>
+        </div>
+
         <BookmarkForms 
           bookmarks={bookmarks}
           folderHierarchy={folderHierarchy}
@@ -201,7 +212,6 @@ export default function BookmarkList({ initialBookmarks }: { initialBookmarks: B
           />
         </div>
 
-        {/* ---> RENDER SKELETONS OR CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
