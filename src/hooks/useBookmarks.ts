@@ -1,5 +1,5 @@
 // src/hooks/useBookmarks.ts
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Bookmark } from '@/types';
 import toast from 'react-hot-toast';
@@ -8,15 +8,26 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
   const supabase = createClient();
 
-  // Add Bookmark Logic
+  // Add Single Bookmark Logic
   const addBookmark = async (newBookmark: Omit<Bookmark, 'id' | 'created_at' | 'user_id'>) => {
     const { data, error } = await supabase.from('bookmarks').insert([newBookmark]).select();
     if (error) {
       toast.error("Failed to save bookmark");
       return;
     }
-    setBookmarks([...bookmarks, ...data]);
+    setBookmarks((prev) => [...prev, ...data]);
     toast.success("Bookmark saved!");
+  };
+
+  // Add Bulk Bookmarks Logic
+  const addBulkBookmarks = async (newBookmarks: Omit<Bookmark, 'id' | 'created_at' | 'user_id'>[]) => {
+    const { data, error } = await supabase.from('bookmarks').insert(newBookmarks).select();
+    if (error) {
+      toast.error("Failed to save bulk bookmarks");
+      return;
+    }
+    setBookmarks((prev) => [...prev, ...data]);
+    toast.success(`${data.length} bookmarks saved!`);
   };
 
   // Delete Bookmark Logic
@@ -26,7 +37,7 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
       toast.error("Failed to delete");
       return;
     }
-    setBookmarks(bookmarks.filter(b => b.id !== id));
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
     toast.success("Bookmark removed");
   };
 
@@ -37,9 +48,15 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
       toast.error("Failed to update");
       return;
     }
-    setBookmarks(bookmarks.map(b => b.id === id ? { ...b, ...updates } : b));
-    toast.success("Updated!");
+    setBookmarks((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
+    toast.success("Bookmark updated!");
   };
 
-  return { bookmarks, addBookmark, deleteBookmark, updateBookmark };
+  return { 
+    bookmarks, 
+    addBookmark, 
+    addBulkBookmarks, 
+    deleteBookmark, 
+    updateBookmark 
+  };
 };
