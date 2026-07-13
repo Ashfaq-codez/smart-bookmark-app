@@ -181,7 +181,7 @@ export default function BookmarkForms({
               </div>
             )}
 
-            <button type="submit" className="px-8 py-3 bg-[#E06D53] text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
+            <button type="submit" className="px-8 py-3 bg-[#99acc2] text-dark font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Save</button>
           </div>
           </form>
         ) : (

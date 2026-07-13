@@ -10,7 +10,7 @@ const BACKGROUND_OPTIONS = [
     id: 'solid-yellow', 
     name: 'Pure Yellow', 
     url: '', // Empty URL means it falls back to the hex color
-    hexColor: '#fef08a' 
+    hexColor: '#a0beff' 
   },
   { 
     id: 'retro-grid', 
