@@ -2,30 +2,33 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+type ThemeState = { url: string; hex: string };
+
 type ThemeContextType = {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  bgImage: string;
-  setBgImage: (url: string) => void;
+  bgTheme: ThemeState;
+  setBgTheme: (theme: ThemeState) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [bgImage, setBgImage] = useState('/background.jpg'); // Your default background
+  // Default to a solid Neo-Brutalist yellow if no image is present
+  const [bgTheme, setBgTheme] = useState<ThemeState>({ url: '', hex: '#fef08a' }); 
 
-  // Load saved preferences on initial mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
-    const savedBg = localStorage.getItem('bgImage');
+    const savedUrl = localStorage.getItem('bgUrl');
+    const savedHex = localStorage.getItem('bgHex');
     
     if (savedTheme === 'dark') {
       setIsDarkMode(true);
       document.documentElement.classList.add('dark');
     }
-    if (savedBg) {
-      setBgImage(savedBg);
+    if (savedHex) {
+      setBgTheme({ url: savedUrl || '', hex: savedHex });
     }
   }, []);
 
@@ -41,17 +44,22 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const handleSetBgImage = (url: string) => {
-    setBgImage(url);
-    localStorage.setItem('bgImage', url);
+  const handleSetBgTheme = (theme: ThemeState) => {
+    setBgTheme(theme);
+    localStorage.setItem('bgUrl', theme.url);
+    localStorage.setItem('bgHex', theme.hex);
   };
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, bgImage, setBgImage }}>
-      {/* We apply the background image here so it wraps the whole app effortlessly */}
+    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, bgTheme, setBgTheme: handleSetBgTheme }}>
       <div
-        className="min-h-screen w-full transition-colors duration-300 bg-cover bg-center bg-fixed bg-gray-50 dark:bg-gray-900"
-        style={bgImage ? { backgroundImage: `url('${bgImage}')` } : {}}
+        className="min-h-screen w-full transition-colors duration-300 bg-cover bg-center bg-fixed dark:bg-gray-900"
+        style={{ 
+          // Apply the solid color. If dark mode is active, let the Tailwind dark:bg-gray-900 class take over.
+          backgroundColor: isDarkMode ? undefined : bgTheme.hex,
+          // Apply the image on top if one exists and we aren't in dark mode
+          backgroundImage: (bgTheme.url && !isDarkMode) ? `url('${bgTheme.url}')` : 'none' 
+        }}
       >
         {children}
       </div>
