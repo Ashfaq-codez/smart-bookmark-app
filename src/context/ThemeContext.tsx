@@ -53,12 +53,12 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, bgTheme, setBgTheme: handleSetBgTheme }}>
       <div
-        className="min-h-screen w-full transition-colors duration-300 bg-cover bg-center bg-fixed dark:bg-gray-900"
+        // ADDED: dark:bg-blend-multiply to smoothly dim the image in dark mode
+        className="min-h-screen w-full transition-colors duration-300 bg-cover bg-center bg-fixed dark:bg-gray-900 dark:bg-blend-multiply"
         style={{ 
-          // Apply the solid color. If dark mode is active, let the Tailwind dark:bg-gray-900 class take over.
           backgroundColor: isDarkMode ? undefined : bgTheme.hex,
-          // Apply the image on top if one exists and we aren't in dark mode
-          backgroundImage: (bgTheme.url && !isDarkMode) ? `url('${bgTheme.url}')` : 'none' 
+          // FIX: Removed the '!isDarkMode' block so the image renders in both modes
+          backgroundImage: bgTheme.url ? `url('${bgTheme.url}')` : 'none' 
         }}
       >
         {children}

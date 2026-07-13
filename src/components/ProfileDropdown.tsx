@@ -84,39 +84,39 @@ export default function ProfileDropdown({ email }: { email: string }) {
 
           {/* Background Selector */}
           <div className="flex flex-col gap-3">
-  <span className="font-bold text-gray-900 dark:text-white text-sm">Background</span>
-  
-  {/* Horizontal scrolling container for thumbnails */}
-  <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full">
-    {BACKGROUND_OPTIONS.map((bg) => (
-      <button
-        key={bg.id}
-        onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
-        title={bg.name}
-        className={`
-          relative shrink-0 w-16 h-12 rounded-lg border-2 border-gray-900 dark:border-gray-700 
-          overflow-hidden transition-all bg-cover bg-center
-          ${bgTheme.url === bg.url && bgTheme.hex === bg.hexColor 
-            ? 'scale-110 shadow-[4px_4px_0px_rgba(0,0,0,1)] ring-2 ring-offset-2 ring-gray-900' 
-            : 'hover:scale-105 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)]'}
-        `}
-        style={{ 
-          backgroundColor: bg.hexColor,
-          backgroundImage: bg.url ? `url('${bg.url}')` : 'none'
-        }}
-      >
-        {/* Optional: Add a checkmark overlay for the active selection */}
-        {bgTheme.url === bg.url && bgTheme.hex === bg.hexColor && (
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-            <svg className="w-5 h-5 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-            </svg>
+            <span className="font-bold text-gray-900 dark:text-white text-sm">Background</span>
+            
+            {/* FIX: Added 'p-1' to the container so the hover shadows don't get clipped by overflow */}
+            <div className="flex gap-3 overflow-x-auto pb-3 p-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {BACKGROUND_OPTIONS.map((bg) => (
+                <button
+                  key={bg.id}
+                  onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
+                  title={bg.name}
+                  className={`
+                    relative shrink-0 w-16 h-12 rounded-lg border-2 border-gray-900 dark:border-gray-500 
+                    overflow-hidden transition-all bg-cover bg-center
+                    ${bgTheme.url === bg.url && bgTheme.hex === bg.hexColor 
+                      ? 'scale-110 shadow-[4px_4px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.2)] z-10' 
+                      : 'hover:scale-105 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_rgba(255,255,255,0.2)] z-0'}
+                  `}
+                  style={{ 
+                    backgroundColor: bg.hexColor,
+                    backgroundImage: bg.url ? `url('${bg.url}')` : 'none'
+                  }}
+                >
+                  {/* FIX: Centered the checkmark perfectly with flexbox */}
+                  {bgTheme.url === bg.url && bgTheme.hex === bg.hexColor && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-      </button>
-    ))}
-  </div>
-</div>
 
           {/* Sign Out Button */}
           <button
