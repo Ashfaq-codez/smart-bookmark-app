@@ -6,9 +6,24 @@ import { createClient } from '@/utils/supabase/client';
 
 // Preloaded background options. Ensure these files exist in your /public folder!
 const BACKGROUND_OPTIONS = [
-  { name: 'Default', url: '/background.jpg', hexColor: '#fef08a' }, // yellow-200 equivalent
-  { name: 'Grid', url: '/grid-bg.png', hexColor: '#bfdbfe' },      // blue-200 equivalent
-  { name: 'Dots', url: '/dots-bg.png', hexColor: '#fecaca' }       // red-200 equivalent
+  { 
+    id: 'solid-yellow', 
+    name: 'Pure Yellow', 
+    url: '', // Empty URL means it falls back to the hex color
+    hexColor: '#fef08a' 
+  },
+  { 
+    id: 'retro-grid', 
+    name: 'Retro Grid', 
+    url: '/backgrounds/1.webp', // Your existing GIF
+    hexColor: '#bfdbfe' 
+  },
+  { 
+    id: 'animated-waves', 
+    name: 'Animated Waves', 
+    url: '/backgrounds/background.jpg', 
+    hexColor: '#e5e7eb' 
+  }
 ];
 
 export default function ProfileDropdown({ email }: { email: string }) {
@@ -68,20 +83,40 @@ export default function ProfileDropdown({ email }: { email: string }) {
           </div>
 
           {/* Background Selector */}
-          <div className="flex flex-col gap-2">
-            <span className="font-bold text-black">Backgrounds</span>
-            <div className="flex gap-2">
-              {BACKGROUND_OPTIONS.map((bg) => (
-                <button
-                  key={bg.name}
-                  onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
-                  title={bg.name}
-                  className={`w-8 h-8 rounded-full border-2 border-gray-900 transition-transform ${bgTheme.hex === bg.hexColor ? 'scale-125 shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'hover:scale-110'}`}
-                  style={{ backgroundColor: bg.hexColor }}
-                />
-              ))}
-            </div>
+          <div className="flex flex-col gap-3">
+  <span className="font-bold text-gray-900 dark:text-white text-sm">Background</span>
+  
+  {/* Horizontal scrolling container for thumbnails */}
+  <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full">
+    {BACKGROUND_OPTIONS.map((bg) => (
+      <button
+        key={bg.id}
+        onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
+        title={bg.name}
+        className={`
+          relative shrink-0 w-16 h-12 rounded-lg border-2 border-gray-900 dark:border-gray-700 
+          overflow-hidden transition-all bg-cover bg-center
+          ${bgTheme.url === bg.url && bgTheme.hex === bg.hexColor 
+            ? 'scale-110 shadow-[4px_4px_0px_rgba(0,0,0,1)] ring-2 ring-offset-2 ring-gray-900' 
+            : 'hover:scale-105 hover:shadow-[2px_2px_0px_rgba(0,0,0,1)]'}
+        `}
+        style={{ 
+          backgroundColor: bg.hexColor,
+          backgroundImage: bg.url ? `url('${bg.url}')` : 'none'
+        }}
+      >
+        {/* Optional: Add a checkmark overlay for the active selection */}
+        {bgTheme.url === bg.url && bgTheme.hex === bg.hexColor && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
+        )}
+      </button>
+    ))}
+  </div>
+</div>
 
           {/* Sign Out Button */}
           <button

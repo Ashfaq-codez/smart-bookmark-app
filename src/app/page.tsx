@@ -17,8 +17,8 @@ export default async function Home() {
     .order('created_at', { ascending: false })
 
   return (
-    // <div className="min-h-screen bg-[#fafafa] bg-[radial-gradient(#cbd5e1_2px,transparent_2px)] [background-size:24px_24px] text-gray-900 font-sans flex flex-col">
-      <div className="min-h-screen bg-[url('/background.gif')] bg-cover bg-center bg-fixed text-gray-900 font-sans flex flex-col">
+    // We removed the hardcoded background classes so the ThemeContext in layout.tsx is visible
+    <div className="min-h-screen font-sans flex flex-col transition-colors">
       <BookmarkList 
         initialBookmarks={bookmarks || []} 
         userEmail={user.email} 
