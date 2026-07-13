@@ -80,7 +80,7 @@ const BACKGROUND_OPTIONS = [
   { 
     id: 'retro-grid', 
     name: 'Retro Grid', 
-    url: '/backgrounds/1.webp', // Your existing GIF
+    url: '/backgrounds/2.jpeg', // Your existing GIF
     hexColor: '#bfdbfe' 
   },
   { 
