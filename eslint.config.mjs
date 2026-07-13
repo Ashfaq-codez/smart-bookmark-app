@@ -15,4 +15,4 @@ const eslintConfig = defineConfig([
   ]),
 ]);
 
-export default eslintConfig;
+export default compat.extends("next/core-web-vitals");

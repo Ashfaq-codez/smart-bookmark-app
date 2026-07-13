@@ -13,7 +13,7 @@ const BACKGROUND_OPTIONS = [
 
 export default function ProfileDropdown({ email }: { email: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { isDarkMode, toggleDarkMode, bgImage, setBgImage } = useTheme();
+  const { isDarkMode, toggleDarkMode, bgTheme, setBgTheme } = useTheme();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -74,9 +74,9 @@ export default function ProfileDropdown({ email }: { email: string }) {
               {BACKGROUND_OPTIONS.map((bg) => (
                 <button
                   key={bg.name}
-                  onClick={() => setBgImage(bg.url)}
+                  onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
                   title={bg.name}
-                  className={`w-8 h-8 rounded-full border-2 border-black transition-transform ${bgImage === bg.url ? 'scale-110 shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'hover:scale-105'}`}
+                  className={`w-8 h-8 rounded-full border-2 border-gray-900 transition-transform ${bgTheme.hex === bg.hexColor ? 'scale-125 shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'hover:scale-110'}`}
                   style={{ backgroundColor: bg.hexColor }}
                 />
               ))}
