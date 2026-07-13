@@ -115,7 +115,7 @@ const BACKGROUND_OPTIONS = [
         flex flex-col space-y-6 bg-[#fafafa] dark:bg-gray-900 border-r-4 border-gray-900 dark:border-gray-700 p-6 transition-colors
       `}>
 
-        <div className="p-6 flex items-center justify-between md:hidden pb-4 border-b-2 border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between md:hidden pb-4 border-b-2 border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">Menu</h2>
           <button
             onClick={() => setIsMobileMenuOpen(false)}
