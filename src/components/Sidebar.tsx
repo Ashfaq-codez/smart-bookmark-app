@@ -288,7 +288,7 @@ const BACKGROUND_OPTIONS = [
                         onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
                         title={bg.name}
                         className={`
-                          relative shrink-0 w-10 h-8 rounded-lg border-2 border-gray-900 dark:border-gray-700 
+                          relative shrink-0 w-12 h-10 rounded-lg border-2 border-gray-900 dark:border-gray-700 
                           overflow-hidden transition-all bg-cover bg-center
                           ${bgTheme.url === bg.url && bgTheme.hex === bg.hexColor 
                             ? 'scale-110 shadow-[4px_4px_0px_rgba(0,0,0,1)] ring-2 ring-offset-2 ring-gray-900 dark:ring-gray-100' 
