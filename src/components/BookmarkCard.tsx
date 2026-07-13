@@ -129,7 +129,7 @@ export default function BookmarkCard({
       draggable
       onDragStart={(e) => onDragStart(e, bookmark.id)}
       onDragEnd={onDragEnd}
-      className={`relative group flex flex-col bg-white border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing ${isDragged ? 'opacity-50 scale-95' : ''}`}
+      className={`relative group flex flex-col dark:bg-gray-800 border-2 border-gray-900 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing ${isDragged ? 'opacity-50 scale-95' : ''}`}
     >
       {/* 1. FIXED PREVIEW BUTTON: Always visible on mobile, hover on desktop */}
       <button
@@ -171,11 +171,11 @@ export default function BookmarkCard({
 
         {isEditing ? (
           <div className="space-y-2 w-full mt-1 flex flex-col">
-            <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1.5 text-sm border-2 border-gray-900 rounded bg-white outline-none" placeholder="Title" />
-            <input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-gray-900 rounded bg-white outline-none" placeholder="URL" />
+            <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1.5 text-sm border-2 border-gray-900 rounded dark:bg-gray-800 outline-none" placeholder="Title" />
+            <input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-gray-900 rounded dark:bg-gray-800 outline-none" placeholder="URL" />
             <div className="flex gap-2">
-              <input type="text" list="category-options" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-gray-900 rounded bg-white outline-none" placeholder="Folder" />
-              <input type="text" list="subcategory-options" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Sub (Opt)" />
+              <input type="text" list="category-options" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-gray-900 rounded dark:bg-gray-800 outline-none" placeholder="Folder" />
+              <input type="text" list="subcategory-options" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2 py-1.5 text-[10px] border-2 border-dashed border-gray-500 rounded dark:bg-gray-800 outline-none" placeholder="Sub (Opt)" />
             </div>
             <div className="flex gap-2 mt-1">
               <button onClick={handleSaveEdit} className="flex-1 py-1.5 bg-[#E06D53] text-white text-xs font-bold border-2 border-gray-900 rounded cursor-pointer">Save</button>
@@ -185,8 +185,8 @@ export default function BookmarkCard({
         ) : isMoving ? (
           <div className="space-y-3 w-full mt-1 flex flex-col flex-1 justify-center">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-5">Move to Folder</p>
-            <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-gray-900 rounded bg-white outline-none" placeholder="Main Folder" />
-            <input type="text" list="subcategory-options" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-dashed border-gray-500 rounded bg-white outline-none" placeholder="Subfolder (Optional)" />
+            <input type="text" list="category-options" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-gray-900 rounded dark:bg-gray-800 outline-none" placeholder="Main Folder" />
+            <input type="text" list="subcategory-options" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-2 py-2 text-xs border-2 border-dashed border-gray-500 rounded dark:bg-gray-800 outline-none" placeholder="Subfolder (Optional)" />
             <div className="flex gap-2 mt-auto pt-2">
               <button onClick={handleSaveMove} className="flex-1 py-1.5 bg-yellow-400 text-gray-900 text-xs font-bold border-2 border-gray-900 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer">Confirm</button>
               <button onClick={() => setIsMoving(false)} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold border-2 border-gray-900 rounded cursor-pointer">Cancel</button>

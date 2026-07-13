@@ -219,17 +219,18 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     {/* Right Side Controls: Profile Dropdown & Hamburger */}
     <div className="flex items-center gap-3 sm:gap-4">
         
-      {/* ---> NEW PROFILE DROPDOWN (Now visible on both Desktop and Mobile) */}
-      <ProfileDropdown email={userEmail ?? ""} />
+      {/* ---> HIDDEN ON MOBILE, VISIBLE ON DESKTOP */}
+      <div className="hidden md:block">
+        <ProfileDropdown email={userEmail ?? ""} />
+      </div>
 
-      {/* ---> HAMBURGER MENU (Visible only on Mobile for the Folders Sidebar) */}
+      {/* ---> HAMBURGER MENU (Visible only on Mobile) */}
       <button 
         onClick={() => setIsMobileMenuOpen(true)}
         className="md:hidden p-2 bg-yellow-300 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
       >
         <MenuIcon />
       </button>
-
     </div>
 
   </div>

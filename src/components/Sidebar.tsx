@@ -1,6 +1,7 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
+import { useTheme } from '@/context/ThemeContext';
 
 const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
 const SmallXIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -64,10 +65,21 @@ export default function Sidebar({
   setNewCategoryName,
   handleAddCategory
 }: SidebarProps) {
+  
+  // Theme & Profile Dropdown State
+  const { isDarkMode, toggleDarkMode, bgImage, setBgImage } = useTheme();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const BACKGROUND_OPTIONS = [
+    { name: 'Default', url: '/background.jpg', hexColor: '#fef08a' },
+    { name: 'Grid', url: '/grid-bg.png', hexColor: '#bfdbfe' },
+    { name: 'None', url: '', hexColor: '#e5e7eb' }
+  ];
+
   return (
     <>
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -76,22 +88,23 @@ export default function Sidebar({
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-[280px] overflow-y-auto transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-[8px_0px_0px_0px_rgba(17,24,39,1)]' : '-translate-x-full'}
-        
-        /* 1. UPGRADED DESKTOP STYLING: Solid white background, thick borders, and hard shadow */
-        md:sticky md:translate-x-0 md:w-72 md:top-28 md:self-start md:h-[calc(100vh-8rem)] 
-        md:bg-white md:border-4 md:border-gray-900 md:rounded-3xl md:shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] md:p-6 md:z-0
-        
-        /* 2. CUSTOM SCROLLBAR: Modern, thick-bordered scrollbar track and thumb */
-        [&::-webkit-scrollbar]:w-1 
+
+        /* UPGRADED DESKTOP STYLING */
+        md:sticky md:translate-x-0 md:w-72 md:top-28 md:self-start md:h-[calc(100vh-8rem)]
+        md:bg-white md:border-4 
+        md:border-gray-900 md:rounded-3xl md:shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] md:p-6 md:z-0
+
+        /* CUSTOM SCROLLBAR */
+        [&::-webkit-scrollbar]:w-1
         [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:border-l-2 [&::-webkit-scrollbar-track]:border-gray-900 [&::-webkit-scrollbar-track]:rounded-r-3xl
         [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full
-        
+
         flex flex-col space-y-6 bg-[#fafafa] border-r-4 border-gray-900 p-6
       `}>
-        
+
         <div className="flex items-center justify-between md:hidden pb-4 border-b-2 border-gray-200">
           <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Menu</h2>
-          <button 
+          <button
             onClick={() => setIsMobileMenuOpen(false)}
             className="p-2 bg-red-200 text-red-900 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all"
           >
@@ -125,9 +138,9 @@ export default function Sidebar({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, parentFolder)}
-                  onClick={() => { 
-                    setActiveFilter(parentFolder); 
-                    setActiveSubFilter(null); 
+                  onClick={() => {
+                    setActiveFilter(parentFolder);
+                    setActiveSubFilter(null);
                     toggleFolderExpand(parentFolder);
                   }}
                   className={`group flex items-center justify-between px-3 py-2 rounded-xl border-2 cursor-pointer transition-all ${isParentActive && !activeSubFilter ? 'border-gray-900 bg-gray-900 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'border-gray-300 bg-white hover:border-gray-900 text-gray-700'}`}
@@ -144,8 +157,8 @@ export default function Sidebar({
                       {parentCount}
                     </span>
                     {customCategories.includes(parentFolder) && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteCategory(parentFolder); }} 
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCategory(parentFolder); }}
                         className="opacity-0 md:group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-400"
                       >
                         <SmallXIcon />
@@ -159,16 +172,17 @@ export default function Sidebar({
                     {subfolders.map(sub => {
                       const isSubActive = isParentActive && activeSubFilter === sub;
                       const subCount = getCounts[`${parentFolder}::${sub}`] || 0;
+                      
                       return (
                         <div
                           key={sub}
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, parentFolder, sub)}
-                          onClick={(e) => { 
+                          onClick={(e) => {
                             e.stopPropagation();
-                            setActiveFilter(parentFolder); 
-                            setActiveSubFilter(sub); 
-                            setIsMobileMenuOpen(false); 
+                            setActiveFilter(parentFolder);
+                            setActiveSubFilter(sub);
+                            setIsMobileMenuOpen(false);
                           }}
                           className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg border-2 cursor-pointer transition-all ${isSubActive ? 'border-gray-900 bg-gray-100 text-gray-900 font-bold' : 'border-transparent bg-transparent hover:border-gray-300 text-gray-600 hover:bg-white'}`}
                         >
@@ -231,15 +245,60 @@ export default function Sidebar({
           )}
         </div>
 
-        <div className="mt-auto pt-6 border-t-2 border-gray-200 md:hidden flex flex-col gap-3">
-          <div className="px-3 py-2 bg-gray-100 rounded-lg text-xs font-bold text-gray-500 truncate border-2 border-gray-200">
-            {userEmail || 'Loading...'}
-          </div>
+        {/* ---> UPGRADED MOBILE FOOTER MENU <--- */}
+        <div className="mt-auto pt-4 border-t-4 border-gray-900 bg-[#fafafa] relative md:hidden">
+          
+          {/* The Upward Dropdown Menu */}
+          {isProfileOpen && (
+            <div className="absolute bottom-full left-0 mb-3 w-full z-50">
+              <div className="bg-white border-4 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-4 flex flex-col gap-5 rounded-xl">
+                
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900 text-sm">Dark Mode</span>
+                  <button
+                    onClick={toggleDarkMode}
+                    className={`w-12 h-6 rounded-full border-2 border-gray-900 transition-colors relative ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white border-2 border-gray-900 rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <span className="font-bold text-gray-900 text-sm">Background</span>
+                  <div className="flex gap-3">
+                    {BACKGROUND_OPTIONS.map((bg) => (
+                      <button
+                        key={bg.name}
+                        onClick={() => setBgImage(bg.url)}
+                        className={`w-8 h-8 rounded-full border-2 border-gray-900 transition-transform ${bgImage === bg.url ? 'scale-110 shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'hover:scale-105'}`}
+                        style={{ backgroundColor: bg.hexColor }}
+                        title={bg.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSignOut}
+                  className="w-full py-2 font-black text-white bg-red-500 border-2 border-gray-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-none transition-all uppercase tracking-wider text-sm rounded-lg"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* The Trigger Button */}
           <button 
-            onClick={handleSignOut}
-            className="w-full px-4 py-3 bg-red-100 text-red-700 font-bold uppercase tracking-wider text-sm border-2 border-gray-900 rounded-xl hover:bg-red-200 transition-colors shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none"
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className="w-full flex items-center justify-between p-3 bg-sky-100 border-2 border-gray-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-none transition-all rounded-xl"
           >
-            Sign Out
+            <span className="text-sm font-bold text-gray-900 truncate">
+              {userEmail ?? "Settings"}
+            </span>
+            <svg className={`w-5 h-5 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 15l7-7 7 7" />
+            </svg>
           </button>
         </div>
 

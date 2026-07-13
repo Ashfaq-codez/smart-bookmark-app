@@ -50,8 +50,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, bgImage, setBgImage }}>
       {/* We apply the background image here so it wraps the whole app effortlessly */}
       <div
-        className="min-h-screen w-full transition-colors duration-300 bg-cover bg-center bg-fixed dark:bg-gray-900"
-        style={{ backgroundImage: `url('${bgImage}')` }}
+        className="min-h-screen w-full transition-colors duration-300 bg-cover bg-center bg-fixed bg-gray-50 dark:bg-gray-900"
+        style={bgImage ? { backgroundImage: `url('${bgImage}')` } : {}}
       >
         {children}
       </div>
