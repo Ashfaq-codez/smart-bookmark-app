@@ -101,7 +101,7 @@ const BACKGROUND_OPTIONS = [
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[280px] overflow-y-auto transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-[360px] overflow-y-auto transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-[8px_0px_0px_0px_rgba(17,24,39,1)]' : '-translate-x-full'}
 
         md:sticky md:translate-x-0 md:w-72 md:top-28 md:self-start md:h-[calc(100vh-8rem)]
@@ -281,14 +281,14 @@ const BACKGROUND_OPTIONS = [
                   <span className="font-bold text-gray-900 dark:text-white text-sm">Background</span>
                   
                   {/* Horizontal scrolling container for thumbnails */}
-              <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
+              <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {BACKGROUND_OPTIONS.map((bg) => (
                       <button
                         key={bg.id}
                         onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
                         title={bg.name}
                         className={`
-                          relative shrink-0 w-16 h-12 rounded-lg border-2 border-gray-900 dark:border-gray-700 
+                          relative shrink-0 w-10 h-8 rounded-lg border-2 border-gray-900 dark:border-gray-700 
                           overflow-hidden transition-all bg-cover bg-center
                           ${bgTheme.url === bg.url && bgTheme.hex === bg.hexColor 
                             ? 'scale-110 shadow-[4px_4px_0px_rgba(0,0,0,1)] ring-2 ring-offset-2 ring-gray-900 dark:ring-gray-100' 
