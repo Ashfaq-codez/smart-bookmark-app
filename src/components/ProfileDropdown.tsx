@@ -15,7 +15,7 @@ const BACKGROUND_OPTIONS = [
   { 
     id: 'retro-grid', 
     name: 'Retro Grid', 
-    url: '/backgrounds/2.jpeg', // Your existing GIF
+    url: '/backgrounds/3.gif', // Your existing GIF
     hexColor: '#bfdbfe' 
   },
   { 
@@ -53,7 +53,7 @@ export default function ProfileDropdown({ email }: { email: string }) {
       {/* Profile Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 font-bold text-black bg-white border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"
+        className="flex items-center gap-2 px-4 py-2 font-bold text-black bg-white border-2 rounded-[2rem] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"
       >
         <span>{email.split('@')[0]}</span> {/* Displays just the name part of the email */}
         <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
