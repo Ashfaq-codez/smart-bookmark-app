@@ -108,7 +108,7 @@ const BACKGROUND_OPTIONS = [
         md:bg-white md:dark:bg-gray-800 md:border-4 
         md:border-gray-900 md:dark:border-gray-700 md:rounded-3xl md:shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] md:p-6 md:z-0
 
-        [&::-webkit-scrollbar]:w-1 h-1 
+        [&::-webkit-scrollbar]:w-0 
         [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-track]:border-l-2 [&::-webkit-scrollbar-track]:border-gray-900 [&::-webkit-scrollbar-track]:dark:border-gray-600 [&::-webkit-scrollbar-track]:rounded-r-3xl
         [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full
 
