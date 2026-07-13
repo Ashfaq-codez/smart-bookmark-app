@@ -87,7 +87,7 @@ export default function ProfileDropdown({ email }: { email: string }) {
             <span className="font-bold text-gray-900 dark:text-white text-sm">Background</span>
             
             {/* FIX: Added 'p-1' to the container so the hover shadows don't get clipped by overflow */}
-            <div className="flex gap-3 overflow-x-auto p-3 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
+            <div className="flex gap-3 overflow-x-auto p-3 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
               {BACKGROUND_OPTIONS.map((bg) => (
                 <button
                   key={bg.id}
