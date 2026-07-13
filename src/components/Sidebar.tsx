@@ -281,7 +281,7 @@ const BACKGROUND_OPTIONS = [
                   <span className="font-bold text-gray-900 dark:text-white text-sm">Background</span>
                   
                   {/* Horizontal scrolling container for thumbnails */}
-              <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
+              <div className="flex gap-3 overflow-x-auto p-2 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {BACKGROUND_OPTIONS.map((bg) => (
                       <button
                         key={bg.id}

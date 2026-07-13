@@ -202,35 +202,40 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="flex flex-col w-full min-h-screen">
       
-      {/* ---> GLOBAL NAVBAR <--- */}
-      <nav className="bg-white dark:bg-gray-900 border-b-4 border-gray-900 dark:border-white py-3 px-4 sm:px-6 sticky top-0 z-50 transition-colors">
-        <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-y-4">
-
+      {/* ---> GLOBAL FLOATING PILL NAVBAR <--- */}
+      
+      <div className="sticky top-4 sm:top-6 z-50 flex justify-center w-full px-4 mb-8 pointer-events-none">
+        
+        <nav className="pointer-events-auto w-full max-w-4xl bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-600 rounded-[2rem] py-2 px-3 sm:px-4 shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] flex justify-between items-center gap-4 transition-colors">
+          
           {/* Logo Area */}
-          <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)]">
+          <div className="flex items-center gap-2 pl-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-7 sm:h-7 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] transition-colors">
               <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
             </svg>
-            <h1 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 dark:text-white ml-1 uppercase transition-colors">
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white uppercase transition-colors">
               Smart Bookmarks
             </h1>
           </div>
 
           {/* Right Side Controls */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden md:block">
               <ProfileDropdown email={userEmail ?? ""} />
             </div>
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 bg-yellow-300 dark:bg-yellow-500 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
+              // Upgraded to rounded-full to match the pill aesthetic
+              className="md:hidden p-2 bg-yellow-300 dark:bg-yellow-500 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
             >
               <MenuIcon />
             </button>
           </div>
 
-        </div>
-      </nav>
+        </nav>
+        
+      </div>
+
       {/* Main Content Area */}
       <div className="flex flex-col md:flex-row gap-8 w-full max-w-[2500px] mx-auto p-4 md:p-8 flex-1">
         
