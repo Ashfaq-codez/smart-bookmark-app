@@ -202,39 +202,35 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="flex flex-col w-full min-h-screen">
       
-      {/* ---> GLOBAL NAVBAR IMPORTED DIRECTLY INTO COMPONENT */}
-<nav className="bg-white border-b-4 border-gray-900 py-3 px-4 sm:px-6 sticky top-0 z-50">
-  <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-y-4">
+      {/* ---> GLOBAL NAVBAR <--- */}
+      <nav className="bg-white dark:bg-gray-900 border-b-4 border-gray-900 dark:border-white py-3 px-4 sm:px-6 sticky top-0 z-50 transition-colors">
+        <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-y-4">
 
-    {/* Logo Area */}
-    <div className="flex items-center gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 fill-yellow-400 stroke-gray-900 stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)]">
-        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
-      </svg>
-      <h1 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 ml-1 uppercase">
-        Smart Bookmarks
-      </h1>
-    </div>
+          {/* Logo Area */}
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)]">
+              <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
+            </svg>
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 dark:text-white ml-1 uppercase transition-colors">
+              Smart Bookmarks
+            </h1>
+          </div>
 
-    {/* Right Side Controls: Profile Dropdown & Hamburger */}
-    <div className="flex items-center gap-3 sm:gap-4">
-        
-      {/* ---> HIDDEN ON MOBILE, VISIBLE ON DESKTOP */}
-      <div className="hidden md:block">
-        <ProfileDropdown email={userEmail ?? ""} />
-      </div>
+          {/* Right Side Controls */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="hidden md:block">
+              <ProfileDropdown email={userEmail ?? ""} />
+            </div>
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 bg-yellow-300 dark:bg-yellow-500 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
+            >
+              <MenuIcon />
+            </button>
+          </div>
 
-      {/* ---> HAMBURGER MENU (Visible only on Mobile) */}
-      <button 
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="md:hidden p-2 bg-yellow-300 border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
-      >
-        <MenuIcon />
-      </button>
-    </div>
-
-  </div>
-</nav>
+        </div>
+      </nav>
       {/* Main Content Area */}
       <div className="flex flex-col md:flex-row gap-8 w-full max-w-[2500px] mx-auto p-4 md:p-8 flex-1">
         
@@ -276,16 +272,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             addBulkBookmarks={addBulkBookmarks}
           />
 
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+         {/* ---> SEARCH BAR <--- */}
+          <div className="relative w-full max-w-xl mx-auto mb-8">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
               <SearchIcon />
             </div>
             <input
               type="text"
-              placeholder="Search by title, URL, or folder..."
+              placeholder="Search bookmarks, folders, or URLs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all font-medium placeholder-gray-400"
+              className="w-full pl-12 pr-4 py-4 font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-700 rounded-2xl outline-none focus:translate-y-[-2px] focus:shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] transition-all placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
