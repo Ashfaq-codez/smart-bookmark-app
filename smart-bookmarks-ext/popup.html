@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        width: 250px;
+        padding: 16px;
+        font-family: system-ui, sans-serif;
+        background-color: #fafafa;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .neo-btn {
+        width: 100%;
+        padding: 12px;
+        font-weight: 900;
+        font-size: 14px;
+        text-transform: uppercase;
+        background-color: #fef08a;
+        color: #111827;
+        border: 3px solid #111827;
+        border-radius: 8px;
+        box-shadow: 4px 4px 0px 0px #111827;
+        cursor: pointer;
+        transition: all 0.1s;
+      }
+      .neo-btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px 0px #111827;
+      }
+      #status {
+        font-size: 12px;
+        font-weight: bold;
+        text-align: center;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="save-btn" class="neo-btn">Save to Hub</button>
+    <div id="status">Saving...</div>
+    <script src="popup.js"></script>
+  </body>
+</html>
