@@ -1,16 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Smart Bookmarks - Universal Save",
-  "version": "1.0",
-  "description": "1-click save to your Smart Bookmarks hub.",
+  "name": "Smart Bookmarks Hub",
+  "version": "1.1",
+  "icons": {
+    "128": "icon.png"
+  },
   "action": {
     "default_popup": "popup.html"
   },
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "contextMenus"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
-    "https://smart-bookmark-app-lime.vercel.app/"
-  ]
+    "https://smart-bookmark-app-lime.vercel.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

@@ -2,17 +2,19 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as cheerio from 'cheerio';
 
-// Helper to attach CORS headers
+// Helper function to dynamically reflect the request origin for CORS with credentials
 function corsHeaders(origin: string | null) {
+  const allowedOrigin = origin || 'https://smart-bookmark-app-lime.vercel.app';
+
   return {
-    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
   };
 }
 
-// Handle preflight OPTIONS request
+// Handle preflight OPTIONS requests sent by the browser before POST
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get('origin');
   return new NextResponse(null, {
@@ -21,11 +23,12 @@ export async function OPTIONS(request: Request) {
   });
 }
 
-async function generateTagsAndCategory(title: string, description: string) {
+// Placeholder for future LLM auto-categorization and tagging
+async function generateTagsAndCategory(title: string, description: string, itemType: string) {
   return {
     category: 'Inbox',
-    tags: ['auto-saved', 'web-clip'],
-    type: 'link',
+    tags: ['auto-saved', itemType],
+    type: itemType,
   };
 }
 
@@ -33,7 +36,13 @@ export async function POST(request: Request) {
   const origin = request.headers.get('origin');
 
   try {
-    const { url } = await request.json();
+    const body = await request.json();
+    const { 
+      url, 
+      description: customDesc, 
+      image_url: customImg, 
+      type: customType 
+    } = body;
 
     if (!url) {
       return NextResponse.json(
@@ -42,61 +51,104 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Authenticate the session via cookies
+    // 1. Authenticate user session via Supabase cookies
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized. Please log in at localhost:3000 first.' },
+        { error: 'Unauthorized. Please sign in to your Smart Bookmarks account first.' },
         { status: 401, headers: corsHeaders(origin) }
       );
     }
 
-    // 2. Fast HTML Scraping
-    let title = 'Saved Link';
-    let description: string | null = null;
-    let image_url: string | null = null;
+    // 2. Metadata Scraping with Cheerio (used as fallback or primary info)
+    let scrapedTitle = 'Saved Item';
+    let scrapedDescription: string | null = null;
+    let scrapedImage: string | null = null;
 
     try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SmartBookmarksBot/1.0)' },
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SmartBookmarksBot/1.0)',
+        },
       });
-      const html = await res.text();
-      const $ = cheerio.load(html);
 
-      title = $('meta[property="og:title"]').attr('content') || $('title').text() || url;
-      description = $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-      image_url = $('meta[property="og:image"]').attr('content') || null;
+      if (response.ok) {
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        scrapedTitle =
+          $('meta[property="og:title"]').attr('content') ||
+          $('title').text().trim() ||
+          url;
+
+        scrapedDescription =
+          $('meta[name="description"]').attr('content') ||
+          $('meta[property="og:description"]').attr('content') ||
+          null;
+
+        scrapedImage =
+          $('meta[property="og:image"]').attr('content') ||
+          null;
+      }
     } catch (scrapeError) {
-      console.warn('Scraping fallback triggered:', scrapeError);
+      console.warn('Metadata scraping encountered an issue, falling back:', scrapeError);
     }
 
-    // 3. Auto-Categorize & Tag
-    const aiData = await generateTagsAndCategory(title, description || '');
+    // 3. Resolve final values (custom selections take precedence over scraped page tags)
+    const itemType = customType || 'link';
+    const finalDescription = customDesc ? customDesc.trim() : (scrapedDescription ? scrapedDescription.trim() : null);
+    const finalImage = customImg || scrapedImage;
+    
+    let finalTitle = scrapedTitle;
+    if (itemType === 'note' && customDesc) {
+      finalTitle = customDesc.slice(0, 50) + (customDesc.length > 50 ? '...' : '');
+    } else if (itemType === 'image') {
+      finalTitle = scrapedTitle !== 'Saved Item' ? scrapedTitle : 'Saved Image';
+    }
 
-    // 4. Save to Supabase
-    const { error: insertError } = await supabase
+    // 4. Generate categorization and tags
+    const aiData = await generateTagsAndCategory(finalTitle, finalDescription || '', itemType);
+
+    // 5. Insert record into Supabase
+    const { data: newBookmark, error: insertError } = await supabase
       .from('bookmarks')
-      .insert([{
-        user_id: user.id,
-        url,
-        title: title.trim(),
-        description: description?.trim(),
-        image_url,
-        category: aiData.category,
-        tags: aiData.tags,
-        type: aiData.type,
-      }]);
+      .insert([
+        {
+          user_id: user.id,
+          url,
+          title: finalTitle,
+          description: finalDescription,
+          image_url: finalImage,
+          category: aiData.category,
+          tags: aiData.tags,
+          type: itemType,
+        },
+      ])
+      .select()
+      .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      throw insertError;
+    }
 
     return NextResponse.json(
-      { success: true, message: 'Saved to your hub!' },
-      { status: 200, headers: corsHeaders(origin) }
+      {
+        success: true,
+        message: 'Saved to hub successfully!',
+        data: newBookmark,
+      },
+      {
+        status: 200,
+        headers: corsHeaders(origin),
+      }
     );
   } catch (error) {
-    console.error('Save API Error:', error);
+    console.error('Save API Handler Error:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500, headers: corsHeaders(origin) }

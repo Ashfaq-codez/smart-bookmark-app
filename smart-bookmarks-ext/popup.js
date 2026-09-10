@@ -15,15 +15,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     status.style.display = 'none';
 
     try {
-      const res = await fetch('http://localhost:3000/api/save', {
+      // 🟢 CHANGE THIS TO YOUR LIVE VERCEL URL
+      const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
+      
+      // If you want to test locally again later, swap it back to:
+      // const API_URL = 'http://localhost:3000/api/save';
+
+      const res = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Sends your browser's Supabase auth cookie
+        credentials: 'include', 
         body: JSON.stringify({ url: activeTab.url }),
       });
-
       const data = await res.json();
 
       if (res.ok) {
