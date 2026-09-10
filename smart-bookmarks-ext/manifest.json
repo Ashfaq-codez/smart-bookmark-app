@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Smart Bookmarks",
+  "name": "Smart Bookmarks - Universal Save",
   "version": "1.0",
-  "description": "Save links directly to your digital hub.",
+  "description": "1-click save to your Smart Bookmarks hub.",
   "action": {
     "default_popup": "popup.html"
   },
