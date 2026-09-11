@@ -14,11 +14,13 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
   const supabase = createClient()
   const { isDarkMode, toggleDarkMode } = useTheme()
 
-  const displayName = email ? email.split('@')[0] : 'PROFILE'
+  const displayName = email ? email.split('@')[0] : 'Profile'
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false)
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -33,31 +35,31 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
     <div className="relative w-full h-full flex items-stretch" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-full flex items-center justify-between px-4 py-2 hover:bg-yellow-400 dark:hover:bg-cyan-700 transition-colors font-black uppercase text-sm text-black dark:text-white cursor-pointer select-none border-4 border-transparent hover:border-black dark:hover:border-white"
+        className="w-full h-full flex items-center justify-center px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-mono font-bold text-xs text-gray-900 dark:text-gray-100 cursor-pointer select-none"
       >
-        <span className="truncate max-w-[120px]">{displayName}</span>
-        <span className="ml-2 text-xs">▼</span>
+        <span className="truncate max-w-[110px] md:max-w-[140px]">{displayName}</span>
+        <span className="ml-1 text-[10px]">▼</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 left-0 top-full mt-2 bg-white dark:bg-[#1a1a1a] border-4 border-black dark:border-white shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] z-50 overflow-hidden">
-          <div className="p-4 border-b-4 border-black dark:border-white bg-pink-300 dark:bg-pink-800">
-            <p className="text-[10px] font-black text-black uppercase">SIGNED IN AS</p>
-            <p className="text-sm font-black text-black truncate">{email || 'USER'}</p>
+        <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-900 border-3 border-gray-900 dark:border-gray-700 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] rounded-xl z-50 overflow-hidden">
+          <div className="p-3 border-b-2 border-gray-200 dark:border-gray-800">
+            <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase">Signed in as</p>
+            <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{email || 'User'}</p>
           </div>
 
-          <div className="p-4 border-b-4 border-black dark:border-white flex items-center justify-between cursor-pointer hover:bg-yellow-200 dark:hover:bg-cyan-900 transition-colors" onClick={toggleDarkMode}>
-            <span className="text-xs font-black uppercase text-black dark:text-white">Dark Mode</span>
+          <div className="p-2 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" onClick={toggleDarkMode}>
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">Dark Mode</span>
             <button
-              className={`w-10 h-5 border-4 border-black dark:border-white transition-colors relative ${isDarkMode ? 'bg-black' : 'bg-white'}`}
+              className={`w-9 h-5 rounded-full border-2 border-gray-900 dark:border-gray-300 transition-colors relative ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}
             >
-              <div className={`absolute top-0 w-3 h-3 bg-white dark:bg-black border-r-4 border-black dark:border-white transition-transform ${isDarkMode ? 'translate-x-[16px] border-l-4 border-r-0' : 'translate-x-0'}`} />
+              <div className={`absolute top-0.5 w-3 h-3 bg-white border border-gray-900 dark:border-gray-700 rounded-full transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
           </div>
 
           <button
             onClick={handleSignOut}
-            className="w-full p-4 text-center text-sm font-black uppercase text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-black dark:hover:bg-red-900 dark:hover:text-white transition-colors cursor-pointer"
+            className="w-full p-3 text-left text-xs font-black uppercase tracking-wider text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
           >
             Sign Out
           </button>
