@@ -11,27 +11,27 @@ import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
 const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
   </svg>
 )
 
 const PaperclipIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   </svg>
 )
 
 const SendIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="22" y1="2" x2="11" y2="13"></line>
     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
   </svg>
 )
 
 const MenuIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <line x1="3" y1="12" x2="21" y2="12"></line>
     <line x1="3" y1="6" x2="21" y2="6"></line>
     <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -39,7 +39,7 @@ const MenuIcon = () => (
 )
 
 const ChevronRight = ({ className = '' }: { className?: string }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}>
     <path d="M9 18l6-6-6-6" />
   </svg>
 )
@@ -79,17 +79,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600)
+    const timer = setTimeout(() => setIsLoading(false), 400)
     return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      if (currentScrollY > lastScrollY && currentScrollY > 60) {
-        setIsInputVisible(false) 
+      if (currentScrollY > lastScrollY && currentScrollY > 70) {
+        setIsInputVisible(false)
       } else {
-        setIsInputVisible(true) 
+        setIsInputVisible(true)
       }
       setLastScrollY(currentScrollY)
     }
@@ -99,7 +99,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/' 
+    window.location.href = '/'
   }
 
   const handleQuickCapture = async () => {
@@ -126,7 +126,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         }
 
         if (validNewTokens.length < tokens.length) {
-          toast.success(`Skipped ${tokens.length - validNewTokens.length} duplicate URLs.`)
+          toast.success(`Skipped ${tokens.length - validNewTokens.length} duplicates.`)
         }
 
         await Promise.all(validNewTokens.map(token => {
@@ -141,7 +141,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       } else {
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
-        
+
         if (isSingleUrl) {
           finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
           if (existingUrls.has(finalUrl.toLowerCase())) {
@@ -164,7 +164,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (!res.ok) throw new Error('Failed to save snippet.')
       }
       setInputValue('')
-    } catch (err) {
+    } catch {
       toast.error('Failed to save snippet.')
     } finally {
       setIsSaving(false)
@@ -172,61 +172,61 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const folderHierarchy = useMemo(() => {
-    const tree: Record<string, string[]> = {};
-    const baseCats = Array.from(new Set([...customCategories, ...bookmarks.map(b => b.category || 'Uncategorized')]));
-    baseCats.forEach(cat => { if (cat !== 'All') tree[cat] = []; });
+    const tree: Record<string, string[]> = {}
+    const baseCats = Array.from(new Set([...customCategories, ...bookmarks.map(b => b.category || 'Uncategorized')]))
+    baseCats.forEach(cat => { if (cat !== 'All') tree[cat] = [] })
     bookmarks.forEach(b => {
-      const parent = b.category || 'Uncategorized';
+      const parent = b.category || 'Uncategorized'
       if (b.sub_category) {
-        if (!tree[parent]) tree[parent] = [];
-        if (!tree[parent].includes(b.sub_category)) tree[parent].push(b.sub_category);
+        if (!tree[parent]) tree[parent] = []
+        if (!tree[parent].includes(b.sub_category)) tree[parent].push(b.sub_category)
       }
-    });
+    })
     Object.entries(customSubCategories).forEach(([parent, subs]) => {
-      if (!tree[parent]) tree[parent] = [];
-      subs.forEach(sub => { if (!tree[parent].includes(sub)) tree[parent].push(sub); });
-    });
-    return tree;
+      if (!tree[parent]) tree[parent] = []
+      subs.forEach(sub => { if (!tree[parent].includes(sub)) tree[parent].push(sub) })
+    })
+    return tree
   }, [bookmarks, customCategories, customSubCategories])
 
   const getCounts = useMemo(() => {
-    const counts: Record<string, number> = { 'All': bookmarks.length };
+    const counts: Record<string, number> = { 'All': bookmarks.length }
     bookmarks.forEach(b => {
-      const cat = b.category || 'Uncategorized';
-      const sub = b.sub_category;
-      counts[cat] = (counts[cat] || 0) + 1;
+      const cat = b.category || 'Uncategorized'
+      const sub = b.sub_category
+      counts[cat] = (counts[cat] || 0) + 1
       if (sub) {
-        const subKey = `${cat}::${sub}`;
-        counts[subKey] = (counts[subKey] || 0) + 1;
+        const subKey = `${cat}::${sub}`
+        counts[subKey] = (counts[subKey] || 0) + 1
       }
-    });
-    return counts;
+    })
+    return counts
   }, [bookmarks])
 
   const handleAddCategory = () => {
-    const trimmed = newCategoryName.trim();
+    const trimmed = newCategoryName.trim()
     if (trimmed && !Object.keys(folderHierarchy).includes(trimmed)) {
-      setCustomCategories(prev => [...prev, trimmed]);
-      setActiveFilter(trimmed);
-      setActiveSubFilter(null);
+      setCustomCategories(prev => [...prev, trimmed])
+      setActiveFilter(trimmed)
+      setActiveSubFilter(null)
     }
-    setNewCategoryName('');
-    setIsAddingCategory(false);
+    setNewCategoryName('')
+    setIsAddingCategory(false)
   }
 
   const handleAddSubfolder = (parentFolder: string) => {
-    const trimmed = newSubfolderName.trim();
+    const trimmed = newSubfolderName.trim()
     if (trimmed) {
       setCustomSubCategories(prev => {
-        const existingSubs = prev[parentFolder] || [];
-        if (existingSubs.includes(trimmed)) return prev;
-        return { ...prev, [parentFolder]: [...existingSubs, trimmed] };
-      });
-      setActiveFilter(parentFolder);
-      setActiveSubFilter(trimmed);
+        const existingSubs = prev[parentFolder] || []
+        if (existingSubs.includes(trimmed)) return prev
+        return { ...prev, [parentFolder]: [...existingSubs, trimmed] }
+      })
+      setActiveFilter(parentFolder)
+      setActiveSubFilter(trimmed)
     }
-    setNewSubfolderName('');
-    setCreatingSubFor(null);
+    setNewSubfolderName('')
+    setCreatingSubFor(null)
   }
 
   const handleDeleteCategory = async (catToDelete: string) => {
@@ -239,7 +239,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-900 font-black uppercase text-sm border-2 border-gray-900 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
         </div>
       </div>
-    ), { duration: Infinity, style: { background: '#fef08a', border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } });
+    ), { duration: Infinity, style: { background: '#fef08a', border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } })
   }
 
   const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
@@ -254,23 +254,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[72px] overflow-x-hidden">
+    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[64px] overflow-x-hidden">
       
       {/* ────────────────────────────────────────────────────────────
-          1. FIXED TOP HEADER
+          1. TOP HEADER
           ──────────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 h-[72px] z-50 bg-white dark:bg-gray-900 border-b-4 border-gray-900 dark:border-gray-700 flex items-stretch">
-        <div className="flex items-center pl-4 pr-2 md:px-0 md:justify-center w-auto md:w-[320px] md:border-r-4 border-gray-900 dark:border-gray-700 shrink-0">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="md:hidden p-2 text-gray-900 dark:text-white cursor-pointer">
+      <header className="fixed top-0 left-0 right-0 h-[64px] z-40 bg-white dark:bg-gray-900 border-b-3 border-gray-900 dark:border-gray-700 flex items-stretch select-none">
+        <div className="flex items-center px-4 md:px-6 w-auto md:w-[280px] md:border-r-3 border-gray-900 dark:border-gray-700 shrink-0 gap-3">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className="md:hidden p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            title="Toggle Menu"
+          >
             <MenuIcon />
           </button>
-          <span className="hidden md:block font-mono font-black text-sm uppercase tracking-widest text-gray-900 dark:text-white">
+          <span className="font-mono font-black text-xs md:text-sm uppercase tracking-wider text-gray-900 dark:text-white">
             smart bookmark
           </span>
         </div>
 
-        <div className="flex-1 flex items-center px-4 md:px-8 border-r-4 border-transparent md:border-gray-900 dark:border-gray-700 relative bg-white dark:bg-gray-900">
-          <div className="text-gray-900 dark:text-gray-400 group-focus-within:text-yellow-500 transition-colors">
+        <div className="flex-1 flex items-center px-3 md:px-6 border-l-3 md:border-l-0 border-r-3 border-gray-900 dark:border-gray-700 relative bg-white dark:bg-gray-900">
+          <div className="text-gray-900 dark:text-gray-400 mr-2 shrink-0">
             <SearchIcon />
           </div>
           <input
@@ -278,34 +282,41 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             placeholder="Search your mind..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-full bg-transparent outline-none pl-4 font-bold text-sm md:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full h-full bg-transparent outline-none font-bold text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-400"
           />
         </div>
 
-        <div className="flex items-center justify-end md:justify-center w-[80px] md:w-[240px] pr-4 md:pr-0 shrink-0 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-center w-[120px] md:w-[200px] shrink-0 bg-white dark:bg-gray-900 font-mono text-xs">
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
 
       {/* ────────────────────────────────────────────────────────────
-          2. FIXED FLAP & SLIDE-OUT SIDEBAR (320px Wide, Full Visibility)
+          2. SIDEBAR (Fixed Drawer & Desktop Push)
           ──────────────────────────────────────────────────────────── */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-xs"
+        />
+      )}
+
       <div 
-        className={`fixed left-0 top-[72px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-4 border-gray-900 dark:border-gray-700 transition-all duration-300 ease-in-out flex ${isSidebarOpen ? 'w-[320px]' : 'w-[48px]'}`}
+        className={`fixed left-0 top-[64px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-3 border-gray-900 dark:border-gray-700 transition-all duration-300 ease-in-out flex ${
+          isSidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-[232px] md:translate-x-0 w-[280px] md:w-[48px]'
+        }`}
       >
-        {/* Toggle Flap */}
         <div 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-          className="w-[48px] h-full flex flex-col items-center py-6 cursor-pointer bg-gray-100 dark:bg-gray-800 border-r-4 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0"
+          className="order-last w-[48px] h-full flex flex-col items-center py-5 cursor-pointer bg-gray-50 dark:bg-gray-800 border-l-3 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0 select-none"
         >
           <ChevronRight className={`text-gray-900 dark:text-white transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
-          <span style={{ writingMode: 'vertical-rl' }} className="mt-8 font-mono text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-gray-400">
+          <span style={{ writingMode: 'vertical-rl' }} className="mt-6 font-mono text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-gray-300">
             sidebar
           </span>
         </div>
 
-        {/* Sidebar Inner Content Container */}
-        <div className={`h-full w-[268px] overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`h-full w-[232px] overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden pointer-events-none'}`}>
           <Sidebar 
             userEmail={userEmail || null}
             handleSignOut={handleSignOut}
@@ -338,32 +349,36 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          3. MAIN CONTENT GRID (Pushed dynamically by Sidebar)
+          3. MAIN MASONRY GRID (Strict Boundaries to Prevent Overflow)
           ──────────────────────────────────────────────────────────── */}
       <main 
-        className={`flex-1 p-4 md:p-8 transition-all duration-300 ease-in-out w-full max-w-[2200px] mx-auto min-h-screen ${isSidebarOpen ? 'ml-[320px]' : 'ml-[48px]'}`}
+        className={`flex-1 p-3 sm:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-28 ${
+          isSidebarOpen 
+            ? 'md:ml-[280px] md:w-[calc(100%-280px)]' 
+            : 'md:ml-[48px] md:w-[calc(100%-48px)]'
+        }`}
       >
-        <div className="relative z-0 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 sm:gap-6 w-full">
+        <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-4 w-full">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="break-inside-avoid mb-6 inline-block w-full">
+              <div key={index} className="break-inside-avoid mb-4 inline-block w-full">
                 <BookmarkSkeleton />
               </div>
             ))
           ) : (
             bookmarks.map((bookmark) => {
-              const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-              const matchSubCategory = activeFilter === 'All' ? true : (activeSubFilter ? bookmark.sub_category === activeSubFilter : !bookmark.sub_category);
+              const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter
+              const matchSubCategory = activeFilter === 'All' ? true : (activeSubFilter ? bookmark.sub_category === activeSubFilter : !bookmark.sub_category)
 
-              const searchLower = searchQuery.toLowerCase();
+              const searchLower = searchQuery.toLowerCase()
               const matchSearch = searchQuery === '' || 
                 bookmark.title.toLowerCase().includes(searchLower) ||
                 bookmark.url.toLowerCase().includes(searchLower) ||
                 (bookmark.description && bookmark.description.toLowerCase().includes(searchLower)) ||
                 (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
-                (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
+                (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower))
 
-              if (!(matchCategory && matchSubCategory && matchSearch)) return null;
+              if (!(matchCategory && matchSubCategory && matchSearch)) return null
 
               const theme = colorThemes[bookmark.id % colorThemes.length]
 
@@ -385,15 +400,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </main>
 
       {/* ────────────────────────────────────────────────────────────
-          4. FLOATING BOTTOM INPUT BAR (Aligned with grid offset)
+          4. FLOATING BOTTOM INPUT BAR
           ──────────────────────────────────────────────────────────── */}
       <div 
-        className={`fixed bottom-6 z-40 flex justify-center px-4 pointer-events-none transition-all duration-300 ease-in-out ${isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'} ${isSidebarOpen ? 'left-[320px]' : 'left-[48px]'} right-0`}
+        className={`fixed bottom-4 md:bottom-6 z-30 flex justify-center px-3 pointer-events-none transition-all duration-300 ease-in-out ${
+          isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'
+        } ${isSidebarOpen ? 'md:left-[280px]' : 'md:left-[48px]'} left-0 right-0`}
       >
-        <div className="pointer-events-auto w-full max-w-3xl bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] flex items-center p-2 gap-2 transition-transform focus-within:-translate-y-1">
+        <div className="pointer-events-auto w-full max-w-2xl bg-white dark:bg-gray-900 border-3 border-gray-900 dark:border-gray-600 rounded-2xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] flex items-center p-1.5 gap-2 transition-transform">
           <button
-            onClick={() => toast('File uploads require a storage bucket setup. We can build that next!', { icon: '🏗️' })}
-            className="p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-300 border-2 border-transparent hover:border-gray-900 dark:hover:border-gray-500 rounded-2xl transition-all cursor-pointer shrink-0"
+            onClick={() => toast('Storage bucket coming next!', { icon: '🏗️' })}
+            className="p-2 md:p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-300 border-2 border-transparent hover:border-gray-900 rounded-xl transition-all cursor-pointer shrink-0"
             title="Attach File"
           >
             <PaperclipIcon />
@@ -405,14 +422,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture(); }}
             disabled={isSaving}
-            placeholder="input (paste links, notes, or bulk URLs...)"
-            className="flex-1 bg-transparent border-none outline-none px-2 font-mono font-bold text-sm md:text-base text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50"
+            placeholder="paste links, notes, or bulk URLs..."
+            className="flex-1 bg-transparent border-none outline-none px-2 font-mono font-bold text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50"
           />
 
           <button
             onClick={handleQuickCapture}
             disabled={isSaving || !inputValue.trim()}
-            className="p-3 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-2xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] hover:translate-y-px hover:shadow-none active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center shrink-0"
+            className="p-2 md:p-2.5 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] hover:translate-y-px hover:shadow-none active:translate-y-0.5 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center shrink-0"
           >
             <SendIcon />
           </button>
