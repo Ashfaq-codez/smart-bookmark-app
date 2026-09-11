@@ -150,9 +150,9 @@ export default function BookmarkCard({
           <p className="text-sm font-black uppercase tracking-wide text-black dark:text-white truncate">
             {bookmark.type === 'note' ? 'Text Note' : bookmark.title}
           </p>
-          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 truncate">
+          {/* <p className="text-xs font-bold text-gray-500 dark:text-gray-400 truncate">
             {bookmark.type === 'note' ? dateAdded : getDomain(bookmark.url)}
-          </p>
+          </p> */}
         </div>
       </div>
 
