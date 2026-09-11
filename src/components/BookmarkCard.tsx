@@ -93,11 +93,7 @@ export default function BookmarkCard({
 
   return (
     <>
-      {/* ────────────────────────────────────────────────────────────
-          1. DECOUPLED CARD STRUCTURE (MyMind Layout)
-          The outer div acts only as a position wrapper.
-          The inner div holds the styling. The title floats below.
-         ──────────────────────────────────────────────────────────── */}
+      {/* CARD FACE */}
       <div
         draggable
         onDragStart={(e) => onDragStart(e, bookmark.id)}
@@ -105,11 +101,10 @@ export default function BookmarkCard({
         onClick={() => { setActiveModalTab('view'); setIsModalOpen(true); }}
         className={`group relative flex flex-col break-inside-avoid mb-6 sm:mb-8 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
-        {/* Inner Visual Container */}
         <div className={`w-full bg-white dark:bg-gray-800 border-[1.5px] sm:border-2 border-gray-900 dark:border-gray-700 rounded-[1rem] sm:rounded-2xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:group-hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.25)]`}>
           {bookmark.type === 'note' ? (
             <div className="p-5 sm:p-6 bg-[#fffdfa] dark:bg-gray-800 flex items-center justify-center min-h-[120px]">
-              <p className="font-serif text-sm sm:text-base text-gray-800 dark:text-gray-100 leading-relaxed text-center break-words whitespace-pre-wrap">
+              <p className="font-serif text-sm sm:text-base text-gray-800 dark:text-gray-100 leading-relaxed text-center break-words whitespace-pre-wrap line-clamp-6">
                 "{bookmark.description || bookmark.title}"
               </p>
             </div>
@@ -119,22 +114,23 @@ export default function BookmarkCard({
             </div>
           )}
         </div>
-        
-        {/* Floating Title Below Card */}
         <p className="mt-2 text-center text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 px-1 truncate">
           {bookmark.title}
         </p>
       </div>
 
-      {/* ────────────────────────────────────────────────────────────
-          2. DETAIL & ACTION POPUP MODAL
-         ──────────────────────────────────────────────────────────── */}
+      {/* DETAIL & ACTION POPUP MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }}>
-          <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row bg-[#fafafa] dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          
+          {/* MODAL CONTAINER - Fixed 80vh / 80vw for desktop */}
+          <div className="relative w-[95vw] md:w-[80vw] h-[90vh] md:h-[80vh] flex flex-col md:flex-row bg-[#fafafa] dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            
+            {/* Close Button */}
             <button onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }} className="absolute top-4 right-4 z-50 p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer" title="Close"><CloseIcon /></button>
 
-            <div className={`w-full md:w-1/2 min-h-[260px] md:min-h-[540px] bg-gray-50 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex ${bookmark.type === 'note' ? 'items-start p-8 sm:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-6'}`}>
+            {/* LEFT PANE - Independent Scrolling */}
+            <div className={`w-full md:w-1/2 h-[45%] md:h-full bg-gray-50 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex ${bookmark.type === 'note' ? 'items-start p-6 md:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-6'}`}>
               {bookmark.type === 'note' ? (
                 <div className="w-full h-full max-w-lg mx-auto">
                   <p className="font-serif text-lg sm:text-xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
@@ -143,67 +139,77 @@ export default function BookmarkCard({
                 </div>
               ) : (
                 <>
-                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full max-h-[500px] object-contain cursor-pointer" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-pointer" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
                   <button onClick={() => setIsFullscreenImage(true)} className="absolute bottom-4 right-4 p-2 bg-white/90 dark:bg-gray-800/90 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
                 </>
               )}
             </div>
 
-            <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[80vh] md:max-h-[540px] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+            {/* RIGHT PANE - Independent Scrolling & Flex Growth */}
+            <div className="w-full md:w-1/2 h-[55%] md:h-full flex flex-col p-6 sm:p-8 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+              
+              {/* Header Controls */}
               <div className="flex items-center justify-between pb-4 border-b-2 border-gray-200 dark:border-gray-700 mb-4 pr-10 shrink-0">
                 <span className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">{bookmark.type ? bookmark.type.toUpperCase() : 'LINK'} DETAILS</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setActiveModalTab(activeModalTab === 'edit' ? 'view' : 'edit')} className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg transition-all cursor-pointer ${activeModalTab === 'edit' ? 'bg-cyan-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`}><EditIcon /></button>
-                  <button onClick={() => setActiveModalTab(activeModalTab === 'move' ? 'view' : 'move')} className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg transition-all cursor-pointer ${activeModalTab === 'move' ? 'bg-yellow-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`}><MoveIcon /></button>
-                  <button onClick={handleDelete} className="p-1.5 bg-pink-100 dark:bg-pink-950/50 text-pink-700 dark:text-pink-300 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-pink-200 transition-colors cursor-pointer"><TrashIcon /></button>
+                  <button onClick={() => setActiveModalTab(activeModalTab === 'edit' ? 'view' : 'edit')} className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg transition-all cursor-pointer ${activeModalTab === 'edit' ? 'bg-cyan-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`} title="Edit"><EditIcon /></button>
+                  <button onClick={() => setActiveModalTab(activeModalTab === 'move' ? 'view' : 'move')} className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg transition-all cursor-pointer ${activeModalTab === 'move' ? 'bg-yellow-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`} title="Move"><MoveIcon /></button>
+                  <button onClick={handleDelete} className="p-1.5 bg-pink-100 dark:bg-pink-950/50 text-pink-700 dark:text-pink-300 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-pink-200 transition-colors cursor-pointer" title="Delete"><TrashIcon /></button>
                 </div>
               </div>
 
-              {activeModalTab === 'edit' ? (
-                <div className="flex flex-col gap-3 py-2">
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Title</label><input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-3 py-2 text-sm font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Target URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-3 py-2 text-xs font-mono border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                    <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded-lg bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+              {/* View / Edit / Move Container */}
+              <div className="flex flex-col flex-1">
+                {activeModalTab === 'edit' ? (
+                  <div className="flex flex-col gap-3 py-2">
+                    <div><label className="text-[10px] font-black uppercase text-gray-500">Title</label><input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-3 py-2 text-sm font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-gray-500">Target URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-3 py-2 text-xs font-mono border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                      <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded-lg bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    </div>
+                    <div className="flex gap-2 pt-4"><button onClick={handleSaveEdit} className="flex-1 py-3 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">Save Changes</button><button onClick={() => setActiveModalTab('view')} className="px-5 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Cancel</button></div>
                   </div>
-                  <div className="flex gap-2 pt-2"><button onClick={handleSaveEdit} className="flex-1 py-2 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px transition-all cursor-pointer">Save Changes</button><button onClick={() => setActiveModalTab('view')} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer">Cancel</button></div>
-                </div>
-              ) : activeModalTab === 'move' ? (
-                <div className="flex flex-col gap-3 py-2">
-                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Select or type a destination folder:</p>
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-dashed border-gray-500 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                  <div className="flex gap-2 pt-2"><button onClick={handleSaveMove} className="flex-1 py-2 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px transition-all cursor-pointer">Confirm Move</button><button onClick={() => setActiveModalTab('view')} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer">Cancel</button></div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight">{bookmark.title}</h2>
-                  <div className="flex items-center gap-2">
-                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-yellow-300 dark:bg-yellow-400 text-gray-900 font-black text-xs uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer w-fit"><span>{bookmark.type === 'note' ? 'Source Page' : 'Visit Link'}</span><ExternalLinkIcon /></a>
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{getDomain(bookmark.url)}</span>
+                ) : activeModalTab === 'move' ? (
+                  <div className="flex flex-col gap-3 py-2">
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Select or type a destination folder:</p>
+                    <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-dashed border-gray-500 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    <div className="flex gap-2 pt-4"><button onClick={handleSaveMove} className="flex-1 py-3 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">Confirm Move</button><button onClick={() => setActiveModalTab('view')} className="px-5 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Cancel</button></div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 px-2.5 py-1 rounded-md border border-gray-400 dark:border-gray-500">{bookmark.category || 'Inbox'}</span>
-                    {bookmark.sub_category && <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-md border border-dashed border-gray-400">{bookmark.sub_category}</span>}
-                    {bookmark.tags?.map((tag) => <span key={tag} className="text-[10px] font-black uppercase tracking-wider text-gray-900 bg-yellow-200 dark:bg-yellow-400 px-2.5 py-1 rounded-full border border-gray-900">#{tag}</span>)}
+                ) : (
+                  <div className="flex flex-col flex-1">
+                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight mb-4">{bookmark.title}</h2>
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-yellow-300 dark:bg-yellow-400 text-gray-900 font-black text-xs uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer w-fit"><span>{bookmark.type === 'note' ? 'Source Page' : 'Visit Link'}</span><ExternalLinkIcon /></a>
+                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400 px-2">{getDomain(bookmark.url)}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 pb-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 px-2.5 py-1 rounded-md border border-gray-400 dark:border-gray-500">{bookmark.category || 'Inbox'}</span>
+                      {bookmark.sub_category && <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-md border border-dashed border-gray-400">{bookmark.sub_category}</span>}
+                      {bookmark.tags?.map((tag) => <span key={tag} className="text-[10px] font-black uppercase tracking-wider text-gray-900 bg-yellow-200 dark:bg-yellow-400 px-2.5 py-1 rounded-full border border-gray-900">#{tag}</span>)}
+                    </div>
+                    
+                    {/* FLEX GROW NOTES SECTION */}
+                    <div className="flex flex-col flex-1 gap-2 pt-4 pb-2">
+                      <label className="text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">Personal Notes</label>
+                      <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Add personal thoughts, summaries, or context..." className="w-full flex-1 min-h-[120px] p-4 text-sm font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] resize-none transition-shadow" />
+                      <button onClick={handleSaveEdit} className="mt-2 w-full sm:w-auto self-end px-5 py-2.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-xs font-bold uppercase tracking-wider rounded-xl border-2 border-transparent dark:border-gray-300 hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer">Save Note</button>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1.5 pt-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">Personal Notes</label>
-                    <textarea rows={4} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Add personal thoughts, summaries, or context..." className="w-full p-3 text-sm font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] resize-none transition-shadow" />
-                    <button onClick={handleSaveEdit} className="self-end px-4 py-1.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer">Save Note</button>
-                  </div>
-                </div>
-              )}
-              <div className="pt-4 mt-4 shrink-0 border-t border-gray-200 dark:border-gray-800 text-[10px] font-medium text-gray-400 dark:text-gray-500">Added on {new Date(bookmark.created_at).toLocaleDateString()}</div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="pt-4 mt-auto shrink-0 border-t border-gray-200 dark:border-gray-800 text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                Added on {new Date(bookmark.created_at).toLocaleDateString()}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────────
-          3. FULLSCREEN IMAGE LIGHTBOX
-         ──────────────────────────────────────────────────────────── */}
+      {/* FULLSCREEN IMAGE LIGHTBOX */}
       {isFullscreenImage && bookmark.type !== 'note' && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenImage(false)}>
           <button onClick={() => setIsFullscreenImage(false)} className="absolute top-6 right-6 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform cursor-pointer" title="Close Fullscreen"><CloseIcon /></button>
