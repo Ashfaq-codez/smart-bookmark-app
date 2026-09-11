@@ -249,7 +249,7 @@ export default function BookmarkCard({
             </div>
           )}
         </div>
-        <p className="mt-2 text-center text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 px-1 truncate">
+        <p className="mt-2 text-center text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-900 px-1 truncate">
           {bookmark.title}
         </p>
       </div>
