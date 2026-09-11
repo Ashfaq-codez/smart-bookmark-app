@@ -124,7 +124,7 @@ export default function BookmarkForms({
               />
               <input 
                 type="url" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} required 
-                className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all" 
+                className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-gray-500 dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all" 
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -138,7 +138,7 @@ export default function BookmarkForms({
                 onChange={(e) => setCategory(e.target.value)}
                 onFocus={() => setIsCategoryOpen(true)}
                 onBlur={() => setTimeout(() => setIsCategoryOpen(false), 200)}
-                className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-gray-500 dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all"
               />
               {isCategoryOpen && Object.keys(folderHierarchy).length > 0 && (
                 <ul className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border-4 border-gray-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -164,7 +164,7 @@ export default function BookmarkForms({
                   onChange={(e) => setSubCategory(e.target.value)}
                   onFocus={() => setIsSubCategoryOpen(true)}
                   onBlur={() => setTimeout(() => setIsSubCategoryOpen(false), 200)}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-400 dark:border-gray-500 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all"
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-400 dark:border-gray-500 focus:border-solid focus:border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-gray-500 dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all"
                 />
                 {isSubCategoryOpen && folderHierarchy[category] && folderHierarchy[category].length > 0 && (
                   <ul className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border-4 border-gray-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-700 [&::-webkit-scrollbar-thumb]:bg-gray-900 [&::-webkit-scrollbar-thumb]:dark:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -188,12 +188,12 @@ export default function BookmarkForms({
           <form onSubmit={handleAddBulk} className="flex flex-col gap-4">
             <textarea 
               placeholder="Paste text containing URLs here..." value={bulkText} onChange={(e) => setBulkText(e.target.value)} required 
-              className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl h-32 resize-y outline-none bg-slate-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 transition-all" 
+              className="w-full px-4 py-3 border-2 border-gray-900 rounded-xl h-32 resize-y outline-none bg-slate-50 dark:bg-gray-700 dark:text-gray-500 dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all" 
             />
             <div className="flex flex-col sm:flex-row gap-4">
               <input 
                 type="text" list="category-options" placeholder="Folder for these tabs" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} 
-                className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 transition-all" 
+                className="flex-1 px-4 py-3 border-2 border-gray-900 rounded-xl outline-none bg-slate-50 dark:bg-gray-700 dark:text-gray-500 dark:placeholder-gray-600 focus:bg-white dark:focus:bg-gray-600 transition-all" 
               />
               <button type="submit" className="px-6 py-3 bg-indigo-500 text-white font-bold border-2 border-gray-900 rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">Extract & Save</button>
             </div>
