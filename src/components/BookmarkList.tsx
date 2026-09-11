@@ -114,9 +114,46 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && duplicateMatch) {
+        setDuplicateMatch(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [duplicateMatch])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  const handleForceSave = async () => {
+    if (!duplicateMatch) return
+    setIsSaving(true)
+    try {
+      const separator = duplicateMatch.url.includes('#') ? '&' : '#'
+      const forceUrl = `${duplicateMatch.url}${separator}override=${Date.now()}`
+      
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: forceUrl })
+      })
+      
+      if (res.ok) {
+        toast.success('Forced save successful!')
+        setDuplicateMatch(null)
+        setInputValue('')
+      } else {
+        toast.error('Failed to force save.')
+      }
+    } catch {
+      toast.error('Network error.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleQuickCapture = async () => {
@@ -173,7 +210,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
         const payload = isSingleUrl
           ? { url: finalUrl }
-          : { url: window.location.origin + '/note-' + Date.now(), description: rawInput, type: 'note' }
+          : { url: window.location.origin + '/note-' + Date.now(), title: rawInput, description: '', type: 'note' }
 
         const res = await fetch('/api/save', {
           method: 'POST',
@@ -303,14 +340,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    // Dotted Grid Background for premium aesthetic
     <div className="bg-[#f8f9fa] dark:bg-[#0f1115] bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[56px] sm:pt-[64px] overflow-x-hidden">
       
-      {/* ────────────────────────────────────────────────────────────
-          1. FIXED TOP HEADER (Polished Shadow & Profile Fix)
-          ──────────────────────────────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 h-[56px] sm:h-[64px] z-30 bg-white dark:bg-gray-900 border-b-2 sm:border-b-4 border-gray-900 dark:border-gray-700 shadow-[0_4px_0px_0px_rgba(17,24,39,1)] dark:shadow-none flex items-stretch select-none">
-        
         <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r-4 border-gray-900 dark:border-gray-700 shrink-0 gap-2.5">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
@@ -347,9 +379,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </header>
 
-      {/* ────────────────────────────────────────────────────────────
-          2. SIDEBAR (Mobile Slide-Over & Desktop Push)
-          ──────────────────────────────────────────────────────────── */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
@@ -406,9 +435,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {/* ────────────────────────────────────────────────────────────
-          3. MAIN GRID (Replaces Column Masonry for left-to-right flow)
-          ──────────────────────────────────────────────────────────── */}
       <main 
         className={`flex-1 p-3 sm:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-28 ${
           isSidebarOpen 
@@ -416,10 +442,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             : 'md:ml-[48px] md:w-[calc(100%-48px)]'
         }`}
       >
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 w-full items-start">
+        <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 sm:gap-6 w-full items-start">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="w-full">
+              <div key={index} className="w-full inline-block break-inside-avoid mb-4">
                 <BookmarkSkeleton />
               </div>
             ))
@@ -459,9 +485,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ────────────────────────────────────────────────────────────
-          4. FLOATING QUICK CAPTURE INPUT BAR (Pill Design)
-          ──────────────────────────────────────────────────────────── */}
       <div 
         className={`fixed bottom-4 md:bottom-8 z-30 flex justify-center px-4 pointer-events-none transition-all duration-300 ease-in-out ${
           isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'
@@ -496,9 +519,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {/* ────────────────────────────────────────────────────────────
-          5. DUPLICATE INSPECTION DIALOG
-          ──────────────────────────────────────────────────────────── */}
       {duplicateMatch && (
         <div 
           className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
@@ -532,28 +552,36 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               Did you mean to review or edit this existing bookmark instead of saving it again?
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => {
+                    setForcedInspectId(duplicateMatch.id)
+                    setDuplicateMatch(null)
+                    setInputValue('')
+                  }}
+                  className="flex-1 py-2.5 bg-yellow-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px transition-all cursor-pointer"
+                >
+                  Open Existing
+                </button>
+                <button
+                  onClick={() => setDuplicateMatch(null)}
+                  className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold uppercase text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
               <button
-                onClick={() => {
-                  setForcedInspectId(duplicateMatch.id)
-                  setDuplicateMatch(null)
-                  setInputValue('')
-                }}
-                className="flex-1 py-2.5 bg-yellow-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px transition-all cursor-pointer"
+                onClick={handleForceSave}
+                disabled={isSaving}
+                className="w-full py-2.5 mt-1 text-[10px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white underline decoration-gray-400 hover:decoration-gray-900 transition-colors cursor-pointer disabled:opacity-50"
               >
-                Open Existing
-              </button>
-              <button
-                onClick={() => setDuplicateMatch(null)}
-                className="py-2.5 px-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold uppercase text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer"
-              >
-                Dismiss
+                Force save a duplicate anyway
               </button>
             </div>
           </div>
         </div>
       )}
-      
     </div>
   )
 }
