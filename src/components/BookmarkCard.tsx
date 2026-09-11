@@ -6,46 +6,12 @@ import { Bookmark } from '@/types'
 import toast from 'react-hot-toast'
 
 // --- ICONS ---
-const TrashIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-  </svg>
-)
-
-const EditIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-)
-
-const MoveIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    <path d="M12 11v6" />
-    <path d="M9 14l3 3 3-3" />
-  </svg>
-)
-
-const ExternalLinkIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-    <polyline points="15 3 21 3 21 9" />
-    <line x1="10" y1="14" x2="21" y2="3" />
-  </svg>
-)
-
-const FullscreenIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-  </svg>
-)
-
-const CloseIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path d="M18 6L6 18M6 6l12 12" />
-  </svg>
-)
+const TrashIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+const EditIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+const MoveIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><path d="M12 11v6" /><path d="M9 14l3 3 3-3" /></svg>
+const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+const FullscreenIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+const CloseIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -181,7 +147,7 @@ export default function BookmarkCard({
                 </div>
                 <button 
                   onClick={() => setIsFullscreenMedia(true)}
-                  className="absolute bottom-3 right-3 p-1.5 sm:p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs font-bold flex items-center gap-1.5"
+                  className="absolute bottom-3 right-3 p-1.5 sm:p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <FullscreenIcon /> Fullscreen
                 </button>
@@ -196,7 +162,7 @@ export default function BookmarkCard({
                 />
                 <button 
                   onClick={() => setIsFullscreenMedia(true)}
-                  className="absolute bottom-3 right-3 p-1.5 sm:p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs font-bold flex items-center gap-1.5"
+                  className="absolute bottom-3 right-3 p-1.5 sm:p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <FullscreenIcon /> Fullscreen
                 </button>
@@ -214,7 +180,7 @@ export default function BookmarkCard({
                   href={bookmark.url} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="absolute bottom-3 right-3 p-1.5 sm:p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs font-bold flex items-center gap-1.5"
+                  className="absolute bottom-3 right-3 p-1.5 sm:p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-yellow-300 transition-colors"
                 >
                   <ExternalLinkIcon /> Open Link
                 </a>
@@ -232,21 +198,21 @@ export default function BookmarkCard({
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setActiveModalTab(activeModalTab === 'edit' ? 'view' : 'edit')}
-                  className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg cursor-pointer ${activeModalTab === 'edit' ? 'bg-cyan-300 text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}
+                  className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg cursor-pointer transition-colors ${activeModalTab === 'edit' ? 'bg-cyan-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                   title="Edit"
                 >
                   <EditIcon />
                 </button>
                 <button 
                   onClick={() => setActiveModalTab(activeModalTab === 'move' ? 'view' : 'move')}
-                  className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg cursor-pointer ${activeModalTab === 'move' ? 'bg-yellow-300 text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}
+                  className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg cursor-pointer transition-colors ${activeModalTab === 'move' ? 'bg-yellow-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                   title="Move"
                 >
                   <MoveIcon />
                 </button>
                 <button 
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="p-1.5 bg-red-100 text-red-700 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-red-200 cursor-pointer"
+                  className="p-1.5 bg-red-100 text-red-700 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-red-200 cursor-pointer transition-colors"
                   title="Delete"
                 >
                   <TrashIcon />
@@ -264,7 +230,7 @@ export default function BookmarkCard({
                       type="text" 
                       value={editTitle} 
                       onChange={(e) => setEditTitle(e.target.value)} 
-                      className="w-full px-3 py-2 text-xs sm:text-sm font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" 
+                      className="w-full px-3 py-2 text-xs sm:text-sm font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400" 
                     />
                   </div>
                   <div>
@@ -273,7 +239,7 @@ export default function BookmarkCard({
                       type="url" 
                       value={editUrl} 
                       onChange={(e) => setEditUrl(e.target.value)} 
-                      className="w-full px-3 py-2 text-xs font-mono border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" 
+                      className="w-full px-3 py-2 text-xs font-mono border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400" 
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -283,7 +249,7 @@ export default function BookmarkCard({
                         type="text" 
                         value={editCategory} 
                         onChange={(e) => setEditCategory(e.target.value)} 
-                        className="w-full px-2.5 py-1.5 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" 
+                        className="w-full px-2.5 py-1.5 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400" 
                       />
                     </div>
                     <div>
@@ -292,20 +258,20 @@ export default function BookmarkCard({
                         type="text" 
                         value={editSubCategory} 
                         onChange={(e) => setEditSubCategory(e.target.value)} 
-                        className="w-full px-2.5 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" 
+                        className="w-full px-2.5 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400" 
                       />
                     </div>
                   </div>
                   <div className="flex gap-2 pt-3">
                     <button 
                       onClick={handleSaveEdit} 
-                      className="flex-1 py-2.5 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+                      className="flex-1 py-2.5 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer"
                     >
                       Save Changes
                     </button>
                     <button 
                       onClick={() => setActiveModalTab('view')} 
-                      className="px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer"
+                      className="px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
                       Cancel
                     </button>
@@ -320,7 +286,7 @@ export default function BookmarkCard({
                       type="text" 
                       value={moveCategory} 
                       onChange={(e) => setMoveCategory(e.target.value)} 
-                      className="w-full px-3 py-2 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" 
+                      className="w-full px-3 py-2 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400" 
                     />
                   </div>
                   <div>
@@ -329,19 +295,19 @@ export default function BookmarkCard({
                       type="text" 
                       value={moveSubCategory} 
                       onChange={(e) => setMoveSubCategory(e.target.value)} 
-                      className="w-full px-3 py-2 text-xs border-2 border-dashed border-gray-500 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" 
+                      className="w-full px-3 py-2 text-xs border-2 border-dashed border-gray-500 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400" 
                     />
                   </div>
                   <div className="flex gap-2 pt-3">
                     <button 
                       onClick={handleSaveMove} 
-                      className="flex-1 py-2.5 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+                      className="flex-1 py-2.5 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer"
                     >
                       Confirm Move
                     </button>
                     <button 
                       onClick={() => setActiveModalTab('view')} 
-                      className="px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer"
+                      className="px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
                       Cancel
                     </button>
@@ -357,7 +323,7 @@ export default function BookmarkCard({
                       href={bookmark.url} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-300 dark:bg-yellow-400 text-gray-900 font-black text-[11px] uppercase tracking-wider border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-300 dark:bg-yellow-400 text-gray-900 font-black text-[11px] uppercase tracking-wider border-2 border-gray-900 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all"
                     >
                       <span>{bookmark.type === 'note' ? 'Source Page' : 'Visit Link'}</span>
                       <ExternalLinkIcon />
@@ -386,11 +352,11 @@ export default function BookmarkCard({
                       value={editDescription} 
                       onChange={(e) => setEditDescription(e.target.value)} 
                       placeholder="Add personal thoughts or summaries..." 
-                      className="w-full flex-1 p-2.5 sm:p-3 text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] resize-none" 
+                      className="w-full flex-1 p-2.5 sm:p-3 text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] resize-none transition-shadow" 
                     />
                     <button 
                       onClick={handleSaveEdit} 
-                      className="self-end px-4 py-1.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-xs font-black uppercase tracking-wider rounded-lg border-2 border-transparent cursor-pointer"
+                      className="self-end px-4 py-2 mt-2 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-xs font-black uppercase tracking-wider rounded-lg border-2 border-transparent hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer"
                     >
                       Save Note
                     </button>
@@ -399,20 +365,20 @@ export default function BookmarkCard({
               )}
             </div>
 
-            <div className="pt-2 mt-auto border-t border-gray-200 dark:border-gray-800 text-[10px] text-gray-400">
+            <div className="pt-2 mt-auto border-t border-gray-200 dark:border-gray-800 text-[14px] font-bold text-gray-500">
               Added on {new Date(bookmark.created_at).toLocaleDateString()}
             </div>
           </div>
 
           {/* ────────────────────────────────────────────────────────────
-              IN-MODAL DELETE CONFIRMATION (Guaranteed foreground Z-Index)
+              IN-MODAL DELETE CONFIRMATION
              ──────────────────────────────────────────────────────────── */}
           {showDeleteConfirm && (
             <div 
-              className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+              className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-full max-w-sm bg-yellow-100 dark:bg-gray-900 border-4 border-gray-900 dark:border-white p-5 rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
+              <div className="w-full max-w-sm bg-yellow-50 dark:bg-gray-900 border-4 border-gray-900 dark:border-white p-5 rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
                 <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">
                   Delete Bookmark?
                 </span>
@@ -422,13 +388,13 @@ export default function BookmarkCard({
                 <div className="flex gap-2 mt-2">
                   <button 
                     onClick={handleConfirmDelete}
-                    className="flex-1 py-2 bg-red-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+                    className="flex-1 py-2.5 bg-red-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer"
                   >
                     Yes, Delete
                   </button>
                   <button 
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 py-2 bg-white text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl cursor-pointer"
+                    className="flex-1 py-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-black uppercase text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -455,13 +421,13 @@ export default function BookmarkCard({
       >
         <button 
           onClick={() => setIsFullscreenMedia(false)} 
-          className="absolute top-4 right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+          className="absolute top-4 right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:scale-105 transition-transform"
         >
           <CloseIcon />
         </button>
         {bookmark.type === 'note' ? (
           <div 
-            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 p-6 md:p-10 rounded-2xl border-4 border-gray-900 cursor-auto shadow-2xl" 
+            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 p-6 md:p-10 rounded-2xl border-4 border-gray-900 dark:border-gray-700 cursor-auto shadow-2xl" 
             onClick={(e) => e.stopPropagation()}
           >
             <p className="font-serif text-base sm:text-xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
@@ -488,9 +454,9 @@ export default function BookmarkCard({
         onDragStart={(e) => onDragStart(e, bookmark.id)}
         onDragEnd={onDragEnd}
         onClick={() => { setActiveModalTab('view'); setIsModalOpen(true); }}
-        className={`group relative flex flex-col break-inside-avoid mb-3 sm:mb-4 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
+        className={`group relative flex flex-col w-full cursor-pointer select-none transition-all duration-300 ease-out hover:z-10 ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
-        <div className={`w-full bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-700 rounded-xl sm:rounded-2xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] transition-all group-hover:-translate-y-0.5 group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`}>
+        <div className={`w-full bg-white dark:bg-gray-800 border-2 sm:border-3 border-gray-900 dark:border-gray-700 rounded-xl sm:rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] transition-all group-hover:-translate-y-1.5 group-hover:-rotate-1 group-hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:group-hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.25)]`}>
           {bookmark.type === 'note' ? (
             <div className="p-4 sm:p-5 bg-[#fffdfa] dark:bg-gray-800 flex items-center justify-center min-h-[90px] sm:min-h-[120px]">
               <p className="font-serif text-xs sm:text-sm md:text-base text-gray-800 dark:text-gray-100 leading-relaxed text-center break-words whitespace-pre-wrap line-clamp-5">
@@ -511,7 +477,7 @@ export default function BookmarkCard({
             </div>
           )}
         </div>
-        <p className="mt-1.5 text-center text-[11px] sm:text-xs font-semibold text-gray-600 dark:text-gray-400 px-1 truncate">
+        <p className="mt-2 text-center text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 px-1 truncate">
           {bookmark.title}
         </p>
       </div>

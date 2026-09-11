@@ -303,15 +303,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[56px] sm:pt-[64px] overflow-x-hidden">
+    // Dotted Grid Background for premium aesthetic
+    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[56px] sm:pt-[64px] overflow-x-hidden">
       
       {/* ────────────────────────────────────────────────────────────
-          1. FIXED TOP HEADER (Restored Logo & Mobile Fixes)
+          1. FIXED TOP HEADER (Polished Shadow & Profile Fix)
           ──────────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 h-[56px] sm:h-[64px] z-30 bg-white dark:bg-gray-900 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-700 flex items-stretch select-none">
+      <header className="fixed top-0 left-0 right-0 h-[56px] sm:h-[64px] z-30 bg-white dark:bg-gray-900 border-b-2 sm:border-b-4 border-gray-900 dark:border-gray-700 shadow-[0_4px_0px_0px_rgba(17,24,39,1)] dark:shadow-none flex items-stretch select-none">
         
-        <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r-3 border-gray-900 dark:border-gray-700 shrink-0 gap-2.5">
-          {/* Hamburger (Only visible on mobile) */}
+        <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r-4 border-gray-900 dark:border-gray-700 shrink-0 gap-2.5">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
             className="md:hidden p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
@@ -320,7 +320,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             <MenuIcon />
           </button>
           
-          {/* Restored Logo */}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[2.5px] transition-colors">
             <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
           </svg>
@@ -330,7 +329,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </span>
         </div>
 
-        <div className="flex-1 flex items-center px-2 sm:px-4 border-l-2 md:border-l-0 border-r-2 sm:border-r-3 border-gray-900 dark:border-gray-700 relative bg-white dark:bg-gray-900">
+        <div className="flex-1 flex items-center px-2 sm:px-4 border-l-2 md:border-l-0 border-r-2 sm:border-r-4 border-gray-900 dark:border-gray-700 relative bg-white dark:bg-gray-900">
           <div className="text-gray-900 dark:text-gray-400 mr-1.5 shrink-0">
             <SearchIcon />
           </div>
@@ -343,7 +342,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           />
         </div>
 
-        {/* Profile (Only visible on Desktop) */}
         <div className="hidden md:flex items-center justify-center w-[150px] md:w-[200px] shrink-0 bg-white dark:bg-gray-900 font-mono text-xs">
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
@@ -362,13 +360,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       <div 
         className={`fixed left-0 top-[56px] sm:top-[64px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-3 border-gray-900 dark:border-gray-700 transition-all duration-300 ease-in-out flex ${
           isSidebarOpen 
-            ? 'translate-x-0 w-[82vw] sm:w-[320px] md:w-[280px]' 
+            ? 'translate-x-0 w-[82vw] sm:w-[320px] md:w-[280px] shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-none' 
             : '-translate-x-full md:translate-x-0 md:w-[48px]'
         }`}
       >
         <div 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-          className="hidden md:flex order-last w-[48px] h-full flex-col items-center py-5 cursor-pointer bg-gray-50 dark:bg-gray-800 border-l-3 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0 select-none"
+          className="hidden md:flex order-last w-[48px] h-full flex-col items-center py-5 cursor-pointer bg-gray-50 dark:bg-gray-800 border-l-4 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0 select-none"
         >
           <ChevronRight className={`text-gray-900 dark:text-white transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
           <span style={{ writingMode: 'vertical-rl' }} className="mt-6 font-mono text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-gray-300">
@@ -409,19 +407,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          3. MAIN MASONRY FEED (2 Columns on mobile, expands on desktop)
+          3. MAIN GRID (Replaces Column Masonry for left-to-right flow)
           ──────────────────────────────────────────────────────────── */}
       <main 
-        className={`flex-1 p-2.5 sm:p-4 md:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-24 ${
+        className={`flex-1 p-3 sm:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-28 ${
           isSidebarOpen 
-            ? 'md:ml-[280px] w-full md:w-[calc(100%-280px)]' 
-            : 'md:ml-[48px] w-full md:w-[calc(100%-48px)]'
+            ? 'md:ml-[280px] md:w-[calc(100%-280px)]' 
+            : 'md:ml-[48px] md:w-[calc(100%-48px)]'
         }`}
       >
-        <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-2.5 sm:gap-4 w-full">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 w-full items-start">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="break-inside-avoid mb-3 inline-block w-full">
+              <div key={index} className="w-full">
                 <BookmarkSkeleton />
               </div>
             ))
@@ -462,17 +460,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </main>
 
       {/* ────────────────────────────────────────────────────────────
-          4. FLOATING QUICK CAPTURE INPUT BAR
+          4. FLOATING QUICK CAPTURE INPUT BAR (Pill Design)
           ──────────────────────────────────────────────────────────── */}
       <div 
-        className={`fixed bottom-3 sm:bottom-5 z-30 flex justify-center px-2.5 sm:px-4 pointer-events-none transition-all duration-300 ease-in-out ${
+        className={`fixed bottom-4 md:bottom-8 z-30 flex justify-center px-4 pointer-events-none transition-all duration-300 ease-in-out ${
           isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'
         } ${isSidebarOpen ? 'md:left-[280px]' : 'md:left-[48px]'} left-0 right-0`}
       >
-        <div className="pointer-events-auto w-full max-w-xl bg-white dark:bg-gray-900 border-2 sm:border-3 border-gray-900 dark:border-gray-600 rounded-2xl shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] flex items-center p-1 sm:p-1.5 gap-1.5 transition-transform">
+        <div className="pointer-events-auto w-full max-w-2xl bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-600 rounded-[2rem] shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.15)] flex items-center p-1.5 sm:p-2 gap-2 transition-transform hover:-translate-y-1">
           <button
             onClick={() => toast('Attachment uploads coming with the storage bucket!', { icon: '📎' })}
-            className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border border-gray-900 dark:border-gray-700 rounded-xl cursor-pointer shrink-0"
+            className="p-2 sm:p-2.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-2 border-transparent hover:border-gray-900 dark:hover:border-gray-500 rounded-full cursor-pointer shrink-0 transition-colors"
             title="Attach"
           >
             <PaperclipIcon />
@@ -491,7 +489,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <button
             onClick={handleQuickCapture}
             disabled={isSaving || !inputValue.trim()}
-            className="p-1.5 sm:p-2 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-xl shadow-[1.5px_1.5px_0px_0px_rgba(17,24,39,1)] active:translate-y-0.5 disabled:opacity-50 cursor-pointer flex items-center justify-center shrink-0"
+            className="p-2 sm:p-2.5 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none disabled:opacity-50 cursor-pointer flex items-center justify-center shrink-0 transition-all"
           >
             <SendIcon />
           </button>
@@ -499,7 +497,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          5. DUPLICATE INSPECTION DIALOG (Fair Warning to User)
+          5. DUPLICATE INSPECTION DIALOG
           ──────────────────────────────────────────────────────────── */}
       {duplicateMatch && (
         <div 
