@@ -12,17 +12,9 @@ import ProfileDropdown from './ProfileDropdown'
 
 // --- ICONS ---
 const SearchIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-  </svg>
-)
-
-const MenuIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
   </svg>
 )
 
@@ -39,6 +31,12 @@ const SendIcon = () => (
   </svg>
 )
 
+const ChevronRight = ({ className = '' }: { className?: string }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+)
+
 const colorThemes = [
   { card: 'bg-sky-100', btn: 'bg-sky-300', hover: 'hover:bg-sky-400' },
   { card: 'bg-teal-100', btn: 'bg-teal-300', hover: 'hover:bg-teal-400' },
@@ -52,7 +50,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
 
   const [isLoading, setIsLoading] = useState(true)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const supabase = createClient()
 
   // Grid / Filter State
@@ -61,9 +59,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Quick Capture State
+  // Quick Capture & Scroll State
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isInputVisible, setIsInputVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
 
   // Sidebar Folder State
   const [customCategories, setCustomCategories] = useState<string[]>([])
@@ -79,56 +79,89 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => clearTimeout(timer)
   }, [])
 
+  // Hide/Show Input Bar on Scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsInputVisible(false) // Scrolling down
+      } else {
+        setIsInputVisible(true) // Scrolling up
+      }
+      setLastScrollY(currentScrollY)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/' 
   }
 
   // ────────────────────────────────────────────────────────────
-  // SMART QUICK CAPTURE LOGIC
+  // SMART QUICK CAPTURE & BULK LOGIC
   // ────────────────────────────────────────────────────────────
   const handleQuickCapture = async () => {
-    if (!inputValue.trim()) return
+    const rawInput = inputValue.trim()
+    if (!rawInput) return
     setIsSaving(true)
 
-    // Extremely simple URL check
-    const isUrl = /^https?:\/\//i.test(inputValue.trim()) || /^www\./i.test(inputValue.trim())
-    let finalUrl = inputValue.trim()
+    // Regex to accurately match URLs
+    const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
 
-    if (isUrl && !/^https?:\/\//i.test(finalUrl)) {
-      finalUrl = 'https://' + finalUrl
-    }
-
-    // Build the payload for the existing backend /api/save route
-    const payload = isUrl
-      ? { url: finalUrl }
-      : {
-          url: window.location.origin + '/note-' + Date.now(), // Fallback dummy URL for notes
-          description: inputValue.trim(),
-          type: 'note'
-        }
+    // Split input by whitespace, newlines, or commas
+    const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
+    
+    // Check if every single token extracted is a valid URL
+    const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
 
     try {
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-      if (res.ok) {
-        setInputValue('')
-        // Toast is skipped here because your Supabase Realtime hook will pop a "Saved to Hub!" toast automatically when it syncs!
+      if (isAllUrls && tokens.length > 1) {
+        // BULK MULTI-LINK SAVE
+        await Promise.all(tokens.map(token => {
+          const finalUrl = /^https?:\/\//i.test(token) ? token : 'https://' + token
+          return fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: finalUrl })
+          })
+        }))
+        toast.success(`Bulk saved ${tokens.length} links to your hub!`)
       } else {
-        toast.error('Failed to capture snippet.')
+        // SINGLE SAVE (Note or Link)
+        const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
+        let finalUrl = rawInput
+        if (isSingleUrl && !/^https?:\/\//i.test(finalUrl)) {
+          finalUrl = 'https://' + finalUrl
+        }
+
+        const payload = isSingleUrl
+          ? { url: finalUrl }
+          : {
+              url: window.location.origin + '/note-' + Date.now(),
+              description: rawInput,
+              type: 'note'
+            }
+
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+
+        if (!res.ok) throw new Error('Failed to save snippet.')
       }
+
+      setInputValue('')
     } catch (err) {
-      toast.error('Network error during save.')
+      toast.error('Error saving your content. Please try again.')
     } finally {
       setIsSaving(false)
     }
   }
 
-  // ... (Keep existing folder hierarchy & drag-drop logic below exactly as it was) ...
+  // ... (Keep existing folder hierarchy & drag-drop logic below) ...
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {};
     const baseCats = Array.from(new Set([...customCategories, ...bookmarks.map(b => b.category || 'Uncategorized')]));
@@ -200,11 +233,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     ), { duration: Infinity, style: { background: '#fef08a', border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } });
   }
 
-  const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ [folder]: !prev[folder] }))
+  const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
   const handleDragStart = (e: React.DragEvent, id: number) => { e.dataTransfer.setData('bookmarkId', id.toString()); setDraggedId(id) }
   const handleDragEnd = () => setDraggedId(null)
   const handleDragOver = (e: React.DragEvent) => e.preventDefault()
-  
   const handleDrop = async (e: React.DragEvent, targetCategory: string, targetSubCategory?: string) => {
     e.preventDefault()
     const bookmarkId = parseInt(e.dataTransfer.getData('bookmarkId'))
@@ -213,149 +245,166 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="flex flex-col w-full min-h-screen relative pb-32">
+    <div className="bg-white dark:bg-gray-900 min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[72px]">
       
-      {/* ---> FLOATING PILL NAVBAR <--- */}
-      <div className="sticky top-4 sm:top-6 z-40 flex justify-center w-full px-4 mb-6 sm:mb-10 pointer-events-none">
-        <nav className="pointer-events-auto w-full max-w-4xl bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-600 rounded-[2rem] py-2 px-3 sm:px-4 shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] flex justify-between items-center gap-4 transition-colors">
-          <div className="flex items-center gap-2 pl-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-7 sm:h-7 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] transition-colors">
-              <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
-            </svg>
-            <h1 className="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white uppercase transition-colors">
-              Smart Bookmarks
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:block"><ProfileDropdown email={userEmail ?? ""} /></div>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 bg-yellow-300 dark:bg-yellow-500 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"><MenuIcon /></button>
-          </div>
-        </nav>
-      </div>
-      
-      {/* Main Grid Area */}
-      <div className="flex flex-col md:flex-row gap-8 w-full max-w-[2500px] mx-auto p-4 md:p-8 flex-1">
+      {/* ────────────────────────────────────────────────────────────
+          1. FIXED TOP HEADER (Wireframe Segmented Layout)
+          ──────────────────────────────────────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 h-[72px] bg-white dark:bg-gray-900 border-b-[3px] border-gray-900 dark:border-gray-700 z-50 flex items-stretch">
         
-        <Sidebar 
-          userEmail={userEmail || null}
-          handleSignOut={handleSignOut}
-          isMobileMenuOpen={isMobileMenuOpen}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
-          activeFilter={activeFilter}
-          setActiveFilter={setActiveFilter}
-          activeSubFilter={activeSubFilter}
-          setActiveSubFilter={setActiveSubFilter}
-          getCounts={getCounts}
-          folderHierarchy={folderHierarchy}
-          expandedFolders={expandedFolders}
-          toggleFolderExpand={toggleFolderExpand}
-          customCategories={customCategories}
-          handleDeleteCategory={handleDeleteCategory}
-          handleDragOver={handleDragOver}
-          handleDrop={handleDrop}
-          creatingSubFor={creatingSubFor}
-          setCreatingSubFor={setCreatingSubFor}
-          newSubfolderName={newSubfolderName}
-          setNewSubfolderName={setNewSubfolderName}
-          handleAddSubfolder={handleAddSubfolder}
-          isAddingCategory={isAddingCategory}
-          setIsAddingCategory={setIsAddingCategory}
-          newCategoryName={newCategoryName}
-          setNewCategoryName={setNewCategoryName}
-          handleAddCategory={handleAddCategory}
-        />
+        {/* Logo Segment */}
+        <div className="hidden md:flex items-center justify-center w-[240px] border-r-[3px] border-gray-900 dark:border-gray-700 shrink-0">
+          <span className="font-mono font-bold text-sm uppercase tracking-widest">smart bookmark</span>
+        </div>
 
-        <main className="flex-1 min-w-0">
-          
-          {/* ---> SEARCH BAR <--- */}
-          <div className="relative w-full max-w-xl mx-auto mb-8 sm:mb-12">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-gray-500 dark:text-gray-400">
-              <SearchIcon />
-            </div>
-            <input
-              type="text"
-              placeholder="Search your mind..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-6 py-4 md:py-5 text-sm md:text-base font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-700 rounded-2xl outline-none focus:-translate-y-1 focus:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:focus:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] transition-all placeholder-gray-400 dark:placeholder-gray-500"
+        {/* Global Search Segment */}
+        <div className="flex-1 flex items-center px-4 md:px-8 border-r-[3px] border-gray-900 dark:border-gray-700 relative">
+          <SearchIcon />
+          <input
+            type="text"
+            placeholder="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-full bg-transparent outline-none pl-4 font-mono font-bold text-sm md:text-base placeholder-gray-400 dark:placeholder-gray-500"
+          />
+        </div>
+
+        {/* Profile Segment */}
+        <div className="flex items-center justify-center w-[160px] md:w-[240px] shrink-0 bg-gray-50 dark:bg-gray-800">
+          <ProfileDropdown email={userEmail ?? ""} />
+        </div>
+      </header>
+
+      {/* ────────────────────────────────────────────────────────────
+          2. SLIDE-OUT SIDEBAR FLAP
+          ──────────────────────────────────────────────────────────── */}
+      <div className={`fixed left-0 top-[72px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-[3px] border-gray-900 dark:border-gray-700 transition-all duration-300 flex ${isSidebarOpen ? 'w-[280px]' : 'w-[48px]'}`}>
+        
+        {/* Toggle Flap */}
+        <div 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+          className="w-[48px] h-full flex flex-col items-center py-6 cursor-pointer border-r-[3px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+        >
+          <ChevronRight className={`transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
+          <span style={{ writingMode: 'vertical-rl' }} className="mt-6 font-mono text-xs font-bold uppercase tracking-widest text-gray-500">
+            sidebar
+          </span>
+        </div>
+
+        {/* Sidebar Content (Hidden when closed) */}
+        <div className={`overflow-hidden h-full flex-1 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="w-[229px] h-full overflow-y-auto">
+            <Sidebar 
+              userEmail={userEmail || null}
+              handleSignOut={handleSignOut}
+              isMobileMenuOpen={isSidebarOpen}
+              setIsMobileMenuOpen={setIsSidebarOpen}
+              activeFilter={activeFilter}
+              setActiveFilter={setActiveFilter}
+              activeSubFilter={activeSubFilter}
+              setActiveSubFilter={setActiveSubFilter}
+              getCounts={getCounts}
+              folderHierarchy={folderHierarchy}
+              expandedFolders={expandedFolders}
+              toggleFolderExpand={toggleFolderExpand}
+              customCategories={customCategories}
+              handleDeleteCategory={handleDeleteCategory}
+              handleDragOver={handleDragOver}
+              handleDrop={handleDrop}
+              creatingSubFor={creatingSubFor}
+              setCreatingSubFor={setCreatingSubFor}
+              newSubfolderName={newSubfolderName}
+              setNewSubfolderName={setNewSubfolderName}
+              handleAddSubfolder={handleAddSubfolder}
+              isAddingCategory={isAddingCategory}
+              setIsAddingCategory={setIsAddingCategory}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+              handleAddCategory={handleAddCategory}
             />
           </div>
-
-          <div className="relative z-0 columns-2 md:columns-3 xl:columns-4 gap-3 sm:gap-6 w-full">
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="break-inside-avoid mb-6 inline-block w-full">
-                  <BookmarkSkeleton />
-                </div>
-              ))
-            ) : (
-              bookmarks.map((bookmark) => {
-                const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-                const matchSubCategory = activeFilter === 'All' ? true : (activeSubFilter ? bookmark.sub_category === activeSubFilter : !bookmark.sub_category);
-
-                const searchLower = searchQuery.toLowerCase();
-                const matchSearch = searchQuery === '' || 
-                  bookmark.title.toLowerCase().includes(searchLower) ||
-                  bookmark.url.toLowerCase().includes(searchLower) ||
-                  (bookmark.description && bookmark.description.toLowerCase().includes(searchLower)) ||
-                  (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
-                  (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
-
-                if (!(matchCategory && matchSubCategory && matchSearch)) return null;
-
-                const theme = colorThemes[bookmark.id % colorThemes.length]
-
-                return (
-                  <BookmarkCard 
-                    key={bookmark.id}
-                    bookmark={bookmark}
-                    theme={theme}
-                    isDragged={draggedId === bookmark.id}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    updateBookmark={updateBookmark}
-                    deleteBookmark={deleteBookmark}
-                  />
-                )
-              })
-            )}
-          </div>
-        </main>
+        </div>
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          BOTTOM QUICK CAPTURE BAR
+          3. MAIN CONTENT GRID
           ──────────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-2xl bg-white dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex items-center p-2 gap-2 transition-all focus-within:-translate-y-1 focus-within:shadow-[10px_10px_0px_0px_rgba(17,24,39,1)] dark:focus-within:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.2)]">
+      <main className="ml-[48px] flex-1 p-6 md:p-10 transition-all pb-32">
+        <div className="relative z-0 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 w-full max-w-[2000px] mx-auto">
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="break-inside-avoid mb-6 inline-block w-full">
+                <BookmarkSkeleton />
+              </div>
+            ))
+          ) : (
+            bookmarks.map((bookmark) => {
+              const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
+              const matchSubCategory = activeFilter === 'All' ? true : (activeSubFilter ? bookmark.sub_category === activeSubFilter : !bookmark.sub_category);
 
-          {/* Attachment / File Upload Button */}
+              const searchLower = searchQuery.toLowerCase();
+              const matchSearch = searchQuery === '' || 
+                bookmark.title.toLowerCase().includes(searchLower) ||
+                bookmark.url.toLowerCase().includes(searchLower) ||
+                (bookmark.description && bookmark.description.toLowerCase().includes(searchLower)) ||
+                (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
+                (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower));
+
+              if (!(matchCategory && matchSubCategory && matchSearch)) return null;
+
+              const theme = colorThemes[bookmark.id % colorThemes.length]
+
+              return (
+                <BookmarkCard 
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  theme={theme}
+                  isDragged={draggedId === bookmark.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  updateBookmark={updateBookmark}
+                  deleteBookmark={deleteBookmark}
+                />
+              )
+            })
+          )}
+        </div>
+      </main>
+
+      {/* ────────────────────────────────────────────────────────────
+          4. FLOATING BOTTOM INPUT BAR (Hides on Scroll Down)
+          ──────────────────────────────────────────────────────────── */}
+      <div 
+        className={`fixed bottom-6 md:bottom-8 left-[48px] right-0 z-50 flex justify-center px-4 pointer-events-none transition-transform duration-300 ease-in-out ${isInputVisible ? 'translate-y-0' : 'translate-y-32'}`}
+      >
+        <div className="pointer-events-auto w-full max-w-3xl bg-white dark:bg-gray-900 border-[3px] border-gray-900 dark:border-gray-600 rounded-3xl shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex items-center p-2 gap-2 transition-all focus-within:-translate-y-1 focus-within:shadow-[12px_12px_0px_0px_rgba(17,24,39,1)] dark:focus-within:shadow-[12px_12px_0px_0px_rgba(255,255,255,0.2)]">
+
+          {/* Attachment Button */}
           <button
             onClick={() => toast('File uploads require a storage bucket setup. We can build that next!', { icon: '🏗️' })}
-            className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-300 border-2 border-transparent hover:border-gray-900 dark:hover:border-gray-500 rounded-2xl transition-all cursor-pointer"
-            title="Attach File (Coming Soon)"
+            className="p-3 md:p-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-300 border-[3px] border-transparent hover:border-gray-900 dark:hover:border-gray-500 rounded-2xl transition-all cursor-pointer shrink-0"
+            title="Attach File"
           >
             <PaperclipIcon />
           </button>
 
-          {/* Master Input Field */}
+          {/* Input Box */}
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture(); }}
             disabled={isSaving}
-            placeholder="Paste a URL, quote, or type a note..."
-            className="flex-1 bg-transparent border-none outline-none px-2 text-sm md:text-base font-bold text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50"
+            placeholder="input (paste links, notes, or bulk URLs...)"
+            className="flex-1 bg-transparent border-none outline-none px-4 font-mono font-bold text-sm md:text-base text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50"
           />
 
-          {/* Save / Enter Button */}
+          {/* Submit Button */}
           <button
             onClick={handleQuickCapture}
             disabled={isSaving || !inputValue.trim()}
-            className="p-3 md:px-6 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-2xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(17,24,39,1)] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-2 shrink-0"
+            className="p-3 md:p-4 bg-yellow-400 text-gray-900 border-[3px] border-gray-900 rounded-2xl shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(17,24,39,1)] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center shrink-0"
           >
-            <span className="hidden md:inline font-black uppercase tracking-wider text-xs">Save</span>
             <SendIcon />
           </button>
         </div>
