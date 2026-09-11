@@ -249,7 +249,9 @@ export default function BookmarkCard({
                 <span className="text-[10px] md:text-xs font-semibold uppercase tracking-widest text-gray-400">
                   {bookmark.type ? bookmark.type.toUpperCase() : 'LINK'} DETAILS
                 </span>
-                <div className="flex items-center gap-2">
+                
+                {/* 👇 FIX: Added mr-12 md:mr-10 here to push the buttons safely away from the X button */}
+                <div className="flex items-center gap-2 mr-12 md:mr-10">
                   <button 
                     onClick={() => setActiveModalTab(activeModalTab === 'edit' ? 'view' : 'edit')}
                     className={`p-2 rounded-xl cursor-pointer transition-colors ${activeModalTab === 'edit' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200'}`}
