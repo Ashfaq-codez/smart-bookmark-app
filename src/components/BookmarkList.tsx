@@ -35,7 +35,6 @@ const colorThemes = [
   { card: 'bg-emerald-100', btn: 'bg-emerald-300', hover: 'hover:bg-emerald-400' },
 ]
 
-// FIX: Added userEmail to props
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, addBookmark, addBulkBookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
 
@@ -134,7 +133,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const handleDeleteCategory = async (catToDelete: string) => {
-    // 3. CUSTOM TOAST MODAL: Replaces the ugly window.confirm
     toast((t) => (
       <div className="flex flex-col gap-3 font-sans">
         <span className="text-lg font-black text-gray-900 uppercase tracking-tight">Delete "{catToDelete}"?</span>
@@ -164,7 +162,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     ), { 
       duration: Infinity, 
       style: { 
-        background: '#fef08a', // FIX: Added bold yellow background (yellow-200)
+        background: '#fef08a',
         border: '4px solid #111827', 
         borderRadius: '1rem', 
         padding: '1.5rem', 
@@ -207,7 +205,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         
         <nav className="pointer-events-auto w-full max-w-4xl bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-600 rounded-[2rem] py-2 px-3 sm:px-4 shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] flex justify-between items-center gap-4 transition-colors">
           
-          {/* Logo Area */}
           <div className="flex items-center gap-2 pl-2">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 sm:w-7 sm:h-7 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[3px] drop-shadow-[2px_2px_0px_rgba(17,24,39,1)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] transition-colors">
               <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
@@ -217,14 +214,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </h1>
           </div>
 
-          {/* Right Side Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden md:block">
               <ProfileDropdown email={userEmail ?? ""} />
             </div>
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              // Upgraded to rounded-full to match the pill aesthetic
               className="md:hidden p-2 bg-yellow-300 dark:bg-yellow-500 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer"
             >
               <MenuIcon />
@@ -235,7 +230,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         
       </div>
       
-      {/* Main Content Area */}
       <div className="flex flex-col md:flex-row gap-8 w-full max-w-[2500px] mx-auto p-4 md:p-8 flex-1">
         
         <Sidebar 
@@ -276,7 +270,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             addBulkBookmarks={addBulkBookmarks}
           />
 
-         {/* ---> SEARCH BAR <--- */}
           <div className="relative w-full max-w-xl mx-auto mb-8">
             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
               <SearchIcon />
@@ -290,10 +283,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             />
           </div>
 
-          <div className="relative z-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="relative z-0 columns-2 md:columns-3 xl:columns-4 gap-3 sm:gap-6 w-full">
             {isLoading ? (
               Array.from({ length: 8 }).map((_, index) => (
-                <BookmarkSkeleton key={index} />
+                <div key={index} className="break-inside-avoid mb-6 inline-block w-full">
+                  <BookmarkSkeleton />
+                </div>
               ))
             ) : (
               bookmarks.map((bookmark) => {

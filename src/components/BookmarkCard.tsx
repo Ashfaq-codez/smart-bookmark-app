@@ -93,32 +93,47 @@ export default function BookmarkCard({
 
   return (
     <>
+      {/* ────────────────────────────────────────────────────────────
+          1. DECOUPLED CARD STRUCTURE (MyMind Layout)
+          The outer div acts only as a position wrapper.
+          The inner div holds the styling. The title floats below.
+         ──────────────────────────────────────────────────────────── */}
       <div
         draggable
         onDragStart={(e) => onDragStart(e, bookmark.id)}
         onDragEnd={onDragEnd}
         onClick={() => { setActiveModalTab('view'); setIsModalOpen(true); }}
-        className={`group relative flex flex-col bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-700 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.25)] hover:-translate-y-1 transition-all cursor-pointer select-none break-inside-avoid mb-4 inline-block w-full ${isDragged ? 'opacity-40 scale-95' : ''}`}
+        className={`group relative flex flex-col break-inside-avoid mb-6 sm:mb-8 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
-        {bookmark.type === 'note' ? (
-          <div className="p-6 bg-[#fffdfa] dark:bg-gray-800 h-full">
-            <p className="font-serif text-base md:text-lg text-gray-800 dark:text-gray-100 leading-relaxed break-words whitespace-pre-wrap">
-              {bookmark.description || bookmark.title}
-            </p>
-          </div>
-        ) : (
-          <div className={`w-full overflow-hidden bg-gray-100 dark:bg-gray-700 ${theme.card}`}>
-            <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
-          </div>
-        )}
+        {/* Inner Visual Container */}
+        <div className={`w-full bg-white dark:bg-gray-800 border-[1.5px] sm:border-2 border-gray-900 dark:border-gray-700 rounded-[1rem] sm:rounded-2xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:group-hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.25)]`}>
+          {bookmark.type === 'note' ? (
+            <div className="p-5 sm:p-6 bg-[#fffdfa] dark:bg-gray-800 flex items-center justify-center min-h-[120px]">
+              <p className="font-serif text-sm sm:text-base text-gray-800 dark:text-gray-100 leading-relaxed text-center break-words whitespace-pre-wrap">
+                "{bookmark.description || bookmark.title}"
+              </p>
+            </div>
+          ) : (
+            <div className={`w-full overflow-hidden bg-gray-100 dark:bg-gray-700 ${theme.card}`}>
+              <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+            </div>
+          )}
+        </div>
+        
+        {/* Floating Title Below Card */}
+        <p className="mt-2 text-center text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 px-1 truncate">
+          {bookmark.title}
+        </p>
       </div>
 
+      {/* ────────────────────────────────────────────────────────────
+          2. DETAIL & ACTION POPUP MODAL
+         ──────────────────────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }}>
           <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row bg-[#fafafa] dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }} className="absolute top-4 right-4 z-50 p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer" title="Close"><CloseIcon /></button>
 
-            {/* MODIFIED: Dynamically handle layout based on note vs image */}
             <div className={`w-full md:w-1/2 min-h-[260px] md:min-h-[540px] bg-gray-50 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex ${bookmark.type === 'note' ? 'items-start p-8 sm:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-6'}`}>
               {bookmark.type === 'note' ? (
                 <div className="w-full h-full max-w-lg mx-auto">
@@ -186,6 +201,9 @@ export default function BookmarkCard({
         </div>
       )}
 
+      {/* ────────────────────────────────────────────────────────────
+          3. FULLSCREEN IMAGE LIGHTBOX
+         ──────────────────────────────────────────────────────────── */}
       {isFullscreenImage && bookmark.type !== 'note' && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenImage(false)}>
           <button onClick={() => setIsFullscreenImage(false)} className="absolute top-6 right-6 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform cursor-pointer" title="Close Fullscreen"><CloseIcon /></button>
