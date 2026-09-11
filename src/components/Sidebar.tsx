@@ -16,32 +16,44 @@ export default function Sidebar(props: SidebarProps) {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
   return (
-    <aside className="w-full h-full flex flex-col p-4 sm:p-5 overflow-y-auto bg-white/40 dark:bg-[#151c28]/40 transition-colors [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#a9cbed]">
-      <div className="bg-white/80 dark:bg-[#1a2332]/80 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] shadow-[0_4px_10px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] rounded flex flex-col overflow-hidden">
+    <aside className="w-full h-full flex flex-col p-3 sm:p-5 overflow-y-auto bg-transparent transition-colors [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#a9cbed] dark:[&::-webkit-scrollbar-thumb]:bg-[#3a526b]">
+      
+      {/* ─── DIRECTORY TREE WINDOW PANEL ─── */}
+      <div className="bg-white/60 dark:bg-[#080d14]/60 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] flex flex-col overflow-hidden mb-6">
         
-        <div className="bg-gradient-to-b from-[#eaf2f9] to-[#d1e2f3] dark:from-[#213045] dark:to-[#1a2332] border-b border-[#a9cbed] dark:border-[#2a3f5a] px-3 py-1.5 flex items-center justify-between">
-          <h2 className="text-[10px] font-mono text-[#4a6b8c] dark:text-[#8ea4bd] tracking-widest uppercase">++ nav.tree //</h2>
+        {/* Glossy Header */}
+        <div className="bg-gradient-to-b from-[#eaf2f9]/90 to-[#d1e2f3]/90 dark:from-[#1a2536]/90 dark:to-[#111824]/90 border-b border-[#a9cbed] dark:border-[#2a3f5a] px-3 py-2 flex items-center justify-between shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-none">
+          <h2 className="text-[10px] font-mono text-[#4a6b8c] dark:text-[#5e81a5] tracking-widest uppercase drop-shadow-[0_1px_0_rgba(255,255,255,0.8)] dark:drop-shadow-none">++ nav.tree //</h2>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="p-0.5 rounded text-[#5e81a5] hover:text-[#2c4054] transition-colors" title="New Folder"><PlusIcon /></button>
-            <button onClick={() => props.setIsMobileMenuOpen(false)} className="md:hidden p-0.5 text-[#5e81a5]"><SmallXIcon /></button>
+            <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="p-1 rounded text-[#5e81a5] dark:text-[#8ea4bd] hover:text-[#2c4054] dark:hover:text-white transition-colors cursor-pointer bg-white/50 dark:bg-black/30 border border-transparent hover:border-[#a9cbed] dark:hover:border-[#3a526b] shadow-sm" title="New Folder">
+              <PlusIcon />
+            </button>
+            <button onClick={() => props.setIsMobileMenuOpen(false)} className="md:hidden p-1 text-[#5e81a5] dark:text-[#8ea4bd] hover:text-[#c53030] transition-colors">
+              <SmallXIcon />
+            </button>
           </div>
         </div>
 
-        <div className="p-3 flex flex-col gap-1">
+        {/* Panel Content */}
+        <div className="p-2.5 flex flex-col gap-1.5">
+          
+          {/* New Folder Input (Inset Shadow Style) */}
           {props.isAddingCategory && (
             <div className="mb-2">
-              <input autoFocus type="text" placeholder="dir_name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-2 py-1.5 text-xs font-sans bg-[#f2f7fc] dark:bg-[#0d1620] border border-[#a9cbed] dark:border-[#3a526b] rounded-sm outline-none text-[#2c4054] dark:text-gray-300 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] focus:border-[#609ad3]" />
+              <input autoFocus type="text" placeholder="dir_name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-3 py-2 text-xs font-sans bg-[#f8fbff] dark:bg-[#050b14] border border-[#a9cbed] dark:border-[#3a526b] rounded shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] outline-none text-[#2c4054] dark:text-gray-300 focus:border-[#609ad3] transition-all" />
             </div>
           )}
 
+          {/* All Bookmarks Root */}
           <div
             onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
-            className={`flex items-center justify-between px-2.5 py-1.5 rounded-sm cursor-pointer transition-all ${props.activeFilter === 'All' ? 'bg-[#e1eef9] dark:bg-[#2a3f5a] text-[#315174] dark:text-white border border-[#a9cbed] dark:border-[#4a6b8c] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]' : 'bg-transparent text-[#5e81a5] hover:bg-[#f2f7fc] dark:hover:bg-[#1a2332] border border-transparent'}`}
+            className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-all ${props.activeFilter === 'All' ? 'bg-gradient-to-b from-[#f2f7fc] to-[#dae8f5] dark:from-[#213045] dark:to-[#151c28] text-[#315174] dark:text-white border border-[#a9cbed] dark:border-[#3a526b] shadow-[0_2px_4px_rgba(0,0,0,0.02),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'bg-transparent text-[#5e81a5] hover:bg-white/40 dark:hover:bg-[#1a2332]/40 border border-transparent'}`}
           >
-            <span className="font-sans text-xs font-medium">All Bookmarks</span>
-            <span className="text-[9px] font-mono text-[#4a6b8c]">{props.getCounts['All'] || 0}</span>
+            <span className="font-sans text-xs font-bold truncate">All Records</span>
+            <span className="text-[9px] font-mono text-[#4a6b8c] dark:text-[#8ea4bd]">{props.getCounts['All'] || 0}</span>
           </div>
 
+          {/* Parent Folders */}
           {Object.keys(props.folderHierarchy).map(parentFolder => {
             const isParentActive = props.activeFilter === parentFolder;
             const isExpanded = props.expandedFolders[parentFolder];
@@ -52,42 +64,46 @@ export default function Sidebar(props: SidebarProps) {
                 <div
                   onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder)}
                   onClick={() => { props.setActiveFilter(parentFolder); props.setActiveSubFilter(null); props.toggleFolderExpand(parentFolder); }}
-                  className={`group flex items-center justify-between px-2.5 py-1.5 rounded-sm cursor-pointer transition-all ${isParentActive && !props.activeSubFilter ? 'bg-[#e1eef9] dark:bg-[#2a3f5a] text-[#315174] dark:text-white border border-[#a9cbed] dark:border-[#4a6b8c] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]' : 'bg-transparent text-[#5e81a5] hover:bg-[#f2f7fc] dark:hover:bg-[#1a2332] border border-transparent'}`}
+                  className={`group flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-all ${isParentActive && !props.activeSubFilter ? 'bg-gradient-to-b from-[#f2f7fc] to-[#dae8f5] dark:from-[#213045] dark:to-[#151c28] text-[#315174] dark:text-white border border-[#a9cbed] dark:border-[#3a526b] shadow-[0_2px_4px_rgba(0,0,0,0.02),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'bg-transparent text-[#5e81a5] hover:bg-white/40 dark:hover:bg-[#1a2332]/40 border border-transparent'}`}
                 >
-                  <div className="flex items-center gap-1.5 overflow-hidden flex-1">
-                    <div className="text-[#8ea4bd]">{isExpanded ? <ChevronDown /> : <ChevronRight />}</div>
-                    <span className="font-sans text-xs font-medium truncate">{parentFolder}</span>
+                  <div className="flex items-center gap-2 overflow-hidden flex-1">
+                    <div className="text-[#8ea4bd] dark:text-[#4a6b8c] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)] dark:drop-shadow-none">
+                      {isExpanded ? <ChevronDown /> : <ChevronRight />}
+                    </div>
+                    <span className="font-sans text-xs font-semibold truncate">{parentFolder}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[9px] font-mono text-[#4a6b8c]">{props.getCounts[parentFolder] || 0}</span>
+                    <span className="text-[9px] font-mono text-[#4a6b8c] dark:text-[#8ea4bd]">{props.getCounts[parentFolder] || 0}</span>
                     {props.customCategories.includes(parentFolder) && (
-                      <button onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="opacity-0 group-hover:opacity-100 text-[#8ea4bd] hover:text-[#c53030]">
+                      <button onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="opacity-0 group-hover:opacity-100 text-[#8ea4bd] hover:text-[#c53030] dark:hover:text-[#f87171] transition-opacity">
                         <SmallXIcon />
                       </button>
                     )}
                   </div>
                 </div>
 
+                {/* Subfolders */}
                 {isExpanded && (
-                  <div className="ml-4 pl-2 border-l border-[#c3d7eb] dark:border-[#3a526b] flex flex-col py-1">
+                  <div className="ml-5 pl-3 border-l border-[#c3d7eb] dark:border-[#2a3f5a] flex flex-col py-1 gap-0.5">
                     {subfolders.map(sub => {
                       const isSubActive = isParentActive && props.activeSubFilter === sub;
                       return (
-                        <div key={sub} onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder, sub)} onClick={(e) => { e.stopPropagation(); props.setActiveFilter(parentFolder); props.setActiveSubFilter(sub); props.setIsMobileMenuOpen(false); }} className={`flex items-center justify-between px-2.5 py-1 text-xs rounded-sm cursor-pointer transition-all ${isSubActive ? 'text-[#315174] dark:text-white font-semibold' : 'hover:bg-[#f2f7fc] dark:hover:bg-[#1a2332] text-[#5e81a5] font-medium'}`}>
+                        <div key={sub} onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder, sub)} onClick={(e) => { e.stopPropagation(); props.setActiveFilter(parentFolder); props.setActiveSubFilter(sub); props.setIsMobileMenuOpen(false); }} className={`flex items-center justify-between px-2.5 py-1.5 text-xs rounded cursor-pointer transition-all ${isSubActive ? 'bg-white/80 dark:bg-[#1a2332] text-[#315174] dark:text-white font-semibold shadow-sm border border-[#e1eef9] dark:border-[#3a526b]' : 'hover:bg-white/40 dark:hover:bg-[#151c28] text-[#5e81a5] font-medium border border-transparent'}`}>
                           <span className="truncate">{sub}</span>
                           <span className="text-[9px] font-mono text-[#8ea4bd]">{props.getCounts[`${parentFolder}::${sub}`] || 0}</span>
                         </div>
                       )
                     })}
 
+                    {/* New Subfolder Input */}
                     {props.creatingSubFor === parentFolder ? (
-                      <div className="flex gap-1 mt-1 pl-2">
-                        <input autoFocus type="text" placeholder="sub_dir..." value={props.newSubfolderName} onChange={(e) => props.setNewSubfolderName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddSubfolder(parentFolder)} className="w-full px-1.5 py-1 text-[10px] font-sans bg-[#f2f7fc] dark:bg-[#0d1620] border border-[#a9cbed] dark:border-[#3a526b] rounded-sm outline-none text-[#2c4054] dark:text-gray-300" />
-                        <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(null); }} className="px-1 text-[#8ea4bd] hover:text-[#2c4054]"><SmallXIcon /></button>
+                      <div className="flex gap-1.5 mt-1.5">
+                        <input autoFocus type="text" placeholder="sub_dir..." value={props.newSubfolderName} onChange={(e) => props.setNewSubfolderName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddSubfolder(parentFolder)} className="w-full px-2 py-1.5 text-[10px] font-sans bg-[#f8fbff] dark:bg-[#050b14] border border-[#a9cbed] dark:border-[#3a526b] rounded shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] outline-none text-[#2c4054] dark:text-gray-300 focus:border-[#609ad3]" />
+                        <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(null); }} className="px-1.5 text-[#8ea4bd] hover:text-[#c53030] dark:hover:text-[#f87171]"><SmallXIcon /></button>
                       </div>
                     ) : (
-                      <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(parentFolder); }} className="flex items-center gap-1.5 pl-2 mt-1 text-[9px] font-mono uppercase tracking-widest text-[#8ea4bd] hover:text-[#4a6b8c] transition-colors">
-                        <PlusIcon /> Sub
+                      <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(parentFolder); }} className="flex items-center gap-1.5 px-2 mt-1.5 text-[9px] font-mono uppercase tracking-widest text-[#8ea4bd] hover:text-[#2c4054] dark:hover:text-white transition-colors w-max">
+                        <PlusIcon /> Sub_Dir
                       </button>
                     )}
                   </div>
@@ -98,21 +114,21 @@ export default function Sidebar(props: SidebarProps) {
         </div>
       </div>
 
-      {/* MOBILE PROFILE BLOCK */}
-      <div className="md:hidden mt-auto pt-6 flex flex-col gap-4 pb-4">
-        <div className="bg-white/80 dark:bg-[#1a2332]/80 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded flex flex-col shadow-sm">
-          <div className="bg-gradient-to-b from-[#eaf2f9] to-[#d1e2f3] dark:from-[#213045] dark:to-[#1a2332] border-b border-[#a9cbed] dark:border-[#2a3f5a] px-3 py-1.5">
-            <span className="text-[10px] font-mono text-[#4a6b8c] tracking-widest uppercase">++ user.session //</span>
+      {/* ─── MOBILE PROFILE BLOCK (Only visible < md) ─── */}
+      <div className="md:hidden mt-auto pt-6 flex flex-col pb-4">
+        <div className="bg-white/80 dark:bg-[#080d14]/80 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] flex flex-col overflow-hidden">
+          <div className="bg-gradient-to-b from-[#eaf2f9]/90 to-[#d1e2f3]/90 dark:from-[#1a2536]/90 dark:to-[#111824]/90 border-b border-[#a9cbed] dark:border-[#2a3f5a] px-4 py-2.5">
+            <span className="text-[10px] font-mono text-[#4a6b8c] dark:text-[#5e81a5] tracking-widest uppercase">++ user.session //</span>
           </div>
-          <div className="p-3 flex flex-col gap-3">
-            <span className="text-xs font-sans font-medium text-[#2c4054] dark:text-gray-300 truncate">{props.userEmail}</span>
-            <div className="flex items-center justify-between border-t border-[#eaf2f9] dark:border-[#2a3f5a] pt-2">
-              <span className="text-[9px] font-mono uppercase text-[#5e81a5]">Theme</span>
-              <button onClick={toggleDarkMode} className={`w-8 h-4 rounded-full transition-colors relative flex items-center p-0.5 border ${isDarkMode ? 'bg-[#315174] border-[#2a3f5a]' : 'bg-[#e1eef9] border-[#a9cbed]'}`}>
-                <div className={`w-2.5 h-2.5 bg-white rounded-full transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
+          <div className="p-4 flex flex-col gap-4">
+            <span className="text-xs font-sans font-bold text-[#2c4054] dark:text-gray-200 truncate">{props.userEmail}</span>
+            <div className="flex items-center justify-between border-t border-[#eaf2f9] dark:border-[#1a2536] pt-3">
+              <span className="text-[10px] font-mono uppercase text-[#5e81a5] dark:text-[#8ea4bd]">UI.Theme</span>
+              <button onClick={toggleDarkMode} className={`w-9 h-5 rounded-full shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] transition-colors relative flex items-center p-0.5 border ${isDarkMode ? 'bg-[#315174] border-[#2a3f5a]' : 'bg-[#e1eef9] border-[#a9cbed]'}`}>
+                <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
             </div>
-            <button onClick={props.handleSignOut} className="w-full py-1.5 mt-1 bg-gradient-to-b from-[#fdf2f3] to-[#fadadd] border border-[#f1aab0] text-[#c53030] font-mono text-[9px] uppercase rounded shadow-[inset_0_1px_0_rgba(255,255,255,1)]">Terminate</button>
+            <button onClick={props.handleSignOut} className="w-full py-2.5 mt-2 bg-gradient-to-b from-[#fdf2f3] to-[#fadadd] dark:from-[#3b1515] dark:to-[#2a0e0e] border border-[#f1aab0] dark:border-[#7f1d1d] text-[#c53030] dark:text-[#f87171] font-mono text-[10px] uppercase tracking-widest rounded shadow-[0_2px_4px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] cursor-pointer">Terminate</button>
           </div>
         </div>
       </div>

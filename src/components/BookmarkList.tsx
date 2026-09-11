@@ -252,7 +252,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
           <input
             type="text"
-            placeholder="Type to filter database..."
+            placeholder="Search your space..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-transparent border-none outline-none px-4 py-3 font-sans text-sm sm:text-base text-[#2c4054] dark:text-gray-200 placeholder-[#7999b8] dark:placeholder-[#4a6b8c]"
