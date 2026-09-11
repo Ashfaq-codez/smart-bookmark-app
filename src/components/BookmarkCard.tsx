@@ -234,7 +234,7 @@ export default function BookmarkCard({
         onDragStart={(e) => onDragStart(e, bookmark.id)}
         onDragEnd={onDragEnd}
         onClick={() => { setActiveModalTab('view'); setIsModalOpen(true); }}
-        className={`group relative flex flex-col break-inside-avoid mb-2 sm:mb-8 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
+        className={`group relative flex flex-col break-inside-avoid mb-2 sm:mb-4 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
         <div className={`w-full bg-white dark:bg-gray-800 border-[1.5px] sm:border-2 border-gray-900 dark:border-gray-700 rounded-[1rem] sm:rounded-2xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:group-hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.25)]`}>
           {bookmark.type === 'note' ? (
