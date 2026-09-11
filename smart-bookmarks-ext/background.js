@@ -1,4 +1,4 @@
-const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save'; // Swap to Vercel for production
+const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save'; 
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: "save-page", title: "Save Page to Hub", contexts: ["page"] });
@@ -14,8 +14,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "save-image") {
     payload = { ...payload, image_url: info.srcUrl, type: 'image' };
   } else if (info.menuItemId === "save-text") {
-    // Send the highlighted text directly to the 'content' column
-    payload = { ...payload, content: info.selectionText, type: 'note' };
+    // This MUST say 'content', not 'description'
+    payload = { ...payload, content: info.selectionText, type: 'note' }; 
   }
 
   try {
@@ -28,7 +28,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     if (res.status === 409) {
       chrome.action.setBadgeText({ text: "DUP" });
-      chrome.action.setBadgeBackgroundColor({ color: "#d97706" }); // Amber for duplicate
+      chrome.action.setBadgeBackgroundColor({ color: "#d97706" }); 
     } else if (res.ok) {
       chrome.action.setBadgeText({ text: "OK" });
       chrome.action.setBadgeBackgroundColor({ color: "#15803d" });
