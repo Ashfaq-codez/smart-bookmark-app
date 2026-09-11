@@ -204,8 +204,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     <div className="min-h-screen font-sans flex flex-col overflow-x-hidden selection:bg-[#a9cbed] selection:text-[#203a55] relative z-0">
       
       {/* ─── PURE CSS SKY / CLOUD GRADIENT BACKGROUND ─── */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#f1f7fc] via-[#b6d5f0] to-[#609ad3] dark:from-[#0d1620] dark:via-[#152336] dark:to-[#0f172a]" />
-
+      {/* ─── SMOOTH CROSSFADING BACKGROUNDS ─── */}
+      <div className="fixed inset-0 pointer-events-none z-[-1]">
+        {/* Light Mode Layer */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#f1f7fc] via-[#b6d5f0] to-[#609ad3] transition-opacity duration-700 ease-in-out opacity-100 dark:opacity-0" />
+        
+        {/* Dark Mode Layer */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0d1620] via-[#152336] to-[#0f172a] transition-opacity duration-700 ease-in-out opacity-0 dark:opacity-100" />
+      </div>
+      
       {/* ─── DESKTOP PROFILE DROP (TOP RIGHT WINDOW PANEL) ─── */}
       <div className="hidden md:block fixed top-6 right-6 z-40 w-[240px]">
         <ProfileDropdown email={userEmail ?? ""} />
@@ -217,7 +224,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <MenuIcon />
         </button>
         <span className="font-mono text-[11px] tracking-widest text-[#4a6b8c] dark:text-[#a2bcdc] uppercase">
-          ++ web.portal //
+          ++ smart. space //
         </span>
         <div className="w-8" />
       </header>
