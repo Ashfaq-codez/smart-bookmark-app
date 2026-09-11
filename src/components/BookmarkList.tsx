@@ -53,6 +53,20 @@ const colorThemes = [
   { card: 'bg-emerald-100', btn: 'bg-emerald-300', hover: 'hover:bg-emerald-400' },
 ]
 
+function normalizeUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return ''
+  try {
+    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    const parsed = new URL(withProto)
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '')
+    const path = parsed.pathname.replace(/\/+$/, '') || '/'
+    return `${parsed.protocol}//${host}${path}${parsed.search}`
+  } catch {
+    return trimmed.toLowerCase().replace(/\/+$/, '')
+  }
+}
+
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
 
@@ -70,6 +84,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
+  // Duplicate Inspection Modal State
+  const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
+  const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
+
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [customSubCategories, setCustomSubCategories] = useState<Record<string, string[]>>({})
   const [isAddingCategory, setIsAddingCategory] = useState(false)
@@ -79,14 +97,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400)
+    const timer = setTimeout(() => setIsLoading(false), 300)
     return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      if (currentScrollY > lastScrollY && currentScrollY > 70) {
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
         setIsInputVisible(false)
       } else {
         setIsInputVisible(true)
@@ -102,31 +120,43 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     window.location.href = '/'
   }
 
+  // ────────────────────────────────────────────────────────────
+  // CAPTURE ENGINE WITH DUPLICATE WARNING MODAL
+  // ────────────────────────────────────────────────────────────
   const handleQuickCapture = async () => {
     const rawInput = inputValue.trim()
     if (!rawInput) return
-    setIsSaving(true)
 
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
-    const existingUrls = new Set(bookmarks.map(b => b.url.toLowerCase()))
+
+    // Single link check against existing bookmarks
+    if (isAllUrls && tokens.length === 1) {
+      const targetNormalized = normalizeUrl(tokens[0])
+      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetNormalized)
+      
+      if (existing) {
+        setDuplicateMatch(existing)
+        return
+      }
+    }
+
+    setIsSaving(true)
+    const existingUrls = new Set(bookmarks.map(b => normalizeUrl(b.url)))
 
     try {
       if (isAllUrls && tokens.length > 1) {
-        const validNewTokens = tokens.filter(token => {
-          const formatted = /^https?:\/\//i.test(token) ? token : 'https://' + token
-          return !existingUrls.has(formatted.toLowerCase())
-        })
+        const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
 
         if (validNewTokens.length === 0) {
-          toast.error('All of these links are already in your hub!')
+          toast.error('All entered links are already in your hub!')
           setIsSaving(false)
           return
         }
 
         if (validNewTokens.length < tokens.length) {
-          toast.success(`Skipped ${tokens.length - validNewTokens.length} duplicates.`)
+          toast.success(`Skipped ${tokens.length - validNewTokens.length} duplicate URLs.`)
         }
 
         await Promise.all(validNewTokens.map(token => {
@@ -137,18 +167,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             body: JSON.stringify({ url: finalUrl })
           })
         }))
-        toast.success(`Saved ${validNewTokens.length} links!`)
+        toast.success(`Saved ${validNewTokens.length} new links!`)
       } else {
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
 
         if (isSingleUrl) {
           finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
-          if (existingUrls.has(finalUrl.toLowerCase())) {
-            toast.error('This bookmark already exists!')
-            setIsSaving(false)
-            return
-          }
         }
 
         const payload = isSingleUrl
@@ -161,11 +186,23 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           body: JSON.stringify(payload)
         })
 
-        if (!res.ok) throw new Error('Failed to save snippet.')
+        if (res.status === 409) {
+          const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
+          if (match) {
+            setDuplicateMatch(match)
+            setIsSaving(false)
+            return
+          }
+          toast.error('This bookmark already exists!')
+          setIsSaving(false)
+          return
+        }
+
+        if (!res.ok) throw new Error('Failed to save.')
       }
       setInputValue('')
     } catch {
-      toast.error('Failed to save snippet.')
+      toast.error('Could not save item.')
     } finally {
       setIsSaving(false)
     }
@@ -232,14 +269,31 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const handleDeleteCategory = async (catToDelete: string) => {
     toast((t) => (
       <div className="flex flex-col gap-3 font-sans">
-        <span className="text-lg font-black text-gray-900 uppercase tracking-tight">Delete "{catToDelete}"?</span>
-        <span className="text-sm font-bold text-gray-600">All links inside will remain in "Uncategorized".</span>
-        <div className="flex gap-3 mt-2">
-          <button onClick={() => { setCustomCategories(prev => prev.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null); } toast.dismiss(t.id); }} className="flex-1 px-4 py-2 bg-red-400 text-gray-900 font-black uppercase text-sm border-2 border-gray-900 rounded-xl hover:shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] transition-all">Delete</button>
-          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-900 font-black uppercase text-sm border-2 border-gray-900 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+        <span className="text-base font-black text-gray-900 uppercase">Delete "{catToDelete}"?</span>
+        <span className="text-xs font-bold text-gray-600">Saved items will remain in Uncategorized.</span>
+        <div className="flex gap-2 mt-2">
+          <button 
+            onClick={() => {
+              setCustomCategories(prev => prev.filter(c => c !== catToDelete))
+              if (activeFilter === catToDelete) {
+                setActiveFilter('All')
+                setActiveSubFilter(null)
+              }
+              toast.dismiss(t.id)
+            }} 
+            className="flex-1 px-3 py-1.5 bg-red-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-lg"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-lg"
+          >
+            Cancel
+          </button>
         </div>
       </div>
-    ), { duration: Infinity, style: { background: '#fef08a', border: '4px solid #111827', borderRadius: '1rem', padding: '1.5rem', boxShadow: '6px 6px 0px 0px rgba(17,24,39,1)' } })
+    ), { duration: Infinity, style: { background: '#fef08a', border: '3px solid #111827', borderRadius: '1rem', padding: '1.25rem' } })
   }
 
   const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
@@ -254,27 +308,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[64px] overflow-x-hidden">
+    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[56px] sm:pt-[64px] overflow-x-hidden">
       
       {/* ────────────────────────────────────────────────────────────
-          1. TOP HEADER
+          1. FIXED TOP HEADER (Mobile optimized)
           ──────────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 h-[64px] z-40 bg-white dark:bg-gray-900 border-b-3 border-gray-900 dark:border-gray-700 flex items-stretch select-none">
-        <div className="flex items-center px-4 md:px-6 w-auto md:w-[280px] md:border-r-3 border-gray-900 dark:border-gray-700 shrink-0 gap-3">
+      <header className="fixed top-0 left-0 right-0 h-[56px] sm:h-[64px] z-30 bg-white dark:bg-gray-900 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-700 flex items-stretch select-none">
+        <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r-3 border-gray-900 dark:border-gray-700 shrink-0 gap-2">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="md:hidden p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
             title="Toggle Menu"
           >
             <MenuIcon />
           </button>
-          <span className="font-mono font-black text-xs md:text-sm uppercase tracking-wider text-gray-900 dark:text-white">
+          <span className="hidden sm:inline font-mono font-black text-xs md:text-sm uppercase tracking-wider text-gray-900 dark:text-white">
             smart bookmark
           </span>
         </div>
 
-        <div className="flex-1 flex items-center px-3 md:px-6 border-l-3 md:border-l-0 border-r-3 border-gray-900 dark:border-gray-700 relative bg-white dark:bg-gray-900">
-          <div className="text-gray-900 dark:text-gray-400 mr-2 shrink-0">
+        <div className="flex-1 flex items-center px-2 sm:px-4 border-l-2 md:border-l-0 border-r-2 sm:border-r-3 border-gray-900 dark:border-gray-700 relative bg-white dark:bg-gray-900">
+          <div className="text-gray-900 dark:text-gray-400 mr-1.5 shrink-0">
             <SearchIcon />
           </div>
           <input
@@ -282,33 +336,36 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             placeholder="Search your mind..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-full bg-transparent outline-none font-bold text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-400"
+            className="w-full h-full bg-transparent outline-none font-bold text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400"
           />
         </div>
 
-        <div className="flex items-center justify-center w-[120px] md:w-[200px] shrink-0 bg-white dark:bg-gray-900 font-mono text-xs">
+        <div className="flex items-center justify-center w-[90px] sm:w-[150px] md:w-[200px] shrink-0 bg-white dark:bg-gray-900 font-mono text-xs">
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
 
       {/* ────────────────────────────────────────────────────────────
-          2. SIDEBAR (Fixed Drawer & Desktop Push)
+          2. SIDEBAR (Mobile Slide-Over & Desktop Push)
           ──────────────────────────────────────────────────────────── */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-xs"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-xs transition-opacity"
         />
       )}
 
       <div 
-        className={`fixed left-0 top-[64px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-3 border-gray-900 dark:border-gray-700 transition-all duration-300 ease-in-out flex ${
-          isSidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-[232px] md:translate-x-0 w-[280px] md:w-[48px]'
+        className={`fixed left-0 top-[56px] sm:top-[64px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-3 border-gray-900 dark:border-gray-700 transition-all duration-300 ease-in-out flex ${
+          isSidebarOpen 
+            ? 'translate-x-0 w-[82vw] sm:w-[320px] md:w-[280px]' 
+            : '-translate-x-full md:translate-x-0 md:w-[48px]'
         }`}
       >
+        {/* Desktop Flap Toggle */}
         <div 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-          className="order-last w-[48px] h-full flex flex-col items-center py-5 cursor-pointer bg-gray-50 dark:bg-gray-800 border-l-3 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0 select-none"
+          className="hidden md:flex order-last w-[48px] h-full flex-col items-center py-5 cursor-pointer bg-gray-50 dark:bg-gray-800 border-l-3 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0 select-none"
         >
           <ChevronRight className={`text-gray-900 dark:text-white transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
           <span style={{ writingMode: 'vertical-rl' }} className="mt-6 font-mono text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-gray-300">
@@ -316,7 +373,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </span>
         </div>
 
-        <div className={`h-full w-[232px] overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden pointer-events-none'}`}>
+        {/* Sidebar Navigation */}
+        <div className={`h-full flex-1 overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden pointer-events-none'}`}>
           <Sidebar 
             userEmail={userEmail || null}
             handleSignOut={handleSignOut}
@@ -349,19 +407,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          3. MAIN MASONRY GRID (Strict Boundaries to Prevent Overflow)
+          3. MAIN MASONRY FEED (2 Columns on mobile, expands on desktop)
           ──────────────────────────────────────────────────────────── */}
       <main 
-        className={`flex-1 p-3 sm:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-28 ${
+        className={`flex-1 p-2.5 sm:p-4 md:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-24 ${
           isSidebarOpen 
             ? 'md:ml-[280px] md:w-[calc(100%-280px)]' 
             : 'md:ml-[48px] md:w-[calc(100%-48px)]'
         }`}
       >
-        <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-4 w-full">
+        <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-2.5 sm:gap-4 w-full">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="break-inside-avoid mb-4 inline-block w-full">
+              <div key={index} className="break-inside-avoid mb-3 inline-block w-full">
                 <BookmarkSkeleton />
               </div>
             ))
@@ -392,6 +450,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   onDragEnd={handleDragEnd}
                   updateBookmark={updateBookmark}
                   deleteBookmark={deleteBookmark}
+                  forceOpenModal={forcedInspectId === bookmark.id}
+                  onCloseForcedModal={() => setForcedInspectId(null)}
                 />
               )
             })
@@ -400,18 +460,18 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </main>
 
       {/* ────────────────────────────────────────────────────────────
-          4. FLOATING BOTTOM INPUT BAR
+          4. FLOATING QUICK CAPTURE INPUT BAR
           ──────────────────────────────────────────────────────────── */}
       <div 
-        className={`fixed bottom-4 md:bottom-6 z-30 flex justify-center px-3 pointer-events-none transition-all duration-300 ease-in-out ${
+        className={`fixed bottom-3 sm:bottom-5 z-30 flex justify-center px-2.5 sm:px-4 pointer-events-none transition-all duration-300 ease-in-out ${
           isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'
         } ${isSidebarOpen ? 'md:left-[280px]' : 'md:left-[48px]'} left-0 right-0`}
       >
-        <div className="pointer-events-auto w-full max-w-2xl bg-white dark:bg-gray-900 border-3 border-gray-900 dark:border-gray-600 rounded-2xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] flex items-center p-1.5 gap-2 transition-transform">
+        <div className="pointer-events-auto w-full max-w-xl bg-white dark:bg-gray-900 border-2 sm:border-3 border-gray-900 dark:border-gray-600 rounded-2xl shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] flex items-center p-1 sm:p-1.5 gap-1.5 transition-transform">
           <button
-            onClick={() => toast('Storage bucket coming next!', { icon: '🏗️' })}
-            className="p-2 md:p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-300 border-2 border-transparent hover:border-gray-900 rounded-xl transition-all cursor-pointer shrink-0"
-            title="Attach File"
+            onClick={() => toast('Attachment uploads coming with the storage bucket!', { icon: '📎' })}
+            className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border border-gray-900 rounded-xl cursor-pointer shrink-0"
+            title="Attach"
           >
             <PaperclipIcon />
           </button>
@@ -420,21 +480,79 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
-            placeholder="paste links, notes, or bulk URLs..."
-            className="flex-1 bg-transparent border-none outline-none px-2 font-mono font-bold text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50"
+            placeholder="Save link, note, or bulk URLs..."
+            className="flex-1 bg-transparent border-none outline-none px-2 font-mono font-bold text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50 min-w-0"
           />
 
           <button
             onClick={handleQuickCapture}
             disabled={isSaving || !inputValue.trim()}
-            className="p-2 md:p-2.5 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] hover:translate-y-px hover:shadow-none active:translate-y-0.5 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center shrink-0"
+            className="p-1.5 sm:p-2 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-xl shadow-[1.5px_1.5px_0px_0px_rgba(17,24,39,1)] active:translate-y-0.5 disabled:opacity-50 cursor-pointer flex items-center justify-center shrink-0"
           >
             <SendIcon />
           </button>
         </div>
       </div>
+
+      {/* ────────────────────────────────────────────────────────────
+          5. DUPLICATE INSPECTION DIALOG (Fair Warning to User)
+          ──────────────────────────────────────────────────────────── */}
+      {duplicateMatch && (
+        <div 
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
+          onClick={() => setDuplicateMatch(null)}
+        >
+          <div 
+            className="w-full max-w-md bg-white dark:bg-gray-900 border-4 border-gray-900 dark:border-yellow-400 p-5 sm:p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-yellow-500 font-mono text-xs font-black uppercase tracking-widest">
+              <span>⚠️ Already Saved</span>
+            </div>
+            
+            <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-snug">
+              This link is already in your hub!
+            </h3>
+
+            <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl border-2 border-gray-900 dark:border-gray-700 flex flex-col gap-1">
+              <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                {duplicateMatch.title}
+              </span>
+              <span className="text-[11px] font-mono text-gray-500 truncate">
+                {duplicateMatch.url}
+              </span>
+              <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider mt-1">
+                Folder: {duplicateMatch.category || 'Inbox'}
+              </span>
+            </div>
+
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              Did you mean to review or edit this existing bookmark instead of saving it again?
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+              <button
+                onClick={() => {
+                  setForcedInspectId(duplicateMatch.id)
+                  setDuplicateMatch(null)
+                  setInputValue('')
+                }}
+                className="flex-1 py-2.5 bg-yellow-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px transition-all cursor-pointer"
+              >
+                Open Existing
+              </button>
+              <button
+                onClick={() => setDuplicateMatch(null)}
+                className="py-2.5 px-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold uppercase text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
     </div>
   )
