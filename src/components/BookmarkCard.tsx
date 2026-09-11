@@ -46,7 +46,6 @@ export default function BookmarkCard({
   const [moveCategory, setMoveCategory] = useState(bookmark.category || '')
   const [moveSubCategory, setMoveSubCategory] = useState(bookmark.sub_category || '')
 
-  // Hydration fix for Portals
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -99,7 +98,7 @@ export default function BookmarkCard({
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
 
   // ────────────────────────────────────────────────────────────
-  // MODAL PORTAL COMPONENT (Escapes stacking contexts)
+  // MODAL PORTAL COMPONENT
   // ────────────────────────────────────────────────────────────
   const ModalPortal = () => {
     if (!mounted || !isModalOpen) return null
@@ -107,28 +106,38 @@ export default function BookmarkCard({
     return createPortal(
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-gray-900/70 backdrop-blur-sm transition-opacity" onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }}>
         
-        {/* MODAL CONTAINER - Responsive fixed sizing */}
-        <div className="relative w-full max-w-5xl w-[95vw] md:w-[80vw] h-[92vh] md:h-[80vh] flex flex-col md:flex-row bg-[#fafafa] dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-2xl md:rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="relative w-full max-w-5xl w-[95vw] md:w-[80vw] h-[92vh] md:h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-2xl md:rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
           
           <button onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }} className="absolute top-3 right-3 md:top-4 md:right-4 z-50 p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer" title="Close"><CloseIcon /></button>
 
-          {/* LEFT PANE: 35% height on mobile, full height on desktop */}
-          <div className={`w-full md:w-1/2 h-[35%] min-h-[200px] md:h-full bg-gray-50 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex shrink-0 ${bookmark.type === 'note' ? 'items-start p-6 md:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-4 md:p-6'}`}>
+          {/* LEFT PANE */}
+          <div className={`w-full md:w-1/2 h-[35%] min-h-[200px] md:h-full bg-gray-200 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex shrink-0 ${bookmark.type === 'note' ? 'items-start p-6 md:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-400 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-6 md:p-8'}`}>
             {bookmark.type === 'note' ? (
               <div className="w-full h-full max-w-lg mx-auto">
                 <p className="font-serif text-base sm:text-xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
                   {bookmark.description || bookmark.title}
                 </p>
               </div>
-            ) : (
+            ) : bookmark.type === 'image' ? (
+              // IMAGE HANDLING
               <>
-                <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-pointer" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
-                <button onClick={() => setIsFullscreenImage(true)} className="absolute bottom-3 right-3 md:bottom-4 md:right-4 p-2 bg-white/90 dark:bg-gray-800/90 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5 text-[10px] sm:text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
+                <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-zoom-in drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:scale-[1.02] transition-transform duration-300" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
+                <button onClick={() => setIsFullscreenImage(true)} className="absolute bottom-3 right-3 md:bottom-4 md:right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:translate-y-px active:shadow-none transition-all cursor-pointer flex items-center gap-1.5 text-[10px] sm:text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
+              </>
+            ) : (
+              // LINK HANDLING
+              <>
+                <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center relative group">
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] group-hover:scale-[1.02] transition-transform duration-300" title="Click to open link" />
+                </a>
+                <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="absolute bottom-3 right-3 md:bottom-4 md:right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:translate-y-px active:shadow-none transition-all cursor-pointer flex items-center gap-1.5 text-[10px] sm:text-xs font-bold">
+                  <ExternalLinkIcon /> Open Link
+                </a>
               </>
             )}
           </div>
 
-          {/* RIGHT PANE: 65% height on mobile, full height on desktop */}
+          {/* RIGHT PANE */}
           <div className="w-full md:w-1/2 h-[65%] md:h-full flex flex-col p-5 md:p-8 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
             
             <div className="flex items-center justify-between pb-3 md:pb-4 border-b-2 border-gray-200 dark:border-gray-700 mb-4 pr-10 shrink-0">
@@ -143,19 +152,19 @@ export default function BookmarkCard({
             <div className="flex flex-col flex-1">
               {activeModalTab === 'edit' ? (
                 <div className="flex flex-col gap-3 py-2">
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Title</label><input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-3 py-2 text-sm font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Target URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-3 py-2 text-xs font-mono border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-gray-500">Title</label><input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-3 py-2 text-sm font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-gray-500">Target URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-3 py-2 text-xs font-mono border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                    <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded-lg bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={editSubCategory} onChange={(e) => setEditSubCategory(e.target.value)} className="w-full px-2.5 py-1.5 text-xs border-2 border-dashed border-gray-500 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" /></div>
                   </div>
                   <div className="flex gap-2 pt-4"><button onClick={handleSaveEdit} className="flex-1 py-3 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">Save Changes</button><button onClick={() => setActiveModalTab('view')} className="px-4 md:px-5 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Cancel</button></div>
                 </div>
               ) : activeModalTab === 'move' ? (
                 <div className="flex flex-col gap-3 py-2">
                   <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Select or type a destination folder:</p>
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
-                  <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-dashed border-gray-500 rounded-xl bg-white dark:bg-gray-800 dark:text-white outline-none" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-gray-500">Folder</label><input type="text" value={moveCategory} onChange={(e) => setMoveCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-gray-500">Subfolder</label><input type="text" value={moveSubCategory} onChange={(e) => setMoveSubCategory(e.target.value)} className="w-full px-3 py-2 text-xs border-2 border-dashed border-gray-500 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white outline-none" /></div>
                   <div className="flex gap-2 pt-4"><button onClick={handleSaveMove} className="flex-1 py-3 bg-yellow-400 text-gray-900 text-xs font-black uppercase tracking-wider border-2 border-gray-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">Confirm Move</button><button onClick={() => setActiveModalTab('view')} className="px-4 md:px-5 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Cancel</button></div>
                 </div>
               ) : (
@@ -171,10 +180,9 @@ export default function BookmarkCard({
                     {bookmark.tags?.map((tag) => <span key={tag} className="text-[9px] md:text-[10px] font-black uppercase tracking-wider text-gray-900 bg-yellow-200 dark:bg-yellow-400 px-2 py-1 rounded-full border border-gray-900">#{tag}</span>)}
                   </div>
                   
-                  {/* Flexible Notes Section */}
                   <div className="flex flex-col flex-1 min-h-[120px] gap-2 pt-2 md:pt-4 pb-2">
                     <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">Personal Notes</label>
-                    <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Add personal thoughts, summaries, or context..." className="w-full flex-1 p-3 md:p-4 text-xs md:text-sm font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] resize-none transition-shadow" />
+                    <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Add personal thoughts, summaries, or context..." className="w-full flex-1 p-3 md:p-4 text-xs md:text-sm font-medium text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] resize-none transition-shadow" />
                     <button onClick={handleSaveEdit} className="mt-2 w-full sm:w-auto self-end px-5 py-2.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-[10px] md:text-xs font-bold uppercase tracking-wider rounded-xl border-2 border-transparent dark:border-gray-300 hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer shrink-0">Save Note</button>
                   </div>
                 </div>
@@ -195,7 +203,7 @@ export default function BookmarkCard({
   // FULLSCREEN LIGHTBOX PORTAL
   // ────────────────────────────────────────────────────────────
   const LightboxPortal = () => {
-    if (!mounted || !isFullscreenImage || bookmark.type === 'note') return null
+    if (!mounted || !isFullscreenImage || bookmark.type !== 'image') return null
     
     return createPortal(
       <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenImage(false)}>
