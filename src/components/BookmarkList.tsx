@@ -12,7 +12,7 @@ import ProfileDropdown from './ProfileDropdown'
 
 // --- ICONS ---
 const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
   </svg>
@@ -40,7 +40,7 @@ const MenuIcon = () => (
 )
 
 const ChevronRight = ({ className = '' }: { className?: string }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}>
     <path d="M9 18l6-6-6-6" />
   </svg>
 )
@@ -92,9 +92,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const handleScroll = () => {
       const currentScrollY = window.scrollY
       if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setIsInputVisible(false) // Scrolling down
+        setIsInputVisible(false) 
       } else {
-        setIsInputVisible(true) // Scrolling up
+        setIsInputVisible(true) 
       }
       setLastScrollY(currentScrollY)
     }
@@ -108,7 +108,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   // ────────────────────────────────────────────────────────────
-  // SMART QUICK CAPTURE & BULK LOGIC
+  // DUPLICATE CHECK & QUICK CAPTURE LOGIC
   // ────────────────────────────────────────────────────────────
   const handleQuickCapture = async () => {
     const rawInput = inputValue.trim()
@@ -118,10 +118,28 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
+    
+    // Create a Set of existing URLs for fast lookup
+    const existingUrls = new Set(bookmarks.map(b => b.url.toLowerCase()))
 
     try {
       if (isAllUrls && tokens.length > 1) {
-        await Promise.all(tokens.map(token => {
+        // BULK MULTI-LINK SAVE WITH DUPLICATE CHECK
+        const validNewTokens = tokens.filter(token => {
+          const formatted = /^https?:\/\//i.test(token) ? token : 'https://' + token
+          return !existingUrls.has(formatted.toLowerCase())
+        })
+
+        if (validNewTokens.length === 0) {
+          toast.error('All of these links are already saved!')
+          return
+        }
+
+        if (validNewTokens.length < tokens.length) {
+          toast.success(`Skipped ${tokens.length - validNewTokens.length} duplicates.`)
+        }
+
+        await Promise.all(validNewTokens.map(token => {
           const finalUrl = /^https?:\/\//i.test(token) ? token : 'https://' + token
           return fetch('/api/save', {
             method: 'POST',
@@ -129,12 +147,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             body: JSON.stringify({ url: finalUrl })
           })
         }))
-        toast.success(`Bulk saved ${tokens.length} links to your hub!`)
+        toast.success(`Saved ${validNewTokens.length} new links!`)
+        
       } else {
+        // SINGLE SAVE WITH DUPLICATE CHECK
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
-        if (isSingleUrl && !/^https?:\/\//i.test(finalUrl)) {
-          finalUrl = 'https://' + finalUrl
+        
+        if (isSingleUrl) {
+          finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
+          if (existingUrls.has(finalUrl.toLowerCase())) {
+            toast.error('This link is already in your hub!')
+            return
+          }
         }
 
         const payload = isSingleUrl
@@ -241,26 +266,26 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col">
+    <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[72px] overflow-x-hidden">
       
       {/* ────────────────────────────────────────────────────────────
-          1. GLASSMORPHIC TOP HEADER
+          1. FIXED TOP HEADER (Restored Wireframe UI)
           ──────────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 h-[72px] z-50 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 flex items-stretch transition-colors">
+      <header className="fixed top-0 left-0 right-0 h-[72px] z-50 bg-white dark:bg-gray-900 border-b-4 border-gray-900 dark:border-gray-700 flex items-stretch">
         
         {/* Mobile Hamburger / Desktop Logo */}
-        <div className="flex items-center pl-4 pr-2 md:px-0 md:justify-center w-auto md:w-[240px] md:border-r border-gray-200/50 dark:border-gray-800/50 shrink-0">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="md:hidden p-2 text-gray-700 dark:text-gray-300">
+        <div className="flex items-center pl-4 pr-2 md:px-0 md:justify-center w-auto md:w-[280px] md:border-r-4 border-gray-900 dark:border-gray-700 shrink-0">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="md:hidden p-2 text-gray-900 dark:text-white">
             <MenuIcon />
           </button>
-          <span className="hidden md:block font-mono font-bold text-xs uppercase tracking-widest text-gray-800 dark:text-gray-200">
+          <span className="hidden md:block font-mono font-black text-sm uppercase tracking-widest text-gray-900 dark:text-white">
             smart bookmark
           </span>
         </div>
 
         {/* Global Search Segment */}
-        <div className="flex-1 flex items-center px-4 md:px-8 relative group">
-          <div className="text-gray-400 group-focus-within:text-yellow-500 transition-colors">
+        <div className="flex-1 flex items-center px-4 md:px-8 border-r-4 border-transparent md:border-gray-900 dark:border-gray-700 relative group bg-white dark:bg-gray-900">
+          <div className="text-gray-900 dark:text-gray-400 group-focus-within:text-yellow-500 transition-colors">
             <SearchIcon />
           </div>
           <input
@@ -273,74 +298,67 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
 
         {/* Profile Segment */}
-        <div className="flex items-center justify-end md:justify-center w-[60px] md:w-[240px] pr-4 md:pr-0 md:border-l border-gray-200/50 dark:border-gray-800/50 shrink-0">
+        <div className="flex items-center justify-end md:justify-center w-[80px] md:w-[240px] pr-4 md:pr-0 shrink-0 bg-white dark:bg-gray-900">
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
 
       {/* ────────────────────────────────────────────────────────────
-          2. GLASSMORPHIC SIDEBAR FLAP
+          2. SOLID SIDEBAR FLAP (Pushes Content)
           ──────────────────────────────────────────────────────────── */}
-      {/* Mobile Backdrop Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-900/20 dark:bg-black/40 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      <div className={`fixed left-0 top-[72px] bottom-0 z-40 bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl border-r border-gray-200/50 dark:border-gray-800/50 transition-all duration-300 ease-in-out flex ${isSidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full md:translate-x-0 md:w-[48px]'}`}>
-        
-        {/* Desktop Toggle Flap */}
+      <div 
+        className={`fixed left-0 top-[72px] bottom-0 z-40 bg-white dark:bg-gray-900 border-r-4 border-gray-900 dark:border-gray-700 transition-all duration-300 ease-in-out flex ${isSidebarOpen ? 'w-[280px]' : 'w-[48px]'}`}
+      >
+        {/* Toggle Flap */}
         <div 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-          className="hidden md:flex w-[48px] h-full flex-col items-center py-6 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors shrink-0 border-r border-gray-200/30 dark:border-gray-700/30"
+          className="w-[48px] h-full flex flex-col items-center py-6 cursor-pointer bg-gray-100 dark:bg-gray-800 border-r-4 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0"
         >
-          <ChevronRight className={`text-gray-500 transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
-          <span style={{ writingMode: 'vertical-rl' }} className="mt-8 font-mono text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+          <ChevronRight className={`text-gray-900 dark:text-white transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
+          <span style={{ writingMode: 'vertical-rl' }} className="mt-8 font-mono text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-gray-400">
             sidebar
           </span>
         </div>
 
-        {/* Sidebar Content */}
-        <div className={`overflow-hidden h-full flex-1 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="w-[232px] md:w-[231px] h-full overflow-y-auto">
-            <Sidebar 
-              userEmail={userEmail || null}
-              handleSignOut={handleSignOut}
-              isMobileMenuOpen={isSidebarOpen}
-              setIsMobileMenuOpen={setIsSidebarOpen}
-              activeFilter={activeFilter}
-              setActiveFilter={setActiveFilter}
-              activeSubFilter={activeSubFilter}
-              setActiveSubFilter={setActiveSubFilter}
-              getCounts={getCounts}
-              folderHierarchy={folderHierarchy}
-              expandedFolders={expandedFolders}
-              toggleFolderExpand={toggleFolderExpand}
-              customCategories={customCategories}
-              handleDeleteCategory={handleDeleteCategory}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-              creatingSubFor={creatingSubFor}
-              setCreatingSubFor={setCreatingSubFor}
-              newSubfolderName={newSubfolderName}
-              setNewSubfolderName={setNewSubfolderName}
-              handleAddSubfolder={handleAddSubfolder}
-              isAddingCategory={isAddingCategory}
-              setIsAddingCategory={setIsAddingCategory}
-              newCategoryName={newCategoryName}
-              setNewCategoryName={setNewCategoryName}
-              handleAddCategory={handleAddCategory}
-            />
-          </div>
+        {/* Sidebar Inner Content */}
+        <div className={`h-full w-[228px] shrink-0 overflow-y-auto transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <Sidebar 
+            userEmail={userEmail || null}
+            handleSignOut={handleSignOut}
+            isMobileMenuOpen={isSidebarOpen}
+            setIsMobileMenuOpen={setIsSidebarOpen}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+            activeSubFilter={activeSubFilter}
+            setActiveSubFilter={setActiveSubFilter}
+            getCounts={getCounts}
+            folderHierarchy={folderHierarchy}
+            expandedFolders={expandedFolders}
+            toggleFolderExpand={toggleFolderExpand}
+            customCategories={customCategories}
+            handleDeleteCategory={handleDeleteCategory}
+            handleDragOver={handleDragOver}
+            handleDrop={handleDrop}
+            creatingSubFor={creatingSubFor}
+            setCreatingSubFor={setCreatingSubFor}
+            newSubfolderName={newSubfolderName}
+            setNewSubfolderName={setNewSubfolderName}
+            handleAddSubfolder={handleAddSubfolder}
+            isAddingCategory={isAddingCategory}
+            setIsAddingCategory={setIsAddingCategory}
+            newCategoryName={newCategoryName}
+            setNewCategoryName={setNewCategoryName}
+            handleAddCategory={handleAddCategory}
+          />
         </div>
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          3. MAIN CONTENT GRID
+          3. MAIN CONTENT GRID (Moves to make room for Sidebar)
           ──────────────────────────────────────────────────────────── */}
-      <main className="flex-1 pt-[96px] pb-32 px-4 md:pl-[80px] md:pr-8 transition-all w-full max-w-[2000px] mx-auto min-h-screen">
+      <main 
+        className={`flex-1 p-4 md:p-8 transition-all duration-300 ease-in-out w-full max-w-[2200px] mx-auto min-h-screen ${isSidebarOpen ? 'ml-[280px]' : 'ml-[48px]'}`}
+      >
         <div className="relative z-0 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 sm:gap-6 w-full">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, index) => (
@@ -383,17 +401,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </main>
 
       {/* ────────────────────────────────────────────────────────────
-          4. GLASSMORPHIC BOTTOM INPUT BAR (Hides on Scroll Down)
+          4. SOLID BOTTOM INPUT BAR (Shifts with Sidebar)
           ──────────────────────────────────────────────────────────── */}
       <div 
-        className={`fixed bottom-6 left-0 md:left-[48px] right-0 z-40 flex justify-center px-4 pointer-events-none transition-transform duration-500 ease-in-out ${isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'}`}
+        className={`fixed bottom-6 z-40 flex justify-center px-4 pointer-events-none transition-all duration-300 ease-in-out ${isInputVisible ? 'translate-y-0' : 'translate-y-[150%]'} ${isSidebarOpen ? 'left-[280px]' : 'left-[48px]'} right-0`}
       >
-        <div className="pointer-events-auto w-full max-w-2xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-[2rem] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center p-2 gap-2 transition-all focus-within:bg-white/90 dark:focus-within:bg-gray-800/90 focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
+        <div className="pointer-events-auto w-full max-w-3xl bg-white dark:bg-gray-800 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[8px_8px_0px_0px_rgba(17,24,39,1)] flex items-center p-2 gap-2 transition-transform focus-within:-translate-y-1">
 
           {/* Attachment Button */}
           <button
             onClick={() => toast('File uploads require a storage bucket setup. We can build that next!', { icon: '🏗️' })}
-            className="p-3 md:p-3.5 bg-gray-100/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-all cursor-pointer shrink-0"
+            className="p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-300 border-2 border-transparent hover:border-gray-900 dark:hover:border-gray-500 rounded-2xl transition-all cursor-pointer shrink-0"
             title="Attach File"
           >
             <PaperclipIcon />
@@ -407,14 +425,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture(); }}
             disabled={isSaving}
             placeholder="input (paste links, notes, or bulk URLs...)"
-            className="flex-1 bg-transparent border-none outline-none px-2 md:px-4 font-mono font-bold text-sm md:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50"
+            className="flex-1 bg-transparent border-none outline-none px-2 font-mono font-bold text-sm md:text-base text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-50"
           />
 
           {/* Submit Button */}
           <button
             onClick={handleQuickCapture}
             disabled={isSaving || !inputValue.trim()}
-            className="p-3 md:p-3.5 bg-yellow-400 text-gray-900 rounded-full shadow-md hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center shrink-0"
+            className="p-3 bg-yellow-400 text-gray-900 border-2 border-gray-900 rounded-2xl shadow-[2px_2px_0px_0px_rgba(17,24,39,1)] hover:translate-y-px hover:shadow-none active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center shrink-0"
           >
             <SendIcon />
           </button>
