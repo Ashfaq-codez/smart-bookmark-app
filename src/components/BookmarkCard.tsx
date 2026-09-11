@@ -56,7 +56,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const handleAutoSave = async () => {
     if (editTitle.trim() === (bookmark.title || '') && (bookmark.type === 'note' || formatUrl(editUrl) === bookmark.url) && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent.trim() === (bookmark.content || '')) return;
     await updateBookmark(bookmark.id, { title: editTitle.trim() || 'Untitled', url: bookmark.type !== 'note' ? formatUrl(editUrl) : bookmark.url, category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent.trim() || null })
-    toast.success('SYS_UPDATED', { style: { background: '#000', color: '#0ff', border: '1px solid #0ff' } })
+    toast.success('Saved', { duration: 2000, position: 'bottom-center' })
   }
 
   const handleConfirmDelete = async () => { await deleteBookmark(bookmark.id); setShowDeleteConfirm(false); handleCloseModal() }
@@ -65,158 +65,150 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   return (
     <>
-      {/* ─── Y2K GRID CARD PREVIEW ─── */}
-      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full min-w-0 cursor-pointer select-none transition-all duration-300 ease-out ${isDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-1'}`}>
-        <div className={`w-full bg-[#00111a] rounded-xl overflow-hidden shadow-[0_4px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all duration-300 border border-cyan-800 hover:border-cyan-400 relative`}>
+      {/* ─── CARD LAYOUT: FIXED OVERFLOW & MYMIND AESTHETIC ─── */}
+      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full min-w-0 cursor-pointer select-none transition-transform duration-300 ease-out ${isDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-1'}`}>
+        <div className={`w-full bg-white dark:bg-[#232428] rounded-2xl overflow-hidden flex flex-col min-w-0 border border-gray-100 dark:border-transparent shadow-sm hover:shadow-md transition-shadow`}>
           
-          {/* Subtle Y2K Inner Bevel/Glow */}
-          <div className="absolute inset-0 border-t border-white/10 rounded-xl pointer-events-none z-10" />
-
           {bookmark.type === 'note' ? (
-            <div className="p-6 bg-gradient-to-br from-[#001a2c] to-[#00050a] flex flex-col min-h-[140px] gap-3 w-full">
-              <h4 className="font-mono text-sm text-cyan-300 tracking-tight leading-snug w-full truncate">{bookmark.title}</h4>
-              
-              {/* FIX: whitespace-pre-wrap ensures proper formatting from source! */}
-              <p className="font-sans text-sm text-cyan-600/90 leading-relaxed whitespace-pre-wrap break-words line-clamp-4 w-full">
+            <div className="p-5 flex flex-col min-w-0 gap-2">
+              <span className="text-[10px] font-semibold text-orange-500 uppercase tracking-widest truncate w-full">{bookmark.title}</span>
+              {/* whitespace-pre-wrap ensures formatting is kept, break-words stops overflow */}
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-6 w-full">
                 {bookmark.content}
               </p>
             </div>
           ) : (
-            <div className="w-full overflow-hidden bg-black border-b border-cyan-900/50">
-              <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out opacity-80 group-hover:opacity-100 filter contrast-[1.1]" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+            <div className="w-full flex flex-col min-w-0">
+              <div className="w-full relative overflow-hidden bg-gray-100 dark:bg-[#1a1b1e]">
+                <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+              </div>
+              <div className="p-4 flex flex-col gap-1 min-w-0">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-200 truncate w-full">{bookmark.title}</h4>
+                <p className="text-[11px] text-gray-500 truncate w-full">{getDomain(bookmark.url)}</p>
+              </div>
             </div>
           )}
         </div>
-        <div className="mt-3 px-1 flex items-center justify-between overflow-hidden min-w-0 w-full opacity-80 group-hover:opacity-100 transition-opacity">
-          <p className="text-[11px] font-mono uppercase text-gray-400 truncate max-w-[65%]">
-            {bookmark.type === 'note' ? 'TXT_DATA' : bookmark.title}
-          </p>
-          <p className="text-[10px] font-mono text-fuchsia-500 truncate shrink-0 drop-shadow-[0_0_2px_rgba(217,70,239,0.8)]">
-            {bookmark.type === 'note' ? new Date(bookmark.created_at).toLocaleDateString() : getDomain(bookmark.url)}
-          </p>
-        </div>
       </div>
 
-      {/* ─── Y2K INSPECTION MODAL ─── */}
+      {/* ─── SLEEK INSPECTION MODAL ─── */}
       {mounted && isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-8 bg-black/60 backdrop-blur-sm transition-opacity" onMouseDown={handleCloseModal}>
-          <div className="relative w-full max-w-[1300px] h-[95vh] sm:h-[85vh] flex flex-col md:flex-row bg-[#020813] rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.15)] overflow-hidden border border-cyan-500/50" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-12 bg-black/50 dark:bg-black/70 backdrop-blur-md transition-opacity" onMouseDown={handleCloseModal}>
+          <div className="relative w-full max-w-[1200px] h-[95vh] sm:h-[85vh] flex flex-col md:flex-row bg-white dark:bg-[#1c1d20] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-white/5" onMouseDown={(e) => e.stopPropagation()}>
             
-            {/* Modal Close Button */}
-            <button onClick={handleCloseModal} className="absolute top-4 right-4 z-50 p-2 bg-black/80 text-cyan-400 border border-cyan-800 hover:border-cyan-400 hover:text-white hover:bg-cyan-900/50 hover:shadow-[0_0_10px_#0ff] backdrop-blur-md rounded transition-all cursor-pointer">
+            <button onClick={handleCloseModal} className="absolute top-4 right-4 z-50 p-2 bg-gray-100/50 dark:bg-black/20 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 backdrop-blur-md rounded-full transition-colors cursor-pointer">
               <CloseIcon />
             </button>
 
-            {/* LEFT PANE: CONTENT PREVIEW */}
-            <div className={`w-full md:w-[65%] h-[40%] md:h-full bg-black relative flex flex-col ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center border-b md:border-b-0 md:border-r border-cyan-900'}`}>
+            {/* LEFT PANE */}
+            <div className={`w-full md:w-[65%] h-[40%] md:h-full bg-[#f9fafb] dark:bg-[#131417] relative flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-white/5 ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center p-6'}`}>
               {bookmark.type === 'note' ? (
-                <div className="w-full h-full flex flex-col bg-[linear-gradient(to_right,#06b6d411_1px,transparent_1px),linear-gradient(to_bottom,#06b6d411_1px,transparent_1px)] bg-[size:24px_24px]">
-                  
-                  {/* FIX: Proper text formatting container */}
+                <div className="w-full h-full flex flex-col">
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     onBlur={handleAutoSave}
-                    placeholder="[ ENTER_DATA_STRING ]"
-                    className="w-full h-full bg-transparent p-6 sm:p-10 font-sans text-base sm:text-lg leading-relaxed text-cyan-100 outline-none resize-none whitespace-pre-wrap selection:bg-cyan-500/30"
+                    placeholder="Start typing..."
+                    className="w-full h-full bg-transparent p-8 sm:p-12 md:p-16 font-sans text-lg sm:text-xl leading-relaxed text-gray-800 dark:text-gray-200 outline-none resize-none whitespace-pre-wrap selection:bg-orange-500/20"
                   />
                 </div>
               ) : bookmark.type === 'image' ? (
                 <>
-                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-zoom-in drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" onClick={() => setIsFullscreenMedia(true)} />
-                  <button onClick={() => setIsFullscreenMedia(true)} className="absolute bottom-6 right-6 px-4 py-2 bg-black/80 backdrop-blur-md text-cyan-400 font-mono text-xs uppercase border border-cyan-700 hover:border-cyan-300 flex items-center gap-2 shadow-[0_0_15px_rgba(0,0,0,0.8)] cursor-pointer transition-colors">
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-zoom-in drop-shadow-xl" onClick={() => setIsFullscreenMedia(true)} />
+                  <button onClick={() => setIsFullscreenMedia(true)} className="absolute bottom-6 right-6 px-4 py-2 bg-white/80 dark:bg-black/50 backdrop-blur-md text-gray-800 dark:text-gray-200 text-xs font-medium rounded-full flex items-center gap-2 shadow-sm hover:bg-white dark:hover:bg-white/10 transition-colors cursor-pointer">
                     <FullscreenIcon /> Expand
                   </button>
                 </>
               ) : (
                 <>
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center p-6 group">
-                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain shadow-[0_0_40px_rgba(0,0,0,0.8)] group-hover:scale-[1.02] transition-transform duration-700 ease-out" />
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center p-4 md:p-8 group">
+                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain rounded-xl shadow-lg group-hover:scale-[1.02] transition-transform duration-500 ease-out" />
                   </a>
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="absolute bottom-6 right-6 px-5 py-3 bg-gradient-to-b from-cyan-600 to-cyan-800 border border-cyan-400 text-white font-mono text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] flex items-center gap-2 transition-all">
-                    <ExternalLinkIcon /> Open Source
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="absolute bottom-6 right-6 px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-medium rounded-full shadow-md hover:scale-105 transition-transform flex items-center gap-2">
+                    <ExternalLinkIcon /> Open Link
                   </a>
                 </>
               )}
             </div>
 
-            {/* RIGHT PANE: SIDEBAR */}
-            <div className="w-full md:w-[35%] h-[60%] md:h-full flex flex-col bg-[#010b14] border-t md:border-t-0 md:border-l border-cyan-900 p-6 sm:p-8 overflow-y-auto">
+            {/* RIGHT PANE (SIDEBAR) */}
+            <div className="w-full md:w-[35%] h-[60%] md:h-full flex flex-col bg-white dark:bg-[#1c1d20] p-6 sm:p-10 overflow-y-auto">
               
-              <div className="mb-8">
+              <div className="mb-10 pr-6">
                 <input
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   onBlur={handleAutoSave}
-                  placeholder="ENTRY_TITLE"
-                  className="w-full bg-transparent border-none outline-none text-xl sm:text-2xl font-sans font-medium text-gray-100 mb-2 placeholder-gray-600 focus:text-cyan-300 transition-colors"
+                  placeholder="Title"
+                  className="w-full bg-transparent border-none outline-none text-2xl font-semibold text-gray-900 dark:text-white mb-2 placeholder-gray-300 dark:placeholder-gray-600 transition-colors"
                 />
-                <div className="text-[10px] font-mono text-gray-500 flex flex-col gap-2">
-                  <span>LOGGED: {new Date(bookmark.created_at).toLocaleDateString()}</span>
+                <div className="text-[11px] font-medium text-gray-500 flex flex-col gap-2">
+                  <span>Added {new Date(bookmark.created_at).toLocaleDateString()}</span>
                   {bookmark.type !== 'note' && (
                     <input 
                       type="url"
                       value={editUrl}
                       onChange={(e) => setEditUrl(e.target.value)}
                       onBlur={handleAutoSave}
-                      className="w-full bg-black border border-cyan-900/50 p-2 text-cyan-600 outline-none focus:border-cyan-500 transition-colors rounded"
+                      className="w-full bg-transparent border-b border-gray-200 dark:border-gray-800 pb-1 text-gray-400 outline-none focus:border-gray-400 transition-colors truncate"
                     />
                   )}
                 </div>
               </div>
 
-              <div className="mb-8">
-                <label className="text-[10px] font-mono text-cyan-600 uppercase tracking-widest mb-3 block drop-shadow-[0_0_2px_rgba(6,182,212,0.5)]">Directories</label>
+              <div className="mb-10">
+                <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3 block">Organization</label>
                 <div className="flex flex-col gap-3">
                   <input
                     type="text"
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
                     onBlur={handleAutoSave}
-                    placeholder="FOLDER"
-                    className="w-full text-sm font-sans px-4 py-2 bg-black text-cyan-100 border border-cyan-900 rounded outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.2)] transition-all"
+                    placeholder="Folder"
+                    className="w-full text-sm font-medium px-4 py-3 bg-gray-50 dark:bg-[#232428] text-gray-900 dark:text-white border border-gray-100 dark:border-transparent rounded-xl outline-none focus:border-gray-300 dark:focus:border-gray-600 transition-all"
                   />
                   <input
                     type="text"
                     value={editSubCategory}
                     onChange={(e) => setEditSubCategory(e.target.value)}
                     onBlur={handleAutoSave}
-                    placeholder="SUBFOLDER"
-                    className="w-full text-sm font-sans px-4 py-2 bg-black text-cyan-100 border border-cyan-900 rounded outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(6,182,212,0.2)] transition-all"
+                    placeholder="Subfolder"
+                    className="w-full text-sm font-medium px-4 py-3 bg-gray-50 dark:bg-[#232428] text-gray-900 dark:text-white border border-gray-100 dark:border-transparent rounded-xl outline-none focus:border-gray-300 dark:focus:border-gray-600 transition-all"
                   />
                 </div>
               </div>
 
               <div className="flex-1 flex flex-col min-h-[160px]">
-                <label className="text-[10px] font-mono text-fuchsia-600 uppercase tracking-widest mb-3 block drop-shadow-[0_0_2px_rgba(217,70,239,0.5)]">Personal Notes</label>
+                <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3 block">Personal Notes</label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   onBlur={handleAutoSave}
-                  placeholder="APPEND_DATA..."
-                  className="w-full flex-1 bg-black border border-fuchsia-900/50 rounded p-4 text-sm font-sans text-gray-300 outline-none focus:border-fuchsia-500 focus:shadow-[0_0_10px_rgba(217,70,239,0.2)] resize-none transition-all leading-relaxed"
+                  placeholder="Type your notes here..."
+                  className="w-full flex-1 bg-gray-50 dark:bg-[#232428] border border-gray-100 dark:border-transparent rounded-2xl p-5 text-sm font-medium text-gray-700 dark:text-gray-300 outline-none focus:border-gray-300 dark:focus:border-gray-600 resize-none transition-all leading-relaxed"
                 />
               </div>
 
               <div className="mt-8 flex items-center justify-end">
                 <button 
                   onClick={() => setShowDeleteConfirm(true)} 
-                  className="px-4 py-2 bg-transparent text-red-500 font-mono text-xs border border-red-900 hover:border-red-500 hover:bg-red-900/20 hover:shadow-[0_0_10px_rgba(239,68,68,0.4)] rounded transition-all flex items-center gap-2"
+                  className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors flex items-center gap-2 cursor-pointer"
+                  title="Delete"
                 >
-                  <TrashIcon /> PURGE
+                  <TrashIcon />
                 </button>
               </div>
             </div>
 
-            {/* Y2K Delete Overlay */}
+            {/* Simple Delete Overlay */}
             {showDeleteConfirm && (
-              <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="w-full max-w-sm bg-[#00050a] border border-red-600 p-8 shadow-[0_0_30px_rgba(220,38,38,0.3)] flex flex-col gap-6 text-center rounded">
-                  <span className="text-xl font-mono uppercase text-red-500 drop-shadow-[0_0_5px_rgba(220,38,38,0.8)]">Confirm Purge?</span>
-                  <div className="flex flex-col gap-3 mt-2">
-                    <button onClick={handleConfirmDelete} className="w-full py-3 bg-red-600 text-white font-mono text-sm uppercase rounded hover:bg-red-500 hover:shadow-[0_0_15px_rgba(220,38,38,0.8)] transition-all">EXECUTE</button>
-                    <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-3 bg-transparent border border-cyan-800 text-cyan-500 font-mono text-sm uppercase rounded hover:border-cyan-400 hover:text-cyan-300 transition-colors">ABORT</button>
+              <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-white/80 dark:bg-black/80 backdrop-blur-sm" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="w-full max-w-xs bg-white dark:bg-[#1c1d20] border border-gray-100 dark:border-white/5 p-6 rounded-2xl shadow-xl flex flex-col gap-4 text-center">
+                  <span className="text-lg font-medium text-gray-900 dark:text-white">Delete Item?</span>
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-medium text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
+                    <button onClick={handleConfirmDelete} className="flex-1 py-2.5 bg-red-500 text-white font-medium text-sm rounded-xl hover:bg-red-600 transition-colors shadow-sm">Delete</button>
                   </div>
                 </div>
               </div>
@@ -229,10 +221,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       {/* Fullscreen Media */}
       {mounted && isFullscreenMedia && bookmark.type !== 'link' && createPortal(
         <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/95 p-4 md:p-12 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenMedia(false)}>
-          <button onClick={() => setIsFullscreenMedia(false)} className="absolute top-4 right-4 md:top-8 md:right-8 p-3 bg-black text-cyan-400 border border-cyan-800 hover:border-cyan-400 rounded transition-colors shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+          <button onClick={() => setIsFullscreenMedia(false)} className="absolute top-4 right-4 md:top-8 md:right-8 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition-colors">
             <CloseIcon />
           </button>
-          <img src={previewImageUrl} alt={bookmark.title} className="max-w-full max-h-[90vh] object-contain shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-cyan-900/30" onClick={(e) => e.stopPropagation()} />
+          <img src={previewImageUrl} alt={bookmark.title} className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
         </div>,
         document.body
       )}

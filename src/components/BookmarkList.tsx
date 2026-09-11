@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
 const PaperclipIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-const SendIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
 const ChevronRight = ({ className = '' }: { className?: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M9 18l6-6-6-6" /></svg>
 
@@ -38,7 +38,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isSaving, setIsSaving] = useState(false)
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
-  const [columnsCount, setColumnsCount] = useState(4)
+  const [columnsCount, setColumnsCount] = useState(2) // Default to 2 for mobile-first
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
@@ -51,6 +51,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
+  // EXACT RESIZE OBSERVER FOR 2-COLUMN MOBILE GRID
   useEffect(() => {
     const updateColumns = () => {
       if (!gridRef.current) return
@@ -58,8 +59,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       if (width >= 1536) setColumnsCount(6)
       else if (width >= 1280) setColumnsCount(5)
       else if (width >= 1024) setColumnsCount(4)
-      else if (width >= 768) setColumnsCount(3)
-      else setColumnsCount(2)
+      else if (width >= 640) setColumnsCount(3)
+      else setColumnsCount(2) // Strictly 2 columns below 640px
     }
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
@@ -105,9 +106,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     try {
       if (isAllUrls && tokens.length > 1) {
         const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
-        if (validNewTokens.length === 0) { toast.error('DATA_ALREADY_IN_MAINFRAME'); setIsSaving(false); return }
+        if (validNewTokens.length === 0) { toast.error('Already saved.'); setIsSaving(false); return }
         await Promise.all(validNewTokens.map(token => fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token }) })))
-        toast.success(`UPLOADED_${validNewTokens.length}_NODES`)
+        toast.success(`Saved ${validNewTokens.length} items`)
       } else {
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
@@ -117,12 +118,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (res.status === 409) {
           const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
           if (match) { setDuplicateMatch(match); setIsSaving(false); return }
-          toast.error('NODE_EXISTS'); setIsSaving(false); return
+          toast.error('Item exists'); setIsSaving(false); return
         }
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')
-    } catch { toast.error('SYSTEM_ERROR') } finally { setIsSaving(false) }
+    } catch { toast.error('Error saving item') } finally { setIsSaving(false) }
   }
 
   const filteredBookmarks = useMemo(() => {
@@ -180,14 +181,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const handleDeleteCategory = async (catToDelete: string) => {
     toast((t) => (
-      <div className="flex flex-col gap-4 font-mono p-2">
-        <span className="text-sm font-bold text-cyan-400">DELETE_DIRECTORY // {catToDelete}?</span>
-        <div className="flex gap-3 mt-2">
-          <button onClick={() => { setCustomCategories(p => p.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) }; toast.dismiss(t.id) }} className="flex-1 px-4 py-2 bg-black border border-fuchsia-500 text-fuchsia-500 font-bold hover:bg-fuchsia-500 hover:text-black hover:shadow-[0_0_10px_#d946ef] transition-all text-xs">CONFIRM</button>
-          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-4 py-2 bg-black border border-cyan-500 text-cyan-400 font-bold hover:bg-cyan-500 hover:text-black hover:shadow-[0_0_10px_#06b6d4] transition-all text-xs">ABORT</button>
+      <div className="flex flex-col gap-3 p-1">
+        <span className="text-sm font-medium text-white">Delete "{catToDelete}"?</span>
+        <div className="flex gap-2 mt-2">
+          <button onClick={() => { setCustomCategories(p => p.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) }; toast.dismiss(t.id) }} className="flex-1 px-3 py-2 bg-red-500/20 text-red-400 font-medium text-xs rounded-lg hover:bg-red-500/30">Delete</button>
+          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-3 py-2 bg-white/10 text-white font-medium text-xs rounded-lg hover:bg-white/20">Cancel</button>
         </div>
       </div>
-    ), { duration: Infinity, style: { background: '#000', border: '1px solid #06b6d4', color: '#06b6d4' } })
+    ), { duration: Infinity, style: { background: '#1c1c1c', border: '1px solid #333' } })
   }
 
   const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
@@ -201,40 +202,35 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-black min-h-screen font-sans text-cyan-50 flex flex-col overflow-x-hidden selection:bg-fuchsia-500 selection:text-white relative z-0">
+    <div className="bg-[#f2f3f5] dark:bg-[#121316] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
       
-      {/* ─── Y2K GRID BACKGROUND ─── */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-20 bg-[linear-gradient(to_right,#06b6d4_1px,transparent_1px),linear-gradient(to_bottom,#06b6d4_1px,transparent_1px)] bg-[size:32px_32px]"></div>
-
-      {/* ─── MOBILE HEADER ─── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] z-30 bg-black/80 backdrop-blur-md border-b border-cyan-500/50 flex items-center px-4 justify-between shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-        <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-cyan-400 hover:text-fuchsia-400 transition-colors">
+      {/* MOBILE HEADER */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] z-30 bg-[#f2f3f5]/90 dark:bg-[#121316]/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 flex items-center px-4 justify-between select-none">
+        <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
           <MenuIcon />
         </button>
-        <span className="font-mono text-sm tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_5px_rgba(6,182,212,0.8)]">
-          // SYS.MIND
+        <span className="font-serif italic text-lg text-gray-800 dark:text-gray-300">
+          my mind
         </span>
         <div className="w-8" />
       </header>
 
-      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden transition-opacity" />}
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity" />}
 
-      {/* ─── Y2K SIDEBAR ─── */}
-      <div className={`fixed left-0 top-0 bottom-0 z-40 bg-black border-r border-cyan-500/50 transition-transform duration-300 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[300px] shadow-[0_0_30px_rgba(6,182,212,0.2)]' : '-translate-x-full md:translate-x-0 md:w-[70px]'}`}>
+      {/* SIDEBAR */}
+      <div className={`fixed left-0 top-0 bottom-0 z-40 bg-[#fbfbfc] dark:bg-[#18191c] border-r border-gray-200 dark:border-white/5 transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[300px] shadow-2xl' : '-translate-x-full md:translate-x-0 md:w-[70px]'}`}>
         <div className="hidden md:flex flex-col">
            {isSidebarOpen ? (
-             <div className="p-4 border-b border-cyan-500/50"><ProfileDropdown email={userEmail ?? ""} /></div>
+             <div className="p-4 border-b border-gray-200 dark:border-white/5"><ProfileDropdown email={userEmail ?? ""} /></div>
            ) : (
-             <div className="h-[70px] flex items-center justify-center border-b border-cyan-500/50 bg-black">
-               <div className="w-10 h-10 border border-cyan-400 text-cyan-400 rounded-full flex items-center justify-center font-mono font-bold text-lg shadow-[0_0_10px_rgba(6,182,212,0.5)] bg-black">
-                 {userEmail?.[0].toUpperCase()}
-               </div>
+             <div className="h-[70px] flex items-center justify-center border-b border-gray-200 dark:border-white/5 bg-transparent">
+               <div className="w-9 h-9 rounded-full bg-orange-500/20 flex items-center justify-center font-medium text-sm text-orange-500">{userEmail?.[0].toUpperCase()}</div>
              </div>
            )}
         </div>
 
-        <div onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex w-full h-[40px] items-center justify-center cursor-pointer bg-[#00111a] hover:bg-cyan-950 border-b border-cyan-500/50 text-cyan-500 transition-colors">
-          <ChevronRight className={`transition-transform duration-300 drop-shadow-[0_0_5px_rgba(6,182,212,1)] ${isSidebarOpen ? 'rotate-180' : ''}`} />
+        <div onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex w-full h-[40px] items-center justify-center cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 border-b border-gray-200 dark:border-white/5 text-gray-400 transition-colors">
+          <ChevronRight className={`transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
         </div>
 
         <div className={`h-full flex-1 overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
@@ -242,32 +238,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {/* ─── MAIN CONTENT ─── */}
-      <main className={`flex-1 flex flex-col px-4 sm:px-8 md:px-12 transition-all duration-300 pb-32 pt-[80px] md:pt-4 ${isSidebarOpen ? 'md:ml-[300px]' : 'md:ml-[70px]'}`}>
+      {/* MAIN CONTENT */}
+      {/* px-3 on mobile to allow the 2 column grid to breathe */}
+      <main className={`flex-1 flex flex-col px-3 sm:px-8 md:px-16 transition-all duration-300 pb-32 pt-[80px] md:pt-4 ${isSidebarOpen ? 'md:ml-[300px]' : 'md:ml-[70px]'}`}>
         
-        {/* Y2K Header */}
-        <div className="w-full max-w-6xl mx-auto mb-10 md:mb-16 mt-4 md:mt-10 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 blur-3xl rounded-full z-[-1]" />
+        {/* Elegant Serif Search Header */}
+        <div className="w-full max-w-7xl mx-auto mb-8 md:mb-16 mt-4 md:mt-8 px-2 md:px-0">
           <input
             type="text"
-            placeholder="[ SEARCH_DATABASE... ]"
+            placeholder="Search my mind..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/50 backdrop-blur-md border border-cyan-500/30 rounded-2xl px-6 py-4 font-mono text-xl sm:text-3xl md:text-4xl text-cyan-300 placeholder-cyan-800 transition-all focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(6,182,212,0.4)] outline-none"
+            className="w-full bg-transparent border-none outline-none font-serif italic text-4xl sm:text-5xl md:text-6xl text-gray-800 dark:text-gray-300 placeholder-gray-400 dark:placeholder-[#3a3b40] transition-colors"
           />
         </div>
 
-        {/* Grid */}
-        <div className="w-full max-w-7xl mx-auto flex gap-4 sm:gap-6 items-start" ref={gridRef}>
+        {/* Masonry Grid with OVERFLOW FIX (min-w-0 on flex-1) */}
+        <div className="w-full max-w-7xl mx-auto flex gap-3 sm:gap-5 md:gap-6 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 w-full flex-1">
+              <div key={colIndex} className="flex flex-col gap-3 sm:gap-5 md:gap-6 w-full flex-1 min-w-0">
                 {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
               </div>
             ))
           ) : (
             masonryColumns.map((colBookmarks, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 w-full flex-1">
+              <div key={colIndex} className="flex flex-col gap-3 sm:gap-5 md:gap-6 w-full flex-1 min-w-0">
                 {colBookmarks.map(bookmark => (
                   <BookmarkCard 
                     key={bookmark.id} bookmark={bookmark} theme={{ card: '', btn: '', hover: '' }} isDragged={draggedId === bookmark.id} onDragStart={handleDragStart} onDragEnd={handleDragEnd} updateBookmark={updateBookmark} deleteBookmark={deleteBookmark} forceOpenModal={forcedInspectId === bookmark.id} onCloseForcedModal={() => setForcedInspectId(null)}
@@ -279,10 +275,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ─── Y2K CAPTURE PILL ─── */}
-      <div className={`fixed bottom-6 md:bottom-10 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${isInputVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-[150%] opacity-0 scale-95'} ${isSidebarOpen ? 'md:left-[300px]' : 'md:left-[70px]'} left-0 right-0`}>
-        <div className="pointer-events-auto w-full max-w-3xl bg-black/80 backdrop-blur-xl border border-cyan-500 rounded-full shadow-[0_0_25px_rgba(6,182,212,0.3)] flex items-center p-1.5 gap-2 transition-transform hover:shadow-[0_0_35px_rgba(6,182,212,0.5)]">
-          <button onClick={() => toast('AWAITING_UPLOAD_MODULE', { style: { background: '#000', color: '#0ff', border: '1px solid #0ff' } })} className="p-3 text-cyan-600 hover:text-fuchsia-400 hover:bg-cyan-900/30 rounded-full cursor-pointer transition-colors" title="Attach">
+      {/* SLEEK CAPTURE PILL */}
+      <div className={`fixed bottom-6 md:bottom-10 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'} ${isSidebarOpen ? 'md:left-[300px]' : 'md:left-[70px]'} left-0 right-0`}>
+        <div className="pointer-events-auto w-full max-w-2xl bg-white/95 dark:bg-[#232428]/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-gray-100 dark:border-white/5 flex items-center p-1.5 gap-2 transition-transform hover:-translate-y-1">
+          <button onClick={() => toast('Attachments coming soon', { icon: '📎' })} className="p-3 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full cursor-pointer transition-colors" title="Attach">
             <PaperclipIcon />
           </button>
           <input
@@ -291,32 +287,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
-            placeholder="INPUT_URL_OR_DATA_STRING..."
-            className="flex-1 bg-transparent border-none outline-none px-2 font-mono text-sm md:text-base text-cyan-100 placeholder-cyan-800 tracking-wide"
+            placeholder="Save link, note, or text..."
+            className="flex-1 bg-transparent border-none outline-none px-2 font-medium text-sm md:text-base text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
-          <button onClick={handleQuickCapture} disabled={isSaving || !inputValue.trim()} className="p-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] cursor-pointer flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-50">
+          <button onClick={handleQuickCapture} disabled={isSaving || !inputValue.trim()} className="p-3 bg-gray-900 dark:bg-orange-500 text-white rounded-full shadow-md disabled:opacity-50 cursor-pointer flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
             <SendIcon />
           </button>
         </div>
       </div>
 
-      {/* ─── DUPLICATE MODAL ─── */}
+      {/* DUPLICATE MODAL */}
       {duplicateMatch && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md" onClick={() => setDuplicateMatch(null)}>
-          <div className="w-full max-w-md bg-[#00111a] border border-fuchsia-500 p-8 rounded-xl shadow-[0_0_40px_rgba(217,70,239,0.3)] flex flex-col gap-6" onClick={(e) => e.stopPropagation()}>
-            <div className="inline-block px-3 py-1 bg-fuchsia-500/20 text-fuchsia-400 font-mono text-xs border border-fuchsia-500/50 w-max shadow-[0_0_10px_rgba(217,70,239,0.5)]">
-              ! DATA_COLLISION_DETECTED
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={() => setDuplicateMatch(null)}>
+          <div className="w-full max-w-md bg-white dark:bg-[#1c1d20] border border-gray-100 dark:border-white/5 p-8 rounded-3xl shadow-2xl flex flex-col gap-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white">Already in your mind.</h3>
+            <div className="p-4 bg-gray-50 dark:bg-[#232428] rounded-2xl flex flex-col gap-1 border border-gray-100 dark:border-white/5 overflow-hidden">
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{duplicateMatch.title}</span>
+              <span className="text-xs text-gray-500 truncate">{duplicateMatch.url}</span>
             </div>
-            <h3 className="text-xl font-mono text-cyan-300 uppercase leading-snug">
-              Node already exists in mainframe.
-            </h3>
-            <div className="p-4 bg-black/50 rounded-lg flex flex-col gap-1 border border-cyan-900">
-              <span className="text-sm font-medium text-gray-200 truncate">{duplicateMatch.title}</span>
-              <span className="text-xs text-cyan-600 font-mono truncate">{duplicateMatch.url}</span>
-            </div>
-            <div className="flex flex-col gap-3 mt-2">
-              <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue('') }} className="w-full py-3 bg-fuchsia-600 text-white font-mono text-sm rounded hover:bg-fuchsia-500 hover:shadow-[0_0_15px_rgba(217,70,239,0.8)] transition-all">INSPECT_NODE</button>
-              <button onClick={() => setDuplicateMatch(null)} className="w-full py-3 bg-transparent border border-cyan-700 text-cyan-500 font-mono text-sm rounded hover:bg-cyan-900/50 hover:border-cyan-500 hover:text-cyan-300 transition-all">DISMISS</button>
+            <div className="flex flex-col gap-2 mt-2">
+              <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue('') }} className="w-full py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-sm rounded-xl hover:opacity-90 transition-opacity">Open Note</button>
+              <button onClick={() => setDuplicateMatch(null)} className="w-full py-3 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 font-medium text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Dismiss</button>
             </div>
           </div>
         </div>
