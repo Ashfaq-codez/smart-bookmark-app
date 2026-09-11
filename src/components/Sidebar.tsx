@@ -7,6 +7,7 @@ const PlusIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="non
 const SmallXIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
 const ChevronRight = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
 const ChevronDown = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+const CollapseLeftIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
 
 interface SidebarProps {
   userEmail: string | null; handleSignOut: () => void; isMobileMenuOpen: boolean; setIsMobileMenuOpen: (isOpen: boolean) => void; activeFilter: string; setActiveFilter: (filter: string) => void; activeSubFilter: string | null; setActiveSubFilter: (subFilter: string | null) => void; getCounts: Record<string, number>; folderHierarchy: Record<string, string[]>; expandedFolders: Record<string, boolean>; toggleFolderExpand: (folder: string) => void; customCategories: string[]; handleDeleteCategory: (catToDelete: string) => void; handleDragOver: (e: React.DragEvent) => void; handleDrop: (e: React.DragEvent, targetCategory: string, targetSubCategory?: string) => void; creatingSubFor: string | null; setCreatingSubFor: (folder: string | null) => void; newSubfolderName: string; setNewSubfolderName: (name: string) => void; handleAddSubfolder: (parentFolder: string) => void; isAddingCategory: boolean; setIsAddingCategory: (isAdding: boolean) => void; newCategoryName: string; setNewCategoryName: (name: string) => void; handleAddCategory: () => void;
@@ -19,32 +20,30 @@ export default function Sidebar(props: SidebarProps) {
     <aside className="w-full h-full flex flex-col p-3 sm:p-5 overflow-y-auto bg-transparent transition-colors [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#a9cbed] dark:[&::-webkit-scrollbar-thumb]:bg-[#3a526b]">
       
       {/* ─── DIRECTORY TREE WINDOW PANEL ─── */}
-      <div className="bg-white/60 dark:bg-[#080d14]/60 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] flex flex-col overflow-hidden mb-6">
+      <div className="bg-white/70 dark:bg-[#080d14]/60 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] flex flex-col overflow-hidden mb-6">
         
-        {/* Glossy Header */}
+        {/* Glossy Header with Built-In Controls */}
         <div className="bg-gradient-to-b from-[#eaf2f9]/90 to-[#d1e2f3]/90 dark:from-[#1a2536]/90 dark:to-[#111824]/90 border-b border-[#a9cbed] dark:border-[#2a3f5a] px-3 py-2 flex items-center justify-between shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-none">
           <h2 className="text-[10px] font-mono text-[#4a6b8c] dark:text-[#5e81a5] tracking-widest uppercase drop-shadow-[0_1px_0_rgba(255,255,255,0.8)] dark:drop-shadow-none">++ nav.tree //</h2>
           <div className="flex items-center gap-1.5">
             <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="p-1 rounded text-[#5e81a5] dark:text-[#8ea4bd] hover:text-[#2c4054] dark:hover:text-white transition-colors cursor-pointer bg-white/50 dark:bg-black/30 border border-transparent hover:border-[#a9cbed] dark:hover:border-[#3a526b] shadow-sm" title="New Folder">
               <PlusIcon />
             </button>
-            <button onClick={() => props.setIsMobileMenuOpen(false)} className="md:hidden p-1 text-[#5e81a5] dark:text-[#8ea4bd] hover:text-[#c53030] transition-colors">
-              <SmallXIcon />
+            {/* Desktop & Mobile Close Panel Button */}
+            <button onClick={() => props.setIsMobileMenuOpen(false)} className="p-1 rounded text-[#5e81a5] dark:text-[#8ea4bd] hover:bg-white/50 hover:text-[#2c4054] dark:hover:bg-black/30 dark:hover:text-white transition-colors cursor-pointer border border-transparent hover:border-[#a9cbed] dark:hover:border-[#3a526b] shadow-sm" title="Close Panel">
+              <CollapseLeftIcon />
             </button>
           </div>
         </div>
 
         {/* Panel Content */}
         <div className="p-2.5 flex flex-col gap-1.5">
-          
-          {/* New Folder Input (Inset Shadow Style) */}
           {props.isAddingCategory && (
             <div className="mb-2">
               <input autoFocus type="text" placeholder="dir_name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-3 py-2 text-xs font-sans bg-[#f8fbff] dark:bg-[#050b14] border border-[#a9cbed] dark:border-[#3a526b] rounded shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] outline-none text-[#2c4054] dark:text-gray-300 focus:border-[#609ad3] transition-all" />
             </div>
           )}
 
-          {/* All Bookmarks Root */}
           <div
             onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
             className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-all ${props.activeFilter === 'All' ? 'bg-gradient-to-b from-[#f2f7fc] to-[#dae8f5] dark:from-[#213045] dark:to-[#151c28] text-[#315174] dark:text-white border border-[#a9cbed] dark:border-[#3a526b] shadow-[0_2px_4px_rgba(0,0,0,0.02),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]' : 'bg-transparent text-[#5e81a5] hover:bg-white/40 dark:hover:bg-[#1a2332]/40 border border-transparent'}`}
@@ -53,7 +52,6 @@ export default function Sidebar(props: SidebarProps) {
             <span className="text-[9px] font-mono text-[#4a6b8c] dark:text-[#8ea4bd]">{props.getCounts['All'] || 0}</span>
           </div>
 
-          {/* Parent Folders */}
           {Object.keys(props.folderHierarchy).map(parentFolder => {
             const isParentActive = props.activeFilter === parentFolder;
             const isExpanded = props.expandedFolders[parentFolder];
@@ -82,7 +80,6 @@ export default function Sidebar(props: SidebarProps) {
                   </div>
                 </div>
 
-                {/* Subfolders */}
                 {isExpanded && (
                   <div className="ml-5 pl-3 border-l border-[#c3d7eb] dark:border-[#2a3f5a] flex flex-col py-1 gap-0.5">
                     {subfolders.map(sub => {
@@ -94,8 +91,6 @@ export default function Sidebar(props: SidebarProps) {
                         </div>
                       )
                     })}
-
-                    {/* New Subfolder Input */}
                     {props.creatingSubFor === parentFolder ? (
                       <div className="flex gap-1.5 mt-1.5">
                         <input autoFocus type="text" placeholder="sub_dir..." value={props.newSubfolderName} onChange={(e) => props.setNewSubfolderName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddSubfolder(parentFolder)} className="w-full px-2 py-1.5 text-[10px] font-sans bg-[#f8fbff] dark:bg-[#050b14] border border-[#a9cbed] dark:border-[#3a526b] rounded shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] outline-none text-[#2c4054] dark:text-gray-300 focus:border-[#609ad3]" />
@@ -114,7 +109,7 @@ export default function Sidebar(props: SidebarProps) {
         </div>
       </div>
 
-      {/* ─── MOBILE PROFILE BLOCK (Only visible < md) ─── */}
+      {/* MOBILE PROFILE BLOCK */}
       <div className="md:hidden mt-auto pt-6 flex flex-col pb-4">
         <div className="bg-white/80 dark:bg-[#080d14]/80 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] flex flex-col overflow-hidden">
           <div className="bg-gradient-to-b from-[#eaf2f9]/90 to-[#d1e2f3]/90 dark:from-[#1a2536]/90 dark:to-[#111824]/90 border-b border-[#a9cbed] dark:border-[#2a3f5a] px-4 py-2.5">
