@@ -84,9 +84,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
-  const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
-  const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
-
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [customSubCategories, setCustomSubCategories] = useState<Record<string, string[]>>({})
   const [isAddingCategory, setIsAddingCategory] = useState(false)
@@ -114,67 +111,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && duplicateMatch) {
-        setDuplicateMatch(null)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [duplicateMatch])
-
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
   }
 
-  const handleForceSave = async () => {
-    if (!duplicateMatch) return
-    setIsSaving(true)
-    try {
-      const separator = duplicateMatch.url.includes('#') ? '&' : '#'
-      const forceUrl = `${duplicateMatch.url}${separator}override=${Date.now()}`
-      
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: forceUrl })
-      })
-      
-      if (res.ok) {
-        toast.success('Forced save successful!')
-        setDuplicateMatch(null)
-        setInputValue('')
-      } else {
-        toast.error('Failed to force save.')
-      }
-    } catch {
-      toast.error('Network error.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const handleQuickCapture = async () => {
     const rawInput = inputValue.trim()
     if (!rawInput) return
+    setIsSaving(true)
 
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
-
-    if (isAllUrls && tokens.length === 1) {
-      const targetNormalized = normalizeUrl(tokens[0])
-      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetNormalized)
-      
-      if (existing) {
-        setDuplicateMatch(existing)
-        return
-      }
-    }
-
-    setIsSaving(true)
     const existingUrls = new Set(bookmarks.map(b => normalizeUrl(b.url)))
 
     try {
@@ -206,6 +155,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
         if (isSingleUrl) {
           finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
+          if (existingUrls.has(normalizeUrl(finalUrl))) {
+            toast.error('This bookmark is already saved!')
+            setIsSaving(false)
+            return
+          }
         }
 
         const payload = isSingleUrl
@@ -219,12 +173,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         })
 
         if (res.status === 409) {
-          const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
-          if (match) {
-            setDuplicateMatch(match)
-            setIsSaving(false)
-            return
-          }
           toast.error('This bookmark already exists!')
           setIsSaving(false)
           return
@@ -476,8 +424,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   onDragEnd={handleDragEnd}
                   updateBookmark={updateBookmark}
                   deleteBookmark={deleteBookmark}
-                  forceOpenModal={forcedInspectId === bookmark.id}
-                  onCloseForcedModal={() => setForcedInspectId(null)}
                 />
               )
             })
@@ -519,69 +465,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {duplicateMatch && (
-        <div 
-          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
-          onClick={() => setDuplicateMatch(null)}
-        >
-          <div 
-            className="w-full max-w-md bg-white dark:bg-gray-900 border-4 border-gray-900 dark:border-yellow-400 p-5 sm:p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 text-yellow-500 font-mono text-xs font-black uppercase tracking-widest">
-              <span>⚠️ Already Saved</span>
-            </div>
-            
-            <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-snug">
-              This link is already in your hub!
-            </h3>
-
-            <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl border-2 border-gray-900 dark:border-gray-700 flex flex-col gap-1">
-              <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                {duplicateMatch.title}
-              </span>
-              <span className="text-[11px] font-mono text-gray-500 truncate">
-                {duplicateMatch.url}
-              </span>
-              <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider mt-1">
-                Folder: {duplicateMatch.category || 'Inbox'}
-              </span>
-            </div>
-
-            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
-              Did you mean to review or edit this existing bookmark instead of saving it again?
-            </p>
-
-            <div className="flex flex-col gap-2 mt-2">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={() => {
-                    setForcedInspectId(duplicateMatch.id)
-                    setDuplicateMatch(null)
-                    setInputValue('')
-                  }}
-                  className="flex-1 py-2.5 bg-yellow-400 text-gray-900 font-black uppercase text-xs border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px transition-all cursor-pointer"
-                >
-                  Open Existing
-                </button>
-                <button
-                  onClick={() => setDuplicateMatch(null)}
-                  className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold uppercase text-xs border-2 border-gray-900 dark:border-gray-600 rounded-xl cursor-pointer"
-                >
-                  Dismiss
-                </button>
-              </div>
-              <button
-                onClick={handleForceSave}
-                disabled={isSaving}
-                className="w-full py-2.5 mt-1 text-[10px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white underline decoration-gray-400 hover:decoration-gray-900 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                Force save a duplicate anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
