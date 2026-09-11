@@ -5,10 +5,10 @@ import { createPortal } from 'react-dom'
 import { Bookmark } from '@/types'
 import toast from 'react-hot-toast'
 
-const TrashIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
-const ExternalLinkIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-const FullscreenIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
-const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
+const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+const ExternalLinkIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+const FullscreenIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+const CloseIcon = () => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -22,22 +22,12 @@ interface BookmarkCardProps {
   onCloseForcedModal?: () => void;
 }
 
-export default function BookmarkCard({
-  bookmark,
-  isDragged,
-  onDragStart,
-  onDragEnd,
-  updateBookmark,
-  deleteBookmark,
-  forceOpenModal,
-  onCloseForcedModal,
-}: BookmarkCardProps) {
+export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal }: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenMedia, setIsFullscreenMedia] = useState(false)
 
-  // Edit State
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
   const [editUrl, setEditUrl] = useState(bookmark.url || '')
   const [editCategory, setEditCategory] = useState(bookmark.category || '')
@@ -45,14 +35,8 @@ export default function BookmarkCard({
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
   const [editContent, setEditContent] = useState(bookmark.content || '')
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (forceOpenModal) setIsModalOpen(true)
-  }, [forceOpenModal])
-
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => { if (forceOpenModal) setIsModalOpen(true) }, [forceOpenModal])
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -65,245 +49,164 @@ export default function BookmarkCard({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isModalOpen, isFullscreenMedia, showDeleteConfirm])
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setShowDeleteConfirm(false)
-    if (onCloseForcedModal) onCloseForcedModal()
-  }
+  const handleCloseModal = () => { setIsModalOpen(false); setShowDeleteConfirm(false); if (onCloseForcedModal) onCloseForcedModal() }
+  const getDomain = (link: string) => { try { return new URL(link).hostname.replace('www.', '') } catch { return 'source' } }
+  const formatUrl = (rawUrl: string) => { const t = rawUrl.trim(); if (!t) return ''; return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t }
 
-  const getDomain = (link: string) => {
-    try { return new URL(link).hostname.replace('www.', '') } 
-    catch { return 'source' }
-  }
-
-  const formatUrl = (rawUrl: string) => {
-    const trimmed = rawUrl.trim()
-    if (!trimmed) return ''
-    return !trimmed.startsWith('http://') && !trimmed.startsWith('https://') ? 'https://' + trimmed : trimmed
-  }
-
-  // Auto-save logic on Blur (clicks away from input)
   const handleAutoSave = async () => {
-    if (
-      editTitle.trim() === (bookmark.title || '') &&
-      (bookmark.type === 'note' || formatUrl(editUrl) === bookmark.url) &&
-      editCategory.trim() === (bookmark.category || '') &&
-      editSubCategory.trim() === (bookmark.sub_category || '') &&
-      editDescription.trim() === (bookmark.description || '') &&
-      editContent.trim() === (bookmark.content || '')
-    ) {
-      return; 
-    }
-
-    await updateBookmark(bookmark.id, {
-      title: editTitle.trim() || 'Untitled',
-      url: bookmark.type !== 'note' ? formatUrl(editUrl) : bookmark.url,
-      category: editCategory.trim() || 'Uncategorized',
-      sub_category: editSubCategory.trim() || null,
-      description: editDescription.trim() || null,
-      content: editContent.trim() || null
-    })
-    toast.success('Changes saved', { duration: 2000, position: 'bottom-center' })
+    if (editTitle.trim() === (bookmark.title || '') && (bookmark.type === 'note' || formatUrl(editUrl) === bookmark.url) && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent.trim() === (bookmark.content || '')) return;
+    await updateBookmark(bookmark.id, { title: editTitle.trim() || 'Untitled', url: bookmark.type !== 'note' ? formatUrl(editUrl) : bookmark.url, category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent.trim() || null })
+    toast.success('Saved', { duration: 2000, position: 'bottom-center' })
   }
 
-  const handleConfirmDelete = async () => {
-    await deleteBookmark(bookmark.id)
-    setShowDeleteConfirm(false)
-    handleCloseModal()
-  }
+  const handleConfirmDelete = async () => { await deleteBookmark(bookmark.id); setShowDeleteConfirm(false); handleCloseModal() }
 
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
-  const dateAdded = new Date(bookmark.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
   return (
     <>
-      {/* ─── MASONRY GRID CARD PREVIEW ─── */}
-      <div
-        draggable
-        onDragStart={(e) => onDragStart(e, bookmark.id)}
-        onDragEnd={onDragEnd}
-        onClick={() => setIsModalOpen(true)}
-        className={`group relative flex flex-col w-full cursor-pointer select-none transition-all duration-200 ease-out ${isDragged ? 'opacity-40 scale-95' : ''}`}
-      >
-        {/* Brutalist Main Card style */}
-        <div className={`w-full bg-white dark:bg-[#121212] border-4 border-black dark:border-white rounded-lg overflow-hidden shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all`}>
+      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full cursor-pointer select-none transition-all duration-500 ease-out ${isDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-2'}`}>
+        <div className={`w-full bg-white dark:bg-[#111] rounded-[32px] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-800`}>
           {bookmark.type === 'note' ? (
-            <div className="p-6 bg-[#f4f4f0] dark:bg-[#1a1b1e] flex flex-col min-h-[120px] gap-3">
-              <h4 className="font-black text-black dark:text-white uppercase tracking-wide truncate w-full">{bookmark.title}</h4>
-              <p className="font-medium text-black dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap line-clamp-4 w-full">
+            <div className="p-8 sm:p-10 bg-gradient-to-br from-fuchsia-50/50 to-orange-50/50 dark:from-fuchsia-900/10 dark:to-orange-900/10 flex flex-col min-h-[160px] gap-4">
+              <h4 className="font-black text-xl text-gray-900 dark:text-white tracking-tight leading-snug w-full">{bookmark.title}</h4>
+              <p className="font-serif text-lg text-gray-600 dark:text-gray-400 leading-relaxed break-words whitespace-pre-wrap line-clamp-4 w-full">
                 {bookmark.content}
               </p>
             </div>
           ) : (
-            <div className="w-full overflow-hidden border-b-4 border-black dark:border-white bg-[#f4f4f0] dark:bg-black/50">
-              <img 
-                src={previewImageUrl} 
-                alt={bookmark.title} 
-                className="w-full h-auto object-cover block" 
-                loading="lazy" 
-                onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} 
-              />
+            <div className="w-full overflow-hidden bg-gray-50 dark:bg-[#050505]">
+              <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-110 transition-transform duration-1000 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
             </div>
           )}
         </div>
-        <div className="mt-3 px-1 flex flex-col gap-1">
-          <p className="text-sm font-black uppercase tracking-wide text-black dark:text-white truncate">
-            {bookmark.type === 'note' ? 'Text Note' : bookmark.title}
+        <div className="mt-4 px-2 flex flex-col gap-1">
+          <p className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white truncate">
+            {bookmark.type === 'note' ? 'Snippet' : bookmark.title}
           </p>
-          {/* <p className="text-xs font-bold text-gray-500 dark:text-gray-400 truncate">
-            {bookmark.type === 'note' ? dateAdded : getDomain(bookmark.url)}
-          </p> */}
+          <p className="text-xs font-medium text-fuchsia-500 truncate">
+            {bookmark.type === 'note' ? new Date(bookmark.created_at).toLocaleDateString() : getDomain(bookmark.url)}
+          </p>
         </div>
       </div>
 
-      {/* ─── NEO-BRUTALIST FULL INSPECTION MODAL ─── */}
+      {/* ─── MAXIMALIST INSPECTION MODAL ─── */}
       {mounted && isModalOpen && createPortal(
-        <div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 md:p-10 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
-          onMouseDown={handleCloseModal} 
-        >
-          <div 
-            className="relative w-full max-w-[1300px] h-[95vh] sm:h-[85vh] flex flex-col md:flex-row bg-white dark:bg-[#121212] border-4 border-black dark:border-white rounded-xl shadow-[12px_12px_0_0_#000] dark:shadow-[12px_12px_0_0_#fff] overflow-hidden"
-            onMouseDown={(e) => e.stopPropagation()} 
-          >
-            {/* Brutalist Close Button */}
-            <button 
-              onClick={handleCloseModal}
-              className="absolute top-4 right-4 z-50 p-2 bg-yellow-400 text-black border-4 border-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all cursor-pointer font-black"
-            >
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-12 bg-black/40 backdrop-blur-2xl transition-opacity" onMouseDown={handleCloseModal}>
+          <div className="relative w-full max-w-[1600px] h-[98vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#0a0a0a] rounded-[40px] shadow-[0_0_80px_rgba(217,70,239,0.15)] overflow-hidden border border-gray-200 dark:border-gray-800" onMouseDown={(e) => e.stopPropagation()}>
+            <button onClick={handleCloseModal} className="absolute top-6 right-6 z-50 p-3 bg-white/80 dark:bg-black/50 text-gray-900 dark:text-white hover:text-fuchsia-500 backdrop-blur-xl rounded-full transition-colors shadow-lg cursor-pointer">
               <CloseIcon />
             </button>
 
-            {/* ─── LEFT PANE: PRIMARY CONTENT / EDITABLE SNIPPET ─── */}
-            <div className={`w-full md:w-[65%] h-[40%] md:h-full bg-white dark:bg-[#0a0a0c] border-b-4 md:border-b-0 md:border-r-4 border-black dark:border-white relative flex flex-col ${bookmark.type === 'note' ? 'p-6 sm:p-12' : 'items-center justify-center'}`}>
+            {/* ─── LEFT PANE: EDITABLE CONTENT ─── */}
+            <div className={`w-full md:w-[65%] h-[45%] md:h-full bg-white dark:bg-[#050505] relative flex flex-col ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center p-8'}`}>
               {bookmark.type === 'note' ? (
                 <div className="w-full h-full flex flex-col">
-                  <label className="text-xs font-black uppercase tracking-widest text-black dark:text-white mb-4 block">Saved Snippet</label>
+                  {/* FIX: Huge padding, font-serif, leading-loose for perfect readability */}
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     onBlur={handleAutoSave}
-                    placeholder="Type your snippet here..."
-                    className="w-full flex-1 bg-[#f4f4f0] dark:bg-[#1a1a1a] p-6 border-4 border-black dark:border-white shadow-[6px_6px_0_0_#000] dark:shadow-[6px_6px_0_0_#fff] outline-none font-medium text-lg sm:text-2xl text-black dark:text-white resize-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none transition-all"
+                    placeholder="Start typing your thoughts..."
+                    className="w-full h-full bg-transparent p-8 sm:p-12 md:p-20 font-serif text-2xl sm:text-3xl md:text-4xl leading-loose tracking-wide text-gray-900 dark:text-gray-100 outline-none resize-none whitespace-pre-wrap transition-all selection:bg-fuchsia-200 dark:selection:bg-fuchsia-900/50"
                   />
                 </div>
               ) : bookmark.type === 'image' ? (
                 <>
-                  <img 
-                    src={previewImageUrl} 
-                    alt={bookmark.title}
-                    className="w-full h-full object-contain cursor-zoom-in"
-                    onClick={() => setIsFullscreenMedia(true)}
-                  />
-                  <button onClick={() => setIsFullscreenMedia(true)} className="absolute bottom-6 right-6 px-4 py-2 bg-cyan-400 text-black font-black uppercase border-4 border-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2 cursor-pointer">
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-zoom-in drop-shadow-2xl" onClick={() => setIsFullscreenMedia(true)} />
+                  <button onClick={() => setIsFullscreenMedia(true)} className="absolute bottom-8 right-8 px-6 py-4 bg-white/90 dark:bg-black/90 backdrop-blur-xl text-gray-900 dark:text-white font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:scale-105 transition-transform cursor-pointer">
                     <FullscreenIcon /> Expand
                   </button>
                 </>
               ) : (
                 <>
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center p-8 bg-pink-50 dark:bg-black">
-                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border-4 border-black dark:border-white shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all" />
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center p-4 md:p-12 group">
+                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain rounded-2xl shadow-2xl group-hover:scale-105 transition-transform duration-700 ease-out" />
                   </a>
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="absolute bottom-8 right-8 px-5 py-3 bg-cyan-400 text-black font-black uppercase border-4 border-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2">
-                    <ExternalLinkIcon /> Open Link
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="absolute bottom-8 right-8 px-8 py-5 bg-gradient-to-r from-fuchsia-600 to-orange-500 text-white font-black uppercase tracking-widest rounded-full shadow-2xl hover:scale-105 transition-transform flex items-center gap-3">
+                    <ExternalLinkIcon /> Open Source
                   </a>
                 </>
               )}
             </div>
 
-            {/* ─── RIGHT PANE: INLINE SIDEBAR ─── */}
-            <div className="w-full md:w-[35%] h-[60%] md:h-full flex flex-col bg-[#f4f4f0] dark:bg-[#121212] p-6 sm:p-10 overflow-y-auto">
+            {/* ─── RIGHT PANE: SIDEBAR ─── */}
+            <div className="w-full md:w-[35%] h-[55%] md:h-full flex flex-col bg-gray-50 dark:bg-[#0c0c0c] border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-800 p-8 md:p-12 overflow-y-auto">
               
-              {/* Title & Meta */}
-              <div className="mb-10 pr-8">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Title</label>
+              <div className="mb-12">
                 <input
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   onBlur={handleAutoSave}
-                  placeholder="Title goes here"
-                  className="w-full bg-white dark:bg-[#1a1a1a] border-4 border-black dark:border-white p-3 text-xl font-black text-black dark:text-white shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none transition-all outline-none mb-3"
+                  placeholder="Give it a title"
+                  className="w-full bg-transparent border-none outline-none text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none mb-4 placeholder-gray-300 dark:placeholder-gray-800"
                 />
-                <div className="text-xs font-black uppercase text-gray-500 flex flex-col gap-2">
-                  <span>Added: {dateAdded}</span>
+                <div className="text-sm font-bold text-gray-400 flex flex-col gap-3 uppercase tracking-widest">
+                  <span>Saved on {new Date(bookmark.created_at).toLocaleDateString()}</span>
                   {bookmark.type !== 'note' && (
-                    <div className="flex items-center gap-2">
-                      <span>URL:</span>
-                      <input 
-                        type="url"
-                        value={editUrl}
-                        onChange={(e) => setEditUrl(e.target.value)}
-                        onBlur={handleAutoSave}
-                        className="flex-1 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white p-2 text-black dark:text-white shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] outline-none"
-                      />
-                    </div>
+                    <input 
+                      type="url"
+                      value={editUrl}
+                      onChange={(e) => setEditUrl(e.target.value)}
+                      onBlur={handleAutoSave}
+                      className="w-full bg-transparent border-b-2 border-gray-200 dark:border-gray-800 pb-2 text-fuchsia-500 outline-none focus:border-fuchsia-500 transition-colors"
+                    />
                   )}
                 </div>
               </div>
 
-              {/* Folders / Tags */}
-              <div className="mb-10">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 block">Mind Tags</label>
-                <div className="flex flex-col gap-3">
+              <div className="mb-12">
+                <label className="text-xs font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-4 block">Organization</label>
+                <div className="flex flex-col gap-4">
                   <input
                     type="text"
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
                     onBlur={handleAutoSave}
-                    placeholder="+ Add folder"
-                    className="w-full text-sm font-bold px-4 py-3 bg-cyan-100 dark:bg-cyan-900 text-black dark:text-white border-4 border-black dark:border-white shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none transition-all outline-none"
+                    placeholder="Folder Name"
+                    className="w-full text-lg font-bold px-6 py-4 bg-white dark:bg-[#111] text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-fuchsia-500 transition-all shadow-sm"
                   />
                   <input
                     type="text"
                     value={editSubCategory}
                     onChange={(e) => setEditSubCategory(e.target.value)}
                     onBlur={handleAutoSave}
-                    placeholder="+ Subfolder"
-                    className="w-full text-sm font-bold px-4 py-3 bg-pink-100 dark:bg-pink-900 text-black dark:text-white border-4 border-black dark:border-white shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none transition-all outline-none"
+                    placeholder="Subfolder Name"
+                    className="w-full text-lg font-bold px-6 py-4 bg-white dark:bg-[#111] text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500 transition-all shadow-sm"
                   />
                 </div>
               </div>
 
-              {/* Personal Notes */}
-              <div className="flex-1 flex flex-col min-h-[180px]">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 block">Personal Notes</label>
+              <div className="flex-1 flex flex-col min-h-[200px]">
+                <label className="text-xs font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest mb-4 block">Context & Notes</label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   onBlur={handleAutoSave}
-                  placeholder="Type here to add a note..."
-                  className="w-full flex-1 bg-white dark:bg-[#1a1a1a] border-4 border-black dark:border-white p-5 text-sm font-medium text-black dark:text-white outline-none shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none transition-all resize-none"
+                  placeholder="Why did you save this?"
+                  className="w-full flex-1 bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-3xl p-6 text-lg font-medium text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-fuchsia-500 resize-none shadow-sm transition-all leading-relaxed"
                 />
               </div>
 
-              {/* Bottom Action Bar */}
-              <div className="mt-8 pt-4 flex items-center justify-end">
+              <div className="mt-10 flex items-center justify-end">
                 <button 
                   onClick={() => setShowDeleteConfirm(true)} 
-                  className="px-4 py-2 bg-red-500 text-black font-black uppercase border-4 border-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2"
+                  className="px-6 py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-black uppercase tracking-widest rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-3"
                 >
                   <TrashIcon /> Delete
                 </button>
               </div>
             </div>
 
-            {/* ─── BRUTALIST DELETE CONFIRMATION OVERLAY ─── */}
+            {/* Delete Overlay */}
             {showDeleteConfirm && (
-              <div 
-                className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-white/80 dark:bg-black/80 backdrop-blur-sm"
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <div className="w-full max-w-sm bg-white dark:bg-[#121212] border-4 border-black dark:border-white p-8 shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] flex flex-col gap-6 text-center">
-                  <span className="text-2xl font-black uppercase text-black dark:text-white">Delete Item?</span>
-                  <p className="text-sm font-bold text-gray-600 dark:text-gray-400">THIS ACTION CANNOT BE UNDONE.</p>
-                  <div className="flex flex-col gap-3 mt-2">
-                    <button onClick={handleConfirmDelete} className="w-full py-4 bg-red-500 text-black font-black uppercase border-4 border-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
-                      Confirm Delete
-                    </button>
-                    <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-4 bg-gray-200 dark:bg-gray-800 text-black dark:text-white font-black uppercase border-4 border-black dark:border-white shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
-                      Cancel
-                    </button>
+              <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-white/90 dark:bg-black/90 backdrop-blur-xl" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="w-full max-w-md flex flex-col gap-8 text-center">
+                  <span className="text-5xl font-black uppercase text-gray-900 dark:text-white tracking-tighter">Obliterate?</span>
+                  <div className="flex flex-col gap-4 mt-4">
+                    <button onClick={handleConfirmDelete} className="w-full py-5 bg-red-600 text-white font-black uppercase tracking-widest rounded-full hover:scale-105 transition-transform shadow-xl">Confirm Destruction</button>
+                    <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-5 bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-white font-black uppercase tracking-widest rounded-full hover:bg-gray-300 dark:hover:bg-gray-800 transition-colors">Retreat</button>
                   </div>
                 </div>
               </div>
@@ -313,16 +216,13 @@ export default function BookmarkCard({
         document.body
       )}
 
-      {/* ─── FULLSCREEN MEDIA ─── */}
+      {/* Fullscreen Media */}
       {mounted && isFullscreenMedia && bookmark.type !== 'link' && createPortal(
-        <div 
-          className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/95 p-4 md:p-12 backdrop-blur-md cursor-zoom-out" 
-          onClick={() => setIsFullscreenMedia(false)}
-        >
-          <button onClick={() => setIsFullscreenMedia(false)} className="absolute top-4 right-4 md:top-8 md:right-8 p-3 bg-yellow-400 text-black border-4 border-black shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all cursor-pointer">
+        <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/95 p-4 md:p-12 backdrop-blur-3xl cursor-zoom-out" onClick={() => setIsFullscreenMedia(false)}>
+          <button onClick={() => setIsFullscreenMedia(false)} className="absolute top-6 right-6 md:top-12 md:right-12 p-4 bg-white/10 text-white rounded-full hover:bg-white/20 transition-colors backdrop-blur-md">
             <CloseIcon />
           </button>
-          <img src={previewImageUrl} alt={bookmark.title} className="max-w-full max-h-[90vh] object-contain border-4 border-white shadow-[8px_8px_0_0_#fff]" onClick={(e) => e.stopPropagation()} />
+          <img src={previewImageUrl} alt={bookmark.title} className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
         </div>,
         document.body
       )}
