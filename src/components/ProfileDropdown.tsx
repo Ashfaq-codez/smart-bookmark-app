@@ -12,7 +12,7 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
   const supabase = createClient()
   const { isDarkMode, toggleDarkMode } = useTheme()
 
-  const displayName = email ? email.split('@')[0] : 'PROFILE'
+  const displayName = email ? email.split('@')[0] : 'USER'
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false) }
@@ -24,27 +24,27 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
 
   return (
     <div className="relative w-full flex flex-col" ref={dropdownRef}>
-      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-[#111] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] rounded-3xl transition-colors font-black uppercase tracking-widest text-sm text-gray-900 dark:text-white cursor-pointer select-none">
-        <span className="truncate max-w-[140px]">{displayName}</span>
-        <span className="text-xs">▼</span>
+      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#00111a] rounded transition-colors font-mono text-sm text-gray-300 cursor-pointer border border-transparent hover:border-cyan-900">
+        <span className="truncate max-w-[150px]">{displayName}</span>
+        <span className="text-[10px] text-cyan-600">▼</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 left-0 top-full mt-4 bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] z-50 overflow-hidden border border-gray-100 dark:border-gray-800">
-          <div className="p-6 bg-gradient-to-r from-fuchsia-600 to-orange-500 text-white">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-80">ACCOUNT</p>
-            <p className="text-sm font-bold truncate mt-1">{email || 'USER'}</p>
+        <div className="absolute right-0 left-0 top-full mt-2 bg-black border border-cyan-500/50 rounded shadow-[0_4px_20px_rgba(6,182,212,0.2)] z-50 overflow-hidden">
+          <div className="p-4 border-b border-cyan-900/50 bg-[#000a10]">
+            <p className="text-[9px] font-mono text-cyan-700 uppercase tracking-widest">CONNECTION_ID</p>
+            <p className="text-xs font-mono text-cyan-300 truncate mt-1">{email || 'UNKNOWN'}</p>
           </div>
 
-          <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-[#222] transition-colors" onClick={toggleDarkMode}>
-            <span className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white">Dark Mode</span>
-            <button className={`w-12 h-7 rounded-full transition-colors relative flex items-center p-1 ${isDarkMode ? 'bg-fuchsia-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
-              <div className={`w-5 h-5 bg-white rounded-full transition-transform ${isDarkMode ? 'translate-x-5' : 'translate-x-0'}`} />
+          <div className="p-4 border-b border-cyan-900/50 flex items-center justify-between cursor-pointer hover:bg-[#00111a] transition-colors" onClick={toggleDarkMode}>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">UI_THEME</span>
+            <button className={`w-9 h-4 rounded border transition-colors relative flex items-center p-0.5 ${isDarkMode ? 'bg-cyan-900 border-cyan-500' : 'bg-gray-800 border-gray-600'}`}>
+              <div className={`w-2.5 h-2.5 bg-cyan-400 rounded transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
             </button>
           </div>
 
-          <button onClick={handleSignOut} className="w-full p-6 text-center text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer">
-            Sign Out
+          <button onClick={handleSignOut} className="w-full p-4 text-center text-[10px] font-mono uppercase tracking-widest text-red-500 hover:bg-red-900/20 transition-colors cursor-pointer">
+            TERMINATE_SESSION
           </button>
         </div>
       )}
