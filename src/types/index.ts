@@ -6,9 +6,9 @@ export type Bookmark = {
   sub_category?: string | null;
   created_at: string;
   user_id: string;
-  // Newly added fields for the universal capture engine
   description?: string | null;
+  content?: string | null; // <-- ADD THIS
   image_url?: string | null;
   tags?: string[];
   type?: string;
-}
+};

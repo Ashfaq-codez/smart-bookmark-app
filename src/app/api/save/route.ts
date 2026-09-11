@@ -1,4 +1,3 @@
-// src/app/api/save/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as cheerio from 'cheerio';
@@ -35,14 +34,6 @@ function normalizeUrl(rawUrl: string): string {
   }
 }
 
-async function generateTagsAndCategory(title: string, description: string, itemType: string) {
-  return {
-    category: 'Inbox',
-    tags: ['auto-saved', itemType],
-    type: itemType,
-  };
-}
-
 export async function POST(request: Request) {
   const origin = request.headers.get('origin');
 
@@ -50,27 +41,28 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { 
       url: rawUrl, 
+      title: customTitle,
       description: customDesc, 
+      content: customContent,
       image_url: customImg, 
-      type: customType 
+      type: customType,
+      category,
+      sub_category
     } = body;
 
-    if (!rawUrl && !customDesc) {
+    if (!rawUrl && !customContent) {
       return NextResponse.json(
-        { error: 'URL or description is required' },
+        { error: 'URL or content is required' },
         { status: 400, headers: corsHeaders(origin) }
       );
     }
 
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized. Please sign in to your Smart Bookmarks account first.' },
+        { error: 'Unauthorized' },
         { status: 401, headers: corsHeaders(origin) }
       );
     }
@@ -79,7 +71,6 @@ export async function POST(request: Request) {
     const isLink = itemType === 'link';
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl) : null;
 
-    // Check for existing link duplicate before scraping/inserting
     if (cleanUrl && isLink) {
       const { data: existing } = await supabase
         .from('bookmarks')
@@ -90,107 +81,68 @@ export async function POST(request: Request) {
 
       if (existing) {
         return NextResponse.json(
-          {
-            error: 'Duplicate entry',
-            message: `"${existing.title || cleanUrl}" is already saved in your hub.`,
-          },
+          { error: 'Duplicate entry', message: 'Already saved' },
           { status: 409, headers: corsHeaders(origin) }
         );
       }
     }
 
-    let scrapedTitle = 'Saved Item';
-    let scrapedDescription: string | null = null;
-    let scrapedImage: string | null = null;
+    let finalTitle = customTitle || 'Saved Item';
+    let finalDescription = customDesc || null;
+    let finalImage = customImg || null;
 
+    // ONLY scrape if it is an actual web link
     if (cleanUrl && isLink) {
       try {
         const response = await fetch(cleanUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SmartBookmarksBot/1.0)',
-          },
+          headers: { 'User-Agent': 'Mozilla/5.0' },
           signal: AbortSignal.timeout(4000),
         });
 
         if (response.ok) {
           const html = await response.text();
           const $ = cheerio.load(html);
-
-          scrapedTitle =
-            $('meta[property="og:title"]').attr('content') ||
-            $('title').text().trim() ||
-            cleanUrl;
-
-          scrapedDescription =
-            $('meta[name="description"]').attr('content') ||
-            $('meta[property="og:description"]').attr('content') ||
-            null;
-
-          scrapedImage =
-            $('meta[property="og:image"]').attr('content') ||
-            null;
+          finalTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim() || cleanUrl;
+          finalDescription = customDesc || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
+          finalImage = customImg || $('meta[property="og:image"]').attr('content') || null;
         }
-      } catch (scrapeError) {
-        console.warn('Metadata scraping fallback:', scrapeError);
-        scrapedTitle = cleanUrl;
+      } catch (e) {
+        finalTitle = cleanUrl;
       }
     }
 
-    const finalDescription = customDesc ? customDesc.trim() : (scrapedDescription ? scrapedDescription.trim() : null);
-    const finalImage = customImg || scrapedImage;
-    
-    let finalTitle = scrapedTitle;
-    if (itemType === 'note' && customDesc) {
-      finalTitle = customDesc.slice(0, 50) + (customDesc.length > 50 ? '...' : '');
+    if (itemType === 'note') {
+      finalTitle = 'Text Snippet';
     } else if (itemType === 'image') {
-      finalTitle = scrapedTitle !== 'Saved Item' ? scrapedTitle : 'Saved Image';
+      finalTitle = finalTitle !== 'Saved Item' ? finalTitle : 'Saved Image';
     }
-
-    const aiData = await generateTagsAndCategory(finalTitle, finalDescription || '', itemType);
 
     const { data: newBookmark, error: insertError } = await supabase
       .from('bookmarks')
-      .insert([
-        {
-          user_id: user.id,
-          url: cleanUrl || `${process.env.NEXT_PUBLIC_SITE_URL || ''}/note-${Date.now()}`,
-          title: finalTitle,
-          description: finalDescription,
-          image_url: finalImage,
-          category: aiData.category,
-          tags: aiData.tags,
-          type: itemType,
-        },
-      ])
+      .insert([{
+        user_id: user.id,
+        url: cleanUrl || `${process.env.NEXT_PUBLIC_SITE_URL || ''}/note-${Date.now()}`,
+        title: finalTitle,
+        description: finalDescription,
+        content: customContent || null,
+        image_url: finalImage,
+        category: category || 'Inbox',
+        sub_category: sub_category || null,
+        tags: ['auto-saved', itemType],
+        type: itemType,
+      }])
       .select()
       .single();
 
     if (insertError) {
       if (insertError.code === '23505') {
-        return NextResponse.json(
-          { error: 'Duplicate entry', message: 'This bookmark already exists.' },
-          { status: 409, headers: corsHeaders(origin) }
-        );
+        return NextResponse.json({ error: 'Duplicate entry' }, { status: 409, headers: corsHeaders(origin) });
       }
       throw insertError;
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Saved to hub successfully!',
-        data: newBookmark,
-      },
-      {
-        status: 200,
-        headers: corsHeaders(origin),
-      }
-    );
+    return NextResponse.json({ success: true, data: newBookmark }, { status: 200, headers: corsHeaders(origin) });
   } catch (error: any) {
-    console.error('Save API Handler Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500, headers: corsHeaders(origin) }
-    );
+    return NextResponse.json({ error: 'Server Error' }, { status: 500, headers: corsHeaders(origin) });
   }
 }

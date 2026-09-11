@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom'
 import { Bookmark } from '@/types'
 import toast from 'react-hot-toast'
 
-// --- REFINED MINIMAL ICONS ---
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
 const MoveIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><path d="M12 11v6" /><path d="M9 14l3 3 3-3" /></svg>
@@ -47,7 +46,6 @@ export default function BookmarkCard({
   const [editCategory, setEditCategory] = useState(bookmark.category || '')
   const [editSubCategory, setEditSubCategory] = useState(bookmark.sub_category || '')
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
-
   const [moveCategory, setMoveCategory] = useState(bookmark.category || '')
   const [moveSubCategory, setMoveSubCategory] = useState(bookmark.sub_category || '')
 
@@ -106,6 +104,7 @@ export default function BookmarkCard({
       category: editCategory.trim() || 'Uncategorized',
       sub_category: editSubCategory.trim() || null,
       description: editDescription.trim() || null,
+      content: bookmark.content 
     })
     setActiveModalTab('view')
     toast.success('Updated successfully')
@@ -127,10 +126,13 @@ export default function BookmarkCard({
   }
 
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
-  const notePrimaryContent = bookmark.title === 'Quick Note' ? bookmark.description : bookmark.title;
+  const notePrimaryContent = bookmark.content || (bookmark.title === 'Quick Note' ? bookmark.description : bookmark.title);
 
   return (
     <>
+      {/* ────────────────────────────────────────────────────────────
+          CARD ELEMENT
+          ──────────────────────────────────────────────────────────── */}
       <div
         draggable
         onDragStart={(e) => onDragStart(e, bookmark.id)}
@@ -138,7 +140,6 @@ export default function BookmarkCard({
         onClick={() => { setActiveModalTab('view'); setIsModalOpen(true); }}
         className={`group relative flex flex-col w-full cursor-pointer select-none transition-all duration-300 ease-out hover:z-10 ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
-        {/* REFINED CARD AESTHETIC */}
         <div className={`w-full bg-white dark:bg-[#1a1a1c] border border-gray-200/60 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl dark:shadow-none transition-all duration-300`}>
           {bookmark.type === 'note' ? (
             <div className="p-5 sm:p-6 bg-[#fafafa] dark:bg-[#1a1a1c] flex items-center justify-center min-h-[100px] sm:min-h-[140px]">
@@ -161,12 +162,12 @@ export default function BookmarkCard({
           )}
         </div>
         <p className="mt-2 text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 px-1 truncate">
-          {bookmark.title}
+          {bookmark.type === 'note' ? 'Text Snippet' : bookmark.title}
         </p>
       </div>
 
       {/* ────────────────────────────────────────────────────────────
-          REFINED EXPANSIVE DETAIL MODAL
+          DETAIL MODAL PORTAL 
           ──────────────────────────────────────────────────────────── */}
       {mounted && isModalOpen && createPortal(
         <div 

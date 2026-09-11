@@ -44,7 +44,6 @@ const ChevronRight = ({ className = '' }: { className?: string }) => (
   </svg>
 )
 
-// Simplified elegant themes replacing brutalist colors
 const colorThemes = [
   { card: 'bg-[#f0f4f8] dark:bg-[#1a1b1e]', btn: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', hover: 'hover:bg-blue-500/20' },
   { card: 'bg-[#f0fdf4] dark:bg-[#181f1b]', btn: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', hover: 'hover:bg-emerald-500/20' },
@@ -83,8 +82,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
-  // Masonry Column State
   const [columns, setColumns] = useState(1)
+
+  const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
+  const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
 
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [customSubCategories, setCustomSubCategories] = useState<Record<string, string[]>>({})
@@ -94,14 +95,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Handle Loading & Resize for Programmatic Masonry
   useEffect(() => {
     const updateColumns = () => {
       if (window.innerWidth >= 1280) setColumns(5)
       else if (window.innerWidth >= 1024) setColumns(4)
       else if (window.innerWidth >= 768) setColumns(3)
       else if (window.innerWidth >= 640) setColumns(2)
-      else setColumns(2) // 2 columns on mobile as requested in prior references
+      else setColumns(2) 
     }
     
     updateColumns()
@@ -115,7 +115,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     }
   }, [])
 
-  // Scroll visibility for input bar
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
@@ -130,6 +129,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && duplicateMatch) {
+        setDuplicateMatch(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [duplicateMatch])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
@@ -139,10 +148,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const rawInput = inputValue.trim()
     if (!rawInput) return
 
-    setIsSaving(true)
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
+
+    if (isAllUrls && tokens.length === 1) {
+      const targetNormalized = normalizeUrl(tokens[0])
+      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetNormalized)
+      
+      if (existing) {
+        setDuplicateMatch(existing)
+        return
+      }
+    }
+
+    setIsSaving(true)
     const existingUrls = new Set(bookmarks.map(b => normalizeUrl(b.url)))
 
     try {
@@ -178,7 +198,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
         const payload = isSingleUrl
           ? { url: finalUrl }
-          : { url: window.location.origin + '/note-' + Date.now(), title: rawInput, description: '', type: 'note' }
+          : { url: window.location.origin + '/note-' + Date.now(), content: rawInput, type: 'note' }
 
         const res = await fetch('/api/save', {
           method: 'POST',
@@ -187,6 +207,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         })
 
         if (res.status === 409) {
+          const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
+          if (match) {
+            setDuplicateMatch(match)
+            setIsSaving(false)
+            return
+          }
           toast.error('This bookmark already exists!')
           setIsSaving(false)
           return
@@ -275,19 +301,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               }
               toast.dismiss(t.id)
             }} 
-            className="flex-1 px-3 py-2 bg-red-500 text-white font-medium text-xs rounded-lg"
+            className="flex-1 px-3 py-2 bg-red-500 text-white font-medium text-xs rounded-lg cursor-pointer"
           >
             Delete
           </button>
           <button 
             onClick={() => toast.dismiss(t.id)} 
-            className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium text-xs rounded-lg"
+            className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium text-xs rounded-lg cursor-pointer"
           >
             Cancel
           </button>
         </div>
       </div>
-    ), { duration: Infinity, style: { background: 'transparent', boxShadow: 'none', padding: 0 } }) // Relies on internal modal styles
+    ), { duration: Infinity, style: { background: 'transparent', boxShadow: 'none', padding: 0 } })
   }
 
   const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
@@ -301,7 +327,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(bookmarkId, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
-  // Pre-filter bookmarks before distributing to masonry columns
   const filteredBookmarks = useMemo(() => {
     return bookmarks.filter((bookmark) => {
       const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter
@@ -311,6 +336,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       const matchSearch = searchQuery === '' || 
         bookmark.title.toLowerCase().includes(searchLower) ||
         bookmark.url.toLowerCase().includes(searchLower) ||
+        (bookmark.content && bookmark.content.toLowerCase().includes(searchLower)) ||
         (bookmark.description && bookmark.description.toLowerCase().includes(searchLower)) ||
         (bookmark.category && bookmark.category.toLowerCase().includes(searchLower)) ||
         (bookmark.sub_category && bookmark.sub_category.toLowerCase().includes(searchLower))
@@ -322,9 +348,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#f4f4f5] dark:bg-[#0a0a0c] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[56px] sm:pt-[64px] overflow-x-hidden selection:bg-blue-200 dark:selection:bg-blue-900/50">
       
-      {/* ────────────────────────────────────────────────────────────
-          1. ELEGANT GLASS HEADER
-          ──────────────────────────────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 h-[56px] sm:h-[64px] z-30 bg-white/70 dark:bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/5 flex items-stretch select-none">
         <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r border-gray-200/60 dark:border-white/5 shrink-0 gap-3">
           <button 
@@ -361,9 +384,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </header>
 
-      {/* ────────────────────────────────────────────────────────────
-          2. MINIMALIST SIDEBAR
-          ──────────────────────────────────────────────────────────── */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
@@ -420,9 +440,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {/* ────────────────────────────────────────────────────────────
-          3. HORIZONTAL PROGRAMMATIC MASONRY GRID 
-          ──────────────────────────────────────────────────────────── */}
       <main 
         className={`flex-1 p-3 sm:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-28 ${
           isSidebarOpen 
@@ -440,7 +457,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               </div>
             ))
           ) : (
-            // Programmatic Column Mapping for Left-To-Right Reading Order
             Array.from({ length: columns }).map((_, colIndex) => (
               <div key={colIndex} className="flex flex-col gap-3 sm:gap-5 w-full flex-1">
                 {filteredBookmarks.filter((_, i) => i % columns === colIndex).map(bookmark => (
@@ -453,6 +469,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                     onDragEnd={handleDragEnd}
                     updateBookmark={updateBookmark}
                     deleteBookmark={deleteBookmark}
+                    forceOpenModal={forcedInspectId === bookmark.id}
+                    onCloseForcedModal={() => setForcedInspectId(null)}
                   />
                 ))}
               </div>
@@ -461,9 +479,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ────────────────────────────────────────────────────────────
-          4. FLOATING GLASS PILL INPUT BAR
-          ──────────────────────────────────────────────────────────── */}
       <div 
         className={`fixed bottom-4 md:bottom-8 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-in-out ${
           isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'
@@ -497,6 +512,61 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </button>
         </div>
       </div>
+
+      {duplicateMatch && (
+        <div 
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+          onClick={() => setDuplicateMatch(null)}
+        >
+          <div 
+            className="w-full max-w-md bg-white dark:bg-[#1a1a1c] border border-gray-200 dark:border-yellow-500/50 p-6 rounded-3xl shadow-2xl flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-yellow-500 font-semibold text-xs uppercase tracking-widest">
+              <span>⚠️ Already Saved</span>
+            </div>
+            
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-snug">
+              This link is already in your hub!
+            </h3>
+
+            <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/10 flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {duplicateMatch.title}
+              </span>
+              <span className="text-xs font-mono text-gray-500 truncate">
+                {duplicateMatch.url}
+              </span>
+              <span className="text-[10px] font-semibold text-yellow-600 dark:text-yellow-400/80 uppercase tracking-wider mt-1">
+                Folder: {duplicateMatch.category || 'Inbox'}
+              </span>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Did you mean to review or edit this existing bookmark instead of saving it again?
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+              <button
+                onClick={() => {
+                  setForcedInspectId(duplicateMatch.id)
+                  setDuplicateMatch(null)
+                  setInputValue('')
+                }}
+                className="flex-1 py-3 bg-blue-500 text-white font-medium text-sm rounded-xl hover:bg-blue-600 transition-colors cursor-pointer"
+              >
+                Open Existing
+              </button>
+              <button
+                onClick={() => setDuplicateMatch(null)}
+                className="py-3 px-5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-medium text-sm rounded-xl cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
     </div>
   )
