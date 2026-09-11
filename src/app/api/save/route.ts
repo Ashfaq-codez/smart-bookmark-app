@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       }
     }
 
-    let finalTitle = customTitle || 'Saved Item';
+    let finalTitle = customTitle;
     let finalDescription = customDesc || null;
     let finalImage = customImg || null;
 
@@ -102,19 +102,22 @@ export async function POST(request: Request) {
         if (response.ok) {
           const html = await response.text();
           const $ = cheerio.load(html);
-          finalTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim() || cleanUrl;
-          finalDescription = customDesc || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-          finalImage = customImg || $('meta[property="og:image"]').attr('content') || null;
+          finalTitle = finalTitle || $('meta[property="og:title"]').attr('content') || $('title').text().trim() || cleanUrl;
+          finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
+          finalImage = finalImage || $('meta[property="og:image"]').attr('content') || null;
         }
       } catch (e) {
-        finalTitle = cleanUrl;
+        finalTitle = finalTitle || cleanUrl;
       }
     }
 
+    // Apply fallbacks ONLY if the title is still empty
     if (itemType === 'note') {
-      finalTitle = 'Text Snippet';
+      finalTitle = finalTitle || 'Text Snippet';
     } else if (itemType === 'image') {
-      finalTitle = finalTitle !== 'Saved Item' ? finalTitle : 'Saved Image';
+      finalTitle = finalTitle || 'Saved Image';
+    } else {
+      finalTitle = finalTitle || 'Saved Item';
     }
 
     const { data: newBookmark, error: insertError } = await supabase

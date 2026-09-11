@@ -45,6 +45,7 @@ export default function BookmarkCard({
   const [editCategory, setEditCategory] = useState(bookmark.category || '')
   const [editSubCategory, setEditSubCategory] = useState(bookmark.sub_category || '')
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
+  const [editContent, setEditContent] = useState(bookmark.content || '')
   const [moveCategory, setMoveCategory] = useState(bookmark.category || '')
   const [moveSubCategory, setMoveSubCategory] = useState(bookmark.sub_category || '')
 
@@ -96,14 +97,14 @@ export default function BookmarkCard({
   }
 
   const handleSaveEdit = async () => {
-    if (!editTitle || !editUrl) return
+    if (!editTitle) return
     await updateBookmark(bookmark.id, {
       title: editTitle.trim(),
-      url: formatUrl(editUrl),
+      url: bookmark.type !== 'note' ? formatUrl(editUrl) : bookmark.url,
       category: editCategory.trim() || 'Uncategorized',
       sub_category: editSubCategory.trim() || null,
       description: editDescription.trim() || null,
-      content: bookmark.content 
+      content: editContent.trim() || null
     })
     setActiveModalTab('view')
     toast.success('Updated successfully')
@@ -125,7 +126,6 @@ export default function BookmarkCard({
   }
 
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
-  const notePrimaryContent = bookmark.content || (bookmark.title === 'Quick Note' ? bookmark.description : bookmark.title);
 
   return (
     <>
@@ -138,9 +138,10 @@ export default function BookmarkCard({
       >
         <div className={`w-full bg-white dark:bg-[#1a1b1e] border border-gray-200/60 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl dark:shadow-none transition-all duration-300`}>
           {bookmark.type === 'note' ? (
-            <div className="p-6 sm:p-8 bg-[#fafafa] dark:bg-[#1a1b1e] flex flex-col items-start justify-center min-h-[120px] sm:min-h-[160px]">
-              <p className="font-serif text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap line-clamp-6">
-                {notePrimaryContent}
+            <div className="p-6 sm:p-8 bg-[#fafafa] dark:bg-[#1a1b1e] flex flex-col items-start justify-start min-h-[120px] sm:min-h-[160px] gap-3">
+              <h4 className="font-bold text-gray-900 dark:text-white truncate w-full text-sm sm:text-base">{bookmark.title}</h4>
+              <p className="font-serif text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap line-clamp-4 w-full">
+                {bookmark.content}
               </p>
             </div>
           ) : (
@@ -187,19 +188,26 @@ export default function BookmarkCard({
 
             <div className={`w-full md:w-[65%] h-[45%] md:h-full bg-white dark:bg-[#0a0a0c] border-b md:border-b-0 md:border-r border-gray-200/60 dark:border-white/5 relative flex shrink-0 ${bookmark.type === 'note' ? 'items-start p-8 sm:p-12 md:p-20 overflow-y-auto' : 'items-center justify-center overflow-hidden p-6 sm:p-8 md:p-12'}`}>
               {bookmark.type === 'note' ? (
-                <>
-                  <div className="w-full h-full max-w-3xl mx-auto">
-                    <p className="font-serif text-lg sm:text-2xl md:text-3xl text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap selection:bg-blue-200 dark:selection:bg-blue-900/50">
-                      {notePrimaryContent}
-                    </p>
-                  </div>
+                <div className="w-full h-full max-w-3xl mx-auto flex flex-col gap-4 overflow-y-auto pb-12">
+                  <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white leading-tight">
+                    {bookmark.title}
+                  </h2>
+                  <p className="font-serif text-lg sm:text-2xl md:text-3xl text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap selection:bg-blue-200 dark:selection:bg-blue-900/50">
+                    {bookmark.content}
+                  </p>
+                  {bookmark.description && (
+                     <div className="mt-8 p-5 bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personal Note</span>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-3 leading-relaxed">{bookmark.description}</p>
+                     </div>
+                  )}
                   <button 
                     onClick={() => setIsFullscreenMedia(true)}
-                    className="absolute bottom-6 right-6 p-2.5 bg-white/80 dark:bg-black/50 backdrop-blur-md text-gray-600 dark:text-gray-300 border border-gray-200/50 dark:border-white/10 rounded-xl text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-white dark:hover:bg-white/10 transition-colors"
+                    className="fixed bottom-6 right-6 md:absolute p-2.5 bg-white/80 dark:bg-black/50 backdrop-blur-md text-gray-600 dark:text-gray-300 border border-gray-200/50 dark:border-white/10 rounded-xl text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-white dark:hover:bg-white/10 transition-colors"
                   >
                     <FullscreenIcon /> Expand
                   </button>
-                </>
+                </div>
               ) : bookmark.type === 'image' ? (
                 <>
                   <img 
@@ -269,17 +277,16 @@ export default function BookmarkCard({
               <div className="flex flex-col flex-1">
                 {activeModalTab === 'edit' ? (
                   <div className="flex flex-col gap-4 py-1">
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5 block">Title</label>
+                      <input 
+                        type="text" 
+                        value={editTitle} 
+                        onChange={(e) => setEditTitle(e.target.value)} 
+                        className="w-full px-4 py-3 text-sm font-medium border border-gray-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#1a1b1e] dark:text-white outline-none focus:border-blue-500 transition-colors shadow-sm" 
+                      />
+                    </div>
                     {bookmark.type !== 'note' && (
-                      <>
-                        <div>
-                          <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5 block">Title</label>
-                          <input 
-                            type="text" 
-                            value={editTitle} 
-                            onChange={(e) => setEditTitle(e.target.value)} 
-                            className="w-full px-4 py-3 text-sm font-medium border border-gray-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#1a1b1e] dark:text-white outline-none focus:border-blue-500 transition-colors shadow-sm" 
-                          />
-                        </div>
                         <div>
                           <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5 block">Target URL</label>
                           <input 
@@ -289,7 +296,6 @@ export default function BookmarkCard({
                             className="w-full px-4 py-3 text-xs font-mono border border-gray-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#1a1b1e] dark:text-white outline-none focus:border-blue-500 transition-colors shadow-sm" 
                           />
                         </div>
-                      </>
                     )}
                     
                     <div className="grid grid-cols-2 gap-3">
@@ -321,7 +327,7 @@ export default function BookmarkCard({
                       </button>
                       <button 
                         onClick={() => setActiveModalTab('view')} 
-                        className="px-6 py-3 bg-gray-200/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                        className="flex-1 py-3 bg-gray-200/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                       >
                         Cancel
                       </button>
@@ -357,7 +363,7 @@ export default function BookmarkCard({
                       </button>
                       <button 
                         onClick={() => setActiveModalTab('view')} 
-                        className="px-6 py-3 bg-gray-200/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                        className="flex-1 py-3 bg-gray-200/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                       >
                         Cancel
                       </button>
@@ -388,6 +394,18 @@ export default function BookmarkCard({
                     </div>
 
                     <div className="flex flex-col flex-1 min-h-[140px] gap-2 pt-6">
+                      {bookmark.type === 'note' && (
+                        <>
+                          <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                            Snippet Content
+                          </label>
+                          <textarea 
+                            value={editContent} 
+                            onChange={(e) => setEditContent(e.target.value)} 
+                            className="w-full flex-1 p-4 mb-4 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-[#1a1b1e] border border-gray-200/60 dark:border-white/5 rounded-xl outline-none focus:border-blue-500 resize-none transition-colors shadow-inner" 
+                          />
+                        </>
+                      )}
                       <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
                         Personal Notes
                       </label>
@@ -460,11 +478,14 @@ export default function BookmarkCard({
           </button>
           {bookmark.type === 'note' ? (
             <div 
-              className="w-full max-w-4xl max-h-[85vh] overflow-y-auto bg-white dark:bg-[#0f0f11] p-8 md:p-16 rounded-3xl border border-gray-200/50 dark:border-white/5 cursor-auto shadow-2xl" 
+              className="w-full max-w-4xl max-h-[85vh] overflow-y-auto bg-white dark:bg-[#0f0f11] p-8 md:p-16 rounded-3xl border border-gray-200/50 dark:border-white/5 cursor-auto shadow-2xl flex flex-col gap-6" 
               onClick={(e) => e.stopPropagation()}
             >
+              <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white leading-tight">
+                {bookmark.title}
+              </h2>
               <p className="font-serif text-lg sm:text-2xl md:text-3xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap selection:bg-blue-200 dark:selection:bg-blue-900/50">
-                {notePrimaryContent}
+                {bookmark.content}
               </p>
             </div>
           ) : (

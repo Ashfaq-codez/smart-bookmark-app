@@ -1,20 +1,21 @@
-const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save'; // Swap to Vercel for production[cite: 5]
+const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save'; // Swap to Vercel for production
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: "save-page", title: "Save Page to Hub", contexts: ["page"] }); //[cite: 5]
-  chrome.contextMenus.create({ id: "save-image", title: "Save Image", contexts: ["image"] }); //[cite: 5]
-  chrome.contextMenus.create({ id: "save-text", title: "Save as Note", contexts: ["selection"] }); //[cite: 5]
+  chrome.contextMenus.create({ id: "save-page", title: "Save Page to Hub", contexts: ["page"] });
+  chrome.contextMenus.create({ id: "save-image", title: "Save Image", contexts: ["image"] });
+  chrome.contextMenus.create({ id: "save-text", title: "Save as Note", contexts: ["selection"] });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  chrome.action.setBadgeText({ text: "..." }); //[cite: 5]
+  chrome.action.setBadgeText({ text: "..." });
 
-  let payload = { url: tab.url || info.pageUrl }; //[cite: 5]
+  let payload = { url: tab.url || info.pageUrl, title: tab.title }; 
   
   if (info.menuItemId === "save-image") {
-    payload = { ...payload, image_url: info.srcUrl, type: 'image' }; //[cite: 5]
+    payload = { ...payload, image_url: info.srcUrl, type: 'image' };
   } else if (info.menuItemId === "save-text") {
-    payload = { ...payload, description: info.selectionText, type: 'note' }; //[cite: 5]
+    // Send the highlighted text directly to the 'content' column
+    payload = { ...payload, content: info.selectionText, type: 'note' };
   }
 
   try {
@@ -23,20 +24,20 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(payload)
-    }); //[cite: 5]
+    });
 
     if (res.status === 409) {
       chrome.action.setBadgeText({ text: "DUP" });
       chrome.action.setBadgeBackgroundColor({ color: "#d97706" }); // Amber for duplicate
     } else if (res.ok) {
-      chrome.action.setBadgeText({ text: "OK" }); //[cite: 5]
-      chrome.action.setBadgeBackgroundColor({ color: "#15803d" }); //[cite: 5]
+      chrome.action.setBadgeText({ text: "OK" });
+      chrome.action.setBadgeBackgroundColor({ color: "#15803d" });
     } else {
-      throw new Error("Failed"); //[cite: 5]
+      throw new Error("Failed");
     }
   } catch (err) {
-    chrome.action.setBadgeText({ text: "ERR" }); //[cite: 5]
-    chrome.action.setBadgeBackgroundColor({ color: "#b91c1c" }); //[cite: 5]
+    chrome.action.setBadgeText({ text: "ERR" });
+    chrome.action.setBadgeBackgroundColor({ color: "#b91c1c" });
   }
   
   setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2500);
