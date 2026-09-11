@@ -13,7 +13,7 @@ import ProfileDropdown from './ProfileDropdown'
 const PaperclipIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
 const SendIcon = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 const MenuIcon = () => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-const ChevronRight = ({ className = '' }: { className?: string }) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}><path d="M9 18l6-6-6-6" /></svg>
+const ChevronRight = ({ className = '' }: { className?: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}><path d="M9 18l6-6-6-6" /></svg>
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -201,7 +201,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#fbfbfb] dark:bg-[#070707] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col overflow-x-hidden selection:bg-fuchsia-400 selection:text-white">
+    <div className="bg-[#fbfbfb] dark:bg-[#050505] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col overflow-x-hidden selection:bg-fuchsia-400 selection:text-white">
       
       {/* ─── MOBILE HEADER ─── */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-[70px] z-30 bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-gray-200 dark:border-gray-800 flex items-center px-6 justify-between">
@@ -227,39 +227,40 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
              </div>
            )}
         </div>
+
+        {/* ─── TOGGLE BUTTON MOVED TO THE TOP ─── */}
+        <div onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex w-full h-[40px] items-center justify-center cursor-pointer bg-gray-50 dark:bg-[#111] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800 text-gray-400 transition-colors">
+          <ChevronRight className={`transition-transform duration-500 ${isSidebarOpen ? 'rotate-180' : ''}`} />
+        </div>
+
         <div className={`h-full flex-1 overflow-hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
           <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
-        </div>
-        <div onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex w-full h-[80px] items-center justify-center cursor-pointer bg-gray-50 dark:bg-[#111] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-800 text-gray-400 transition-colors">
-          <ChevronRight className={`transition-transform duration-500 ${isSidebarOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
       {/* ─── MAIN CONTENT ─── */}
-      <main className={`flex-1 flex flex-col px-4 sm:px-8 md:px-16 transition-all duration-500 pb-40 pt-[90px] md:pt-16 ${isSidebarOpen ? 'md:ml-[360px]' : 'md:ml-[80px]'}`}>
+      <main className={`flex-1 flex flex-col px-4 sm:px-8 md:px-16 transition-all duration-500 pb-40 pt-[90px] md:pt-4 ${isSidebarOpen ? 'md:ml-[360px]' : 'md:ml-[80px]'}`}>
         
-        {/* Maximalist Header */}
         <div className="w-full max-w-7xl mx-auto mb-16 md:mb-24 mt-8 md:mt-16">
           <input
             type="text"
             placeholder="SEARCH MY MIND"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none outline-none font-black text-6xl sm:text-8xl md:text-[110px] tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-purple-600 to-orange-500 placeholder-gray-200 dark:placeholder-gray-900 transition-all leading-none"
+            className="w-full bg-transparent border-none outline-none font-black text-6xl sm:text-8xl md:text-[110px] tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-purple-600 to-orange-500 placeholder-gray-200 dark:placeholder-[#151515] transition-all leading-none"
           />
         </div>
 
-        {/* Masonry Grid */}
         <div className="w-full max-w-7xl mx-auto flex gap-6 sm:gap-10 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-6 sm:gap-10 w-full flex-1">
+              <div key={colIndex} className="flex flex-col gap-6 sm:gap-10 w-full flex-1 min-w-0">
                 {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
               </div>
             ))
           ) : (
             masonryColumns.map((colBookmarks, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-6 sm:gap-10 w-full flex-1">
+              <div key={colIndex} className="flex flex-col gap-6 sm:gap-10 w-full flex-1 min-w-0">
                 {colBookmarks.map(bookmark => (
                   <BookmarkCard 
                     key={bookmark.id} bookmark={bookmark} theme={{ card: '', btn: '', hover: '' }} isDragged={draggedId === bookmark.id} onDragStart={handleDragStart} onDragEnd={handleDragEnd} updateBookmark={updateBookmark} deleteBookmark={deleteBookmark} forceOpenModal={forcedInspectId === bookmark.id} onCloseForcedModal={() => setForcedInspectId(null)}
@@ -271,7 +272,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ─── MAXIMALIST CAPTURE PILL ─── */}
       <div className={`fixed bottom-8 md:bottom-12 z-30 flex justify-center px-4 pointer-events-none transition-all duration-700 ease-out ${isInputVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-[150%] opacity-0 scale-95'} ${isSidebarOpen ? 'md:left-[360px]' : 'md:left-[80px]'} left-0 right-0`}>
         <div className="pointer-events-auto w-full max-w-4xl bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-full shadow-[0_20px_60px_-15px_rgba(217,70,239,0.3)] dark:shadow-[0_20px_60px_-15px_rgba(217,70,239,0.15)] flex items-center p-3 gap-4 transition-transform hover:-translate-y-2 border border-gray-100 dark:border-gray-800">
           <button onClick={() => toast('Attachments coming soon', { icon: '📎' })} className="p-4 bg-gray-100 dark:bg-gray-900 text-gray-500 hover:text-fuchsia-600 rounded-full cursor-pointer transition-colors" title="Attach">
@@ -292,7 +292,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {/* ─── DUPLICATE MODAL ─── */}
       {duplicateMatch && (
         <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl" onClick={() => setDuplicateMatch(null)}>
           <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-gray-800 p-10 rounded-[40px] shadow-2xl flex flex-col gap-8" onClick={(e) => e.stopPropagation()}>

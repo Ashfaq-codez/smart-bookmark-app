@@ -65,12 +65,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   return (
     <>
-      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full cursor-pointer select-none transition-all duration-500 ease-out ${isDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-2'}`}>
-        <div className={`w-full bg-white dark:bg-[#111] rounded-[32px] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-800`}>
+      {/* ─── CARD LAYOUT: FIXED OVERFLOW ─── */}
+      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full min-w-0 cursor-pointer select-none transition-all duration-500 ease-out ${isDragged ? 'opacity-40 scale-95' : 'hover:-translate-y-2'}`}>
+        <div className={`w-full bg-white dark:bg-[#111] rounded-[32px] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-200 dark:border-gray-800`}>
           {bookmark.type === 'note' ? (
-            <div className="p-8 sm:p-10 bg-gradient-to-br from-fuchsia-50/50 to-orange-50/50 dark:from-fuchsia-900/10 dark:to-orange-900/10 flex flex-col min-h-[160px] gap-4">
-              <h4 className="font-black text-xl text-gray-900 dark:text-white tracking-tight leading-snug w-full">{bookmark.title}</h4>
-              <p className="font-serif text-lg text-gray-600 dark:text-gray-400 leading-relaxed break-words whitespace-pre-wrap line-clamp-4 w-full">
+            <div className="p-8 sm:p-10 bg-gradient-to-br from-fuchsia-50/50 to-orange-50/50 dark:from-fuchsia-900/10 dark:to-orange-900/10 flex flex-col min-h-[160px] gap-4 w-full">
+              <h4 className="font-black text-xl text-gray-900 dark:text-gray-100 tracking-tight leading-snug w-full truncate">{bookmark.title}</h4>
+              <p className="font-serif text-lg text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap line-clamp-4 w-full overflow-hidden">
                 {bookmark.content}
               </p>
             </div>
@@ -80,11 +81,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
           )}
         </div>
-        <div className="mt-4 px-2 flex flex-col gap-1">
-          <p className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white truncate">
+        <div className="mt-4 px-2 flex flex-col gap-1 overflow-hidden min-w-0 w-full">
+          <p className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-gray-300 truncate w-full">
             {bookmark.type === 'note' ? 'Snippet' : bookmark.title}
           </p>
-          <p className="text-xs font-medium text-fuchsia-500 truncate">
+          <p className="text-xs font-medium text-fuchsia-500 truncate w-full">
             {bookmark.type === 'note' ? new Date(bookmark.created_at).toLocaleDateString() : getDomain(bookmark.url)}
           </p>
         </div>
@@ -92,17 +93,16 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
       {/* ─── MAXIMALIST INSPECTION MODAL ─── */}
       {mounted && isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-12 bg-black/40 backdrop-blur-2xl transition-opacity" onMouseDown={handleCloseModal}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-12 bg-black/60 backdrop-blur-xl transition-opacity" onMouseDown={handleCloseModal}>
           <div className="relative w-full max-w-[1600px] h-[98vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#0a0a0a] rounded-[40px] shadow-[0_0_80px_rgba(217,70,239,0.15)] overflow-hidden border border-gray-200 dark:border-gray-800" onMouseDown={(e) => e.stopPropagation()}>
             <button onClick={handleCloseModal} className="absolute top-6 right-6 z-50 p-3 bg-white/80 dark:bg-black/50 text-gray-900 dark:text-white hover:text-fuchsia-500 backdrop-blur-xl rounded-full transition-colors shadow-lg cursor-pointer">
               <CloseIcon />
             </button>
 
-            {/* ─── LEFT PANE: EDITABLE CONTENT ─── */}
+            {/* LEFT PANE */}
             <div className={`w-full md:w-[65%] h-[45%] md:h-full bg-white dark:bg-[#050505] relative flex flex-col ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center p-8'}`}>
               {bookmark.type === 'note' ? (
-                <div className="w-full h-full flex flex-col">
-                  {/* FIX: Huge padding, font-serif, leading-loose for perfect readability */}
+                <div className="w-full h-full flex flex-col overflow-hidden">
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
@@ -130,7 +130,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               )}
             </div>
 
-            {/* ─── RIGHT PANE: SIDEBAR ─── */}
+            {/* RIGHT PANE: SIDEBAR */}
             <div className="w-full md:w-[35%] h-[55%] md:h-full flex flex-col bg-gray-50 dark:bg-[#0c0c0c] border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-800 p-8 md:p-12 overflow-y-auto">
               
               <div className="mb-12">
@@ -192,7 +192,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="mt-10 flex items-center justify-end">
                 <button 
                   onClick={() => setShowDeleteConfirm(true)} 
-                  className="px-6 py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-black uppercase tracking-widest rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-3"
+                  className="px-6 py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-black uppercase tracking-widest rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-3 cursor-pointer"
                 >
                   <TrashIcon /> Delete
                 </button>
@@ -205,8 +205,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 <div className="w-full max-w-md flex flex-col gap-8 text-center">
                   <span className="text-5xl font-black uppercase text-gray-900 dark:text-white tracking-tighter">Obliterate?</span>
                   <div className="flex flex-col gap-4 mt-4">
-                    <button onClick={handleConfirmDelete} className="w-full py-5 bg-red-600 text-white font-black uppercase tracking-widest rounded-full hover:scale-105 transition-transform shadow-xl">Confirm Destruction</button>
-                    <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-5 bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-white font-black uppercase tracking-widest rounded-full hover:bg-gray-300 dark:hover:bg-gray-800 transition-colors">Retreat</button>
+                    <button onClick={handleConfirmDelete} className="w-full py-5 bg-red-600 text-white font-black uppercase tracking-widest rounded-full hover:scale-105 transition-transform shadow-xl cursor-pointer">Confirm Destruction</button>
+                    <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-5 bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-white font-black uppercase tracking-widest rounded-full hover:bg-gray-300 dark:hover:bg-gray-800 transition-colors cursor-pointer">Retreat</button>
                   </div>
                 </div>
               </div>
