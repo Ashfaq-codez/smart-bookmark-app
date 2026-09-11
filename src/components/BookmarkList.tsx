@@ -10,10 +10,10 @@ import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
-const PaperclipIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-const ChevronRight = ({ className = '' }: { className?: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M9 18l6-6-6-6" /></svg>
+const PaperclipIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+const SendIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+const MenuIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+const ChevronRight = ({ className = '' }: { className?: string }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><path d="M9 18l6-6-6-6" /></svg>
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -38,7 +38,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isSaving, setIsSaving] = useState(false)
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
-  const [columnsCount, setColumnsCount] = useState(2) // Default to 2 for mobile-first
+  const [columnsCount, setColumnsCount] = useState(2) 
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
@@ -51,7 +51,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // EXACT RESIZE OBSERVER FOR 2-COLUMN MOBILE GRID
   useEffect(() => {
     const updateColumns = () => {
       if (!gridRef.current) return
@@ -60,7 +59,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       else if (width >= 1280) setColumnsCount(5)
       else if (width >= 1024) setColumnsCount(4)
       else if (width >= 640) setColumnsCount(3)
-      else setColumnsCount(2) // Strictly 2 columns below 640px
+      else setColumnsCount(2)
     }
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
@@ -106,7 +105,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     try {
       if (isAllUrls && tokens.length > 1) {
         const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
-        if (validNewTokens.length === 0) { toast.error('Already saved.'); setIsSaving(false); return }
+        if (validNewTokens.length === 0) { toast.error('URLs already present.'); setIsSaving(false); return }
         await Promise.all(validNewTokens.map(token => fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token }) })))
         toast.success(`Saved ${validNewTokens.length} items`)
       } else {
@@ -118,12 +117,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (res.status === 409) {
           const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
           if (match) { setDuplicateMatch(match); setIsSaving(false); return }
-          toast.error('Item exists'); setIsSaving(false); return
+          toast.error('Item exists.'); setIsSaving(false); return
         }
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')
-    } catch { toast.error('Error saving item') } finally { setIsSaving(false) }
+    } catch { toast.error('Error saving item.') } finally { setIsSaving(false) }
   }
 
   const filteredBookmarks = useMemo(() => {
@@ -181,14 +180,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const handleDeleteCategory = async (catToDelete: string) => {
     toast((t) => (
-      <div className="flex flex-col gap-3 p-1">
-        <span className="text-sm font-medium text-white">Delete "{catToDelete}"?</span>
+      <div className="flex flex-col gap-2 font-sans text-sm">
+        <span className="font-semibold text-[#324a66] dark:text-gray-200">Delete "{catToDelete}"?</span>
         <div className="flex gap-2 mt-2">
-          <button onClick={() => { setCustomCategories(p => p.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) }; toast.dismiss(t.id) }} className="flex-1 px-3 py-2 bg-red-500/20 text-red-400 font-medium text-xs rounded-lg hover:bg-red-500/30">Delete</button>
-          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-3 py-2 bg-white/10 text-white font-medium text-xs rounded-lg hover:bg-white/20">Cancel</button>
+          <button onClick={() => { setCustomCategories(p => p.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) }; toast.dismiss(t.id) }} className="flex-1 px-3 py-1.5 bg-red-100 text-red-600 border border-red-200 shadow-sm rounded hover:bg-red-200 transition-colors">Delete</button>
+          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-3 py-1.5 bg-white text-[#324a66] border border-[#a2bcdc] shadow-sm rounded hover:bg-gray-50 transition-colors">Cancel</button>
         </div>
       </div>
-    ), { duration: Infinity, style: { background: '#1c1c1c', border: '1px solid #333' } })
+    ), { duration: Infinity })
   }
 
   const toggleFolderExpand = (folder: string) => setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }))
@@ -202,34 +201,39 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f2f3f5] dark:bg-[#121316] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
+    <div className="min-h-screen font-sans flex flex-col overflow-x-hidden selection:bg-[#a9cbed] selection:text-[#203a55] relative z-0">
       
+      {/* ─── PURE CSS SKY / CLOUD GRADIENT BACKGROUND ─── */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#f1f7fc] via-[#b6d5f0] to-[#609ad3] dark:from-[#0d1620] dark:via-[#152336] dark:to-[#0f172a]" />
+
       {/* MOBILE HEADER */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] z-30 bg-[#f2f3f5]/90 dark:bg-[#121316]/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 flex items-center px-4 justify-between select-none">
-        <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] z-30 bg-white/70 dark:bg-[#1a2332]/70 backdrop-blur-md border-b border-[#a9cbed] dark:border-[#2a3f5a] flex items-center px-4 justify-between shadow-sm">
+        <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-[#4a6b8c] dark:text-[#8ea4bd] hover:text-[#2c4054] transition-colors">
           <MenuIcon />
         </button>
-        <span className="font-serif italic text-lg text-gray-800 dark:text-gray-300">
-          my mind
+        <span className="font-mono text-xs tracking-widest text-[#4a6b8c] dark:text-[#a2bcdc]">
+          ++ web.portal //
         </span>
         <div className="w-8" />
       </header>
 
-      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity" />}
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-[#2c4054]/50 backdrop-blur-sm z-40 md:hidden transition-opacity" />}
 
-      {/* SIDEBAR */}
-      <div className={`fixed left-0 top-0 bottom-0 z-40 bg-[#fbfbfc] dark:bg-[#18191c] border-r border-gray-200 dark:border-white/5 transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[300px] shadow-2xl' : '-translate-x-full md:translate-x-0 md:w-[70px]'}`}>
+      {/* GLOSSY SIDEBAR */}
+      <div className={`fixed left-0 top-0 bottom-0 z-40 bg-white/80 dark:bg-[#151c28]/80 backdrop-blur-xl border-r border-[#a9cbed] dark:border-[#2a3f5a] shadow-[0_0_20px_rgba(0,0,0,0.05)] transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[280px]' : '-translate-x-full md:translate-x-0 md:w-[65px]'}`}>
         <div className="hidden md:flex flex-col">
            {isSidebarOpen ? (
-             <div className="p-4 border-b border-gray-200 dark:border-white/5"><ProfileDropdown email={userEmail ?? ""} /></div>
+             <div className="p-3 border-b border-[#a9cbed] dark:border-[#2a3f5a]"><ProfileDropdown email={userEmail ?? ""} /></div>
            ) : (
-             <div className="h-[70px] flex items-center justify-center border-b border-gray-200 dark:border-white/5 bg-transparent">
-               <div className="w-9 h-9 rounded-full bg-orange-500/20 flex items-center justify-center font-medium text-sm text-orange-500">{userEmail?.[0].toUpperCase()}</div>
+             <div className="h-[60px] flex items-center justify-center border-b border-[#a9cbed] dark:border-[#2a3f5a]">
+               <div className="w-8 h-8 rounded-full bg-gradient-to-b from-[#e1eef9] to-[#b6d5f0] border border-[#8eb2d6] text-[#315174] flex items-center justify-center font-bold text-xs shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)]">
+                 {userEmail?.[0].toUpperCase()}
+               </div>
              </div>
            )}
         </div>
 
-        <div onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex w-full h-[40px] items-center justify-center cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 border-b border-gray-200 dark:border-white/5 text-gray-400 transition-colors">
+        <div onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:flex w-full h-[32px] items-center justify-center cursor-pointer bg-gradient-to-b from-white/60 to-[#eef4f9]/60 dark:from-[#2a3f5a]/60 dark:to-[#1a2332]/60 hover:from-white hover:to-[#e1eef9] border-b border-[#a9cbed] dark:border-[#2a3f5a] text-[#5e81a5] transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
           <ChevronRight className={`transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
         </div>
 
@@ -239,31 +243,33 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </div>
 
       {/* MAIN CONTENT */}
-      {/* px-3 on mobile to allow the 2 column grid to breathe */}
-      <main className={`flex-1 flex flex-col px-3 sm:px-8 md:px-16 transition-all duration-300 pb-32 pt-[80px] md:pt-4 ${isSidebarOpen ? 'md:ml-[300px]' : 'md:ml-[70px]'}`}>
+      <main className={`flex-1 flex flex-col px-3 sm:px-6 md:px-10 transition-all duration-300 pb-32 pt-[70px] md:pt-6 ${isSidebarOpen ? 'md:ml-[280px]' : 'md:ml-[65px]'}`}>
         
-        {/* Elegant Serif Search Header */}
-        <div className="w-full max-w-7xl mx-auto mb-8 md:mb-16 mt-4 md:mt-8 px-2 md:px-0">
+        {/* GLOSSY SEARCH PANEL */}
+        <div className="w-full max-w-6xl mx-auto mb-8 md:mb-12 mt-2 bg-white/60 dark:bg-[#151c28]/60 backdrop-blur-md border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.6)] overflow-hidden">
+          <div className="bg-gradient-to-b from-[#f2f7fc] to-[#dae8f5] dark:from-[#213045] dark:to-[#1a2332] border-b border-[#a9cbed] dark:border-[#2a3f5a] px-3 py-1.5 flex items-center">
+            <span className="font-mono text-[10px] text-[#4a6b8c] dark:text-[#8ea4bd] tracking-widest uppercase">++ search.query //</span>
+          </div>
           <input
             type="text"
-            placeholder="Search my mind..."
+            placeholder="Type to filter database..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none outline-none font-serif italic text-4xl sm:text-5xl md:text-6xl text-gray-800 dark:text-gray-300 placeholder-gray-400 dark:placeholder-[#3a3b40] transition-colors"
+            className="w-full bg-transparent border-none outline-none px-4 py-3 font-sans text-sm sm:text-base text-[#2c4054] dark:text-gray-200 placeholder-[#7999b8] dark:placeholder-[#4a6b8c]"
           />
         </div>
 
-        {/* Masonry Grid with OVERFLOW FIX (min-w-0 on flex-1) */}
-        <div className="w-full max-w-7xl mx-auto flex gap-3 sm:gap-5 md:gap-6 items-start" ref={gridRef}>
+        {/* 2-COLUMN MASONRY GRID WITH OVERFLOW FIX */}
+        <div className="w-full max-w-7xl mx-auto flex gap-3 sm:gap-4 md:gap-5 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-3 sm:gap-5 md:gap-6 w-full flex-1 min-w-0">
+              <div key={colIndex} className="flex flex-col gap-3 sm:gap-4 md:gap-5 w-full flex-1 min-w-0">
                 {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
               </div>
             ))
           ) : (
             masonryColumns.map((colBookmarks, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-3 sm:gap-5 md:gap-6 w-full flex-1 min-w-0">
+              <div key={colIndex} className="flex flex-col gap-3 sm:gap-4 md:gap-5 w-full flex-1 min-w-0">
                 {colBookmarks.map(bookmark => (
                   <BookmarkCard 
                     key={bookmark.id} bookmark={bookmark} theme={{ card: '', btn: '', hover: '' }} isDragged={draggedId === bookmark.id} onDragStart={handleDragStart} onDragEnd={handleDragEnd} updateBookmark={updateBookmark} deleteBookmark={deleteBookmark} forceOpenModal={forcedInspectId === bookmark.id} onCloseForcedModal={() => setForcedInspectId(null)}
@@ -275,10 +281,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* SLEEK CAPTURE PILL */}
-      <div className={`fixed bottom-6 md:bottom-10 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'} ${isSidebarOpen ? 'md:left-[300px]' : 'md:left-[70px]'} left-0 right-0`}>
-        <div className="pointer-events-auto w-full max-w-2xl bg-white/95 dark:bg-[#232428]/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-gray-100 dark:border-white/5 flex items-center p-1.5 gap-2 transition-transform hover:-translate-y-1">
-          <button onClick={() => toast('Attachments coming soon', { icon: '📎' })} className="p-3 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full cursor-pointer transition-colors" title="Attach">
+      {/* GLOSSY CAPTURE PILL */}
+      <div className={`fixed bottom-6 md:bottom-8 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'} ${isSidebarOpen ? 'md:left-[280px]' : 'md:left-[65px]'} left-0 right-0`}>
+        <div className="pointer-events-auto w-full max-w-2xl bg-white/70 dark:bg-[#1a2332]/80 backdrop-blur-xl border border-white dark:border-[#2a3f5a] rounded-full shadow-[0_8px_24px_rgba(44,64,84,0.15),inset_0_1px_2px_rgba(255,255,255,0.8)] flex items-center p-1.5 gap-2">
+          <button onClick={() => toast('Attachments panel offline', { style: { background: '#eaf2f9', color: '#2c4054', border: '1px solid #a9cbed' } })} className="p-2.5 text-[#5e81a5] hover:text-[#2c4054] hover:bg-[#e1eef9] dark:hover:bg-[#2a3f5a] rounded-full cursor-pointer transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
             <PaperclipIcon />
           </button>
           <input
@@ -287,10 +293,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
-            placeholder="Save link, note, or text..."
-            className="flex-1 bg-transparent border-none outline-none px-2 font-medium text-sm md:text-base text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="Save link, note, or data..."
+            className="flex-1 bg-transparent border-none outline-none px-2 font-sans text-sm text-[#2c4054] dark:text-gray-200 placeholder-[#7999b8] dark:placeholder-[#4a6b8c]"
           />
-          <button onClick={handleQuickCapture} disabled={isSaving || !inputValue.trim()} className="p-3 bg-gray-900 dark:bg-orange-500 text-white rounded-full shadow-md disabled:opacity-50 cursor-pointer flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+          <button onClick={handleQuickCapture} disabled={isSaving || !inputValue.trim()} className="p-2.5 bg-gradient-to-b from-[#609ad3] to-[#3a75b0] hover:from-[#7cb3eb] hover:to-[#4a85c0] text-white rounded-full shadow-[0_2px_5px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.4)] disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all">
             <SendIcon />
           </button>
         </div>
@@ -298,16 +304,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {/* DUPLICATE MODAL */}
       {duplicateMatch && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={() => setDuplicateMatch(null)}>
-          <div className="w-full max-w-md bg-white dark:bg-[#1c1d20] border border-gray-100 dark:border-white/5 p-8 rounded-3xl shadow-2xl flex flex-col gap-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white">Already in your mind.</h3>
-            <div className="p-4 bg-gray-50 dark:bg-[#232428] rounded-2xl flex flex-col gap-1 border border-gray-100 dark:border-white/5 overflow-hidden">
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{duplicateMatch.title}</span>
-              <span className="text-xs text-gray-500 truncate">{duplicateMatch.url}</span>
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-[#1a2332]/50 backdrop-blur-md" onClick={() => setDuplicateMatch(null)}>
+          <div className="w-full max-w-md bg-white/90 dark:bg-[#151c28]/95 backdrop-blur-xl border border-white dark:border-[#2a3f5a] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-b from-[#fceced] to-[#fad2d5] border-b border-[#f1aab0] px-4 py-2 flex items-center">
+              <span className="font-mono text-[10px] text-[#c53030] tracking-widest uppercase">++ warning.collision //</span>
             </div>
-            <div className="flex flex-col gap-2 mt-2">
-              <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue('') }} className="w-full py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-sm rounded-xl hover:opacity-90 transition-opacity">Open Note</button>
-              <button onClick={() => setDuplicateMatch(null)} className="w-full py-3 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 font-medium text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Dismiss</button>
+            <div className="p-6 flex flex-col gap-4">
+              <h3 className="text-sm font-semibold text-[#2c4054] dark:text-white">Entry already exists in database.</h3>
+              <div className="p-3 bg-white/50 dark:bg-[#0d1620] rounded border border-[#a9cbed] dark:border-[#2a3f5a] flex flex-col gap-1 overflow-hidden">
+                <span className="text-xs font-semibold text-[#2c4054] dark:text-gray-300 truncate">{duplicateMatch.title}</span>
+                <span className="text-[10px] font-mono text-[#5e81a5] truncate">{duplicateMatch.url}</span>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue('') }} className="flex-1 py-2 bg-gradient-to-b from-[#609ad3] to-[#3a75b0] text-white text-xs font-semibold rounded shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] hover:opacity-90 transition-opacity">Inspect Panel</button>
+                <button onClick={() => setDuplicateMatch(null)} className="flex-1 py-2 bg-gradient-to-b from-[#f2f7fc] to-[#dae8f5] text-[#4a6b8c] text-xs font-semibold border border-[#a9cbed] rounded shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] hover:bg-[#e1eef9] transition-colors">Dismiss</button>
+              </div>
             </div>
           </div>
         </div>
