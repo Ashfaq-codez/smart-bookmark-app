@@ -34,7 +34,7 @@ export default function BookmarkCard({
 }: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isFullscreenImage, setIsFullscreenImage] = useState(false)
+  const [isFullscreenMedia, setIsFullscreenMedia] = useState(false)
   const [activeModalTab, setActiveModalTab] = useState<'view' | 'edit' | 'move'>('view')
 
   const [editTitle, setEditTitle] = useState(bookmark.title)
@@ -113,16 +113,19 @@ export default function BookmarkCard({
           {/* LEFT PANE */}
           <div className={`w-full md:w-1/2 h-[35%] min-h-[200px] md:h-full bg-gray-200 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex shrink-0 ${bookmark.type === 'note' ? 'items-start p-6 md:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-400 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-6 md:p-8'}`}>
             {bookmark.type === 'note' ? (
-              <div className="w-full h-full max-w-lg mx-auto">
-                <p className="font-serif text-base sm:text-xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
-                  {bookmark.description || bookmark.title}
-                </p>
-              </div>
+              <>
+                <div className="w-full h-full max-w-lg mx-auto">
+                  <p className="font-serif text-base sm:text-xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+                    {bookmark.description || bookmark.title}
+                  </p>
+                </div>
+                <button onClick={() => setIsFullscreenMedia(true)} className="absolute bottom-3 right-3 md:bottom-4 md:right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:translate-y-px active:shadow-none transition-all cursor-pointer flex items-center gap-1.5 text-[10px] sm:text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
+              </>
             ) : bookmark.type === 'image' ? (
               // IMAGE HANDLING
               <>
-                <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-zoom-in drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:scale-[1.02] transition-transform duration-300" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
-                <button onClick={() => setIsFullscreenImage(true)} className="absolute bottom-3 right-3 md:bottom-4 md:right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:translate-y-px active:shadow-none transition-all cursor-pointer flex items-center gap-1.5 text-[10px] sm:text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
+                <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain cursor-zoom-in drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:scale-[1.02] transition-transform duration-300" onClick={() => setIsFullscreenMedia(true)} title="Click for fullscreen" />
+                <button onClick={() => setIsFullscreenMedia(true)} className="absolute bottom-3 right-3 md:bottom-4 md:right-4 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 active:translate-y-px active:shadow-none transition-all cursor-pointer flex items-center gap-1.5 text-[10px] sm:text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
               </>
             ) : (
               // LINK HANDLING
@@ -189,7 +192,7 @@ export default function BookmarkCard({
               )}
             </div>
 
-            <div className="pt-3 md:pt-4 mt-auto shrink-0 border-t border-gray-200 dark:border-gray-800 text-[9px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">
+            <div className="pt-3 md:pt-4 mt-auto shrink-0 border-t border-gray-200 dark:border-gray-800 text-[12px] md:text-[10px] font-medium text-gray-400 dark:text-gray-500">
               Added on {new Date(bookmark.created_at).toLocaleDateString()}
             </div>
           </div>
@@ -203,12 +206,22 @@ export default function BookmarkCard({
   // FULLSCREEN LIGHTBOX PORTAL
   // ────────────────────────────────────────────────────────────
   const LightboxPortal = () => {
-    if (!mounted || !isFullscreenImage || bookmark.type !== 'image') return null
+    // Return early if not mounted, not triggered, or if it's a link (links shouldn't trigger fullscreen)
+    if (!mounted || !isFullscreenMedia || bookmark.type === 'link') return null
     
     return createPortal(
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenImage(false)}>
-        <button onClick={() => setIsFullscreenImage(false)} className="absolute top-4 right-4 md:top-6 md:right-6 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform cursor-pointer" title="Close Fullscreen"><CloseIcon /></button>
-        <img src={previewImageUrl} alt={bookmark.title} className="max-w-full max-h-full object-contain rounded-lg border-2 border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()} />
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 p-4 md:p-12 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenMedia(false)}>
+        <button onClick={() => setIsFullscreenMedia(false)} className="absolute top-4 right-4 md:top-6 md:right-6 p-2 bg-white text-gray-900 border-2 border-gray-900 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform cursor-pointer" title="Close Fullscreen"><CloseIcon /></button>
+        
+        {bookmark.type === 'note' ? (
+          <div className="w-full max-w-4xl max-h-full overflow-y-auto bg-[#fffdfa] dark:bg-gray-900 p-8 md:p-16 rounded-3xl border-4 border-gray-900 dark:border-gray-700 shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
+            <p className="font-serif text-xl sm:text-2xl md:text-3xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+              {bookmark.description || bookmark.title}
+            </p>
+          </div>
+        ) : (
+          <img src={previewImageUrl} alt={bookmark.title} className="max-w-full max-h-full object-contain rounded-lg border-2 border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()} />
+        )}
       </div>,
       document.body
     )
@@ -221,7 +234,7 @@ export default function BookmarkCard({
         onDragStart={(e) => onDragStart(e, bookmark.id)}
         onDragEnd={onDragEnd}
         onClick={() => { setActiveModalTab('view'); setIsModalOpen(true); }}
-        className={`group relative flex flex-col break-inside-avoid mb-6 sm:mb-8 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
+        className={`group relative flex flex-col break-inside-avoid mb-2 sm:mb-8 inline-block w-full cursor-pointer select-none ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
         <div className={`w-full bg-white dark:bg-gray-800 border-[1.5px] sm:border-2 border-gray-900 dark:border-gray-700 rounded-[1rem] sm:rounded-2xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:group-hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.25)]`}>
           {bookmark.type === 'note' ? (
