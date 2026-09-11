@@ -1,11 +1,10 @@
+// src/app/api/save/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as cheerio from 'cheerio';
 
-// Helper function to dynamically reflect the request origin for CORS with credentials
 function corsHeaders(origin: string | null) {
   const allowedOrigin = origin || 'https://smart-bookmark-app-lime.vercel.app';
-
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -14,7 +13,6 @@ function corsHeaders(origin: string | null) {
   };
 }
 
-// Handle preflight OPTIONS requests sent by the browser before POST
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get('origin');
   return new NextResponse(null, {
@@ -23,7 +21,20 @@ export async function OPTIONS(request: Request) {
   });
 }
 
-// Placeholder for future LLM auto-categorization and tagging
+function normalizeUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return '';
+  try {
+    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(withProto);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const path = parsed.pathname.replace(/\/+$/, '') || '/';
+    return `${parsed.protocol}//${host}${path}${parsed.search}`;
+  } catch {
+    return trimmed.toLowerCase().replace(/\/+$/, '');
+  }
+}
+
 async function generateTagsAndCategory(title: string, description: string, itemType: string) {
   return {
     category: 'Inbox',
@@ -38,20 +49,19 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { 
-      url, 
+      url: rawUrl, 
       description: customDesc, 
       image_url: customImg, 
       type: customType 
     } = body;
 
-    if (!url) {
+    if (!rawUrl && !customDesc) {
       return NextResponse.json(
-        { error: 'URL is required' },
+        { error: 'URL or description is required' },
         { status: 400, headers: corsHeaders(origin) }
       );
     }
 
-    // 1. Authenticate user session via Supabase cookies
     const supabase = await createClient();
     const {
       data: { user },
@@ -65,42 +75,67 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Metadata Scraping with Cheerio (used as fallback or primary info)
+    const itemType = customType || 'link';
+    const isLink = itemType === 'link';
+    const cleanUrl = rawUrl ? normalizeUrl(rawUrl) : null;
+
+    // Check for existing link duplicate before scraping/inserting
+    if (cleanUrl && isLink) {
+      const { data: existing } = await supabase
+        .from('bookmarks')
+        .select('id, title, url')
+        .eq('user_id', user.id)
+        .eq('url', cleanUrl)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json(
+          {
+            error: 'Duplicate entry',
+            message: `"${existing.title || cleanUrl}" is already saved in your hub.`,
+          },
+          { status: 409, headers: corsHeaders(origin) }
+        );
+      }
+    }
+
     let scrapedTitle = 'Saved Item';
     let scrapedDescription: string | null = null;
     let scrapedImage: string | null = null;
 
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; SmartBookmarksBot/1.0)',
-        },
-      });
+    if (cleanUrl && isLink) {
+      try {
+        const response = await fetch(cleanUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; SmartBookmarksBot/1.0)',
+          },
+          signal: AbortSignal.timeout(4000),
+        });
 
-      if (response.ok) {
-        const html = await response.text();
-        const $ = cheerio.load(html);
+        if (response.ok) {
+          const html = await response.text();
+          const $ = cheerio.load(html);
 
-        scrapedTitle =
-          $('meta[property="og:title"]').attr('content') ||
-          $('title').text().trim() ||
-          url;
+          scrapedTitle =
+            $('meta[property="og:title"]').attr('content') ||
+            $('title').text().trim() ||
+            cleanUrl;
 
-        scrapedDescription =
-          $('meta[name="description"]').attr('content') ||
-          $('meta[property="og:description"]').attr('content') ||
-          null;
+          scrapedDescription =
+            $('meta[name="description"]').attr('content') ||
+            $('meta[property="og:description"]').attr('content') ||
+            null;
 
-        scrapedImage =
-          $('meta[property="og:image"]').attr('content') ||
-          null;
+          scrapedImage =
+            $('meta[property="og:image"]').attr('content') ||
+            null;
+        }
+      } catch (scrapeError) {
+        console.warn('Metadata scraping fallback:', scrapeError);
+        scrapedTitle = cleanUrl;
       }
-    } catch (scrapeError) {
-      console.warn('Metadata scraping encountered an issue, falling back:', scrapeError);
     }
 
-    // 3. Resolve final values (custom selections take precedence over scraped page tags)
-    const itemType = customType || 'link';
     const finalDescription = customDesc ? customDesc.trim() : (scrapedDescription ? scrapedDescription.trim() : null);
     const finalImage = customImg || scrapedImage;
     
@@ -111,16 +146,14 @@ export async function POST(request: Request) {
       finalTitle = scrapedTitle !== 'Saved Item' ? scrapedTitle : 'Saved Image';
     }
 
-    // 4. Generate categorization and tags
     const aiData = await generateTagsAndCategory(finalTitle, finalDescription || '', itemType);
 
-    // 5. Insert record into Supabase
     const { data: newBookmark, error: insertError } = await supabase
       .from('bookmarks')
       .insert([
         {
           user_id: user.id,
-          url,
+          url: cleanUrl || `${process.env.NEXT_PUBLIC_SITE_URL || ''}/note-${Date.now()}`,
           title: finalTitle,
           description: finalDescription,
           image_url: finalImage,
@@ -133,6 +166,12 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError) {
+      if (insertError.code === '23505') {
+        return NextResponse.json(
+          { error: 'Duplicate entry', message: 'This bookmark already exists.' },
+          { status: 409, headers: corsHeaders(origin) }
+        );
+      }
       throw insertError;
     }
 
@@ -147,10 +186,10 @@ export async function POST(request: Request) {
         headers: corsHeaders(origin),
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save API Handler Error:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: error.message || 'Internal Server Error' },
       { status: 500, headers: corsHeaders(origin) }
     );
   }
