@@ -84,7 +84,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
-  // Duplicate Inspection Modal State
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
 
@@ -120,9 +119,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     window.location.href = '/'
   }
 
-  // ────────────────────────────────────────────────────────────
-  // CAPTURE ENGINE WITH DUPLICATE WARNING MODAL
-  // ────────────────────────────────────────────────────────────
   const handleQuickCapture = async () => {
     const rawInput = inputValue.trim()
     if (!rawInput) return
@@ -131,7 +127,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
 
-    // Single link check against existing bookmarks
     if (isAllUrls && tokens.length === 1) {
       const targetNormalized = normalizeUrl(tokens[0])
       const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetNormalized)
@@ -311,17 +306,25 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     <div className="bg-[#f8f9fa] dark:bg-[#0f1115] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col pt-[56px] sm:pt-[64px] overflow-x-hidden">
       
       {/* ────────────────────────────────────────────────────────────
-          1. FIXED TOP HEADER (Mobile optimized)
+          1. FIXED TOP HEADER (Restored Logo & Mobile Fixes)
           ──────────────────────────────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 h-[56px] sm:h-[64px] z-30 bg-white dark:bg-gray-900 border-b-2 sm:border-b-3 border-gray-900 dark:border-gray-700 flex items-stretch select-none">
-        <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r-3 border-gray-900 dark:border-gray-700 shrink-0 gap-2">
+        
+        <div className="flex items-center px-2.5 sm:px-4 md:w-[280px] md:border-r-3 border-gray-900 dark:border-gray-700 shrink-0 gap-2.5">
+          {/* Hamburger (Only visible on mobile) */}
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+            className="md:hidden p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
             title="Toggle Menu"
           >
             <MenuIcon />
           </button>
+          
+          {/* Restored Logo */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 stroke-gray-900 dark:stroke-white stroke-[2.5px] transition-colors">
+            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round"/>
+          </svg>
+
           <span className="hidden sm:inline font-mono font-black text-xs md:text-sm uppercase tracking-wider text-gray-900 dark:text-white">
             smart bookmark
           </span>
@@ -340,7 +343,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           />
         </div>
 
-        <div className="flex items-center justify-center w-[90px] sm:w-[150px] md:w-[200px] shrink-0 bg-white dark:bg-gray-900 font-mono text-xs">
+        {/* Profile (Only visible on Desktop) */}
+        <div className="hidden md:flex items-center justify-center w-[150px] md:w-[200px] shrink-0 bg-white dark:bg-gray-900 font-mono text-xs">
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
@@ -362,7 +366,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             : '-translate-x-full md:translate-x-0 md:w-[48px]'
         }`}
       >
-        {/* Desktop Flap Toggle */}
         <div 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
           className="hidden md:flex order-last w-[48px] h-full flex-col items-center py-5 cursor-pointer bg-gray-50 dark:bg-gray-800 border-l-3 border-gray-900 dark:border-gray-700 hover:bg-yellow-200 dark:hover:bg-gray-700 transition-colors shrink-0 select-none"
@@ -373,7 +376,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </span>
         </div>
 
-        {/* Sidebar Navigation */}
         <div className={`h-full flex-1 overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden pointer-events-none'}`}>
           <Sidebar 
             userEmail={userEmail || null}
@@ -412,8 +414,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       <main 
         className={`flex-1 p-2.5 sm:p-4 md:p-6 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-24 ${
           isSidebarOpen 
-            ? 'md:ml-[280px] md:w-[calc(100%-280px)]' 
-            : 'md:ml-[48px] md:w-[calc(100%-48px)]'
+            ? 'md:ml-[280px] w-full md:w-[calc(100%-280px)]' 
+            : 'md:ml-[48px] w-full md:w-[calc(100%-48px)]'
         }`}
       >
         <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-2.5 sm:gap-4 w-full">
@@ -470,7 +472,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         <div className="pointer-events-auto w-full max-w-xl bg-white dark:bg-gray-900 border-2 sm:border-3 border-gray-900 dark:border-gray-600 rounded-2xl shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] flex items-center p-1 sm:p-1.5 gap-1.5 transition-transform">
           <button
             onClick={() => toast('Attachment uploads coming with the storage bucket!', { icon: '📎' })}
-            className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border border-gray-900 rounded-xl cursor-pointer shrink-0"
+            className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border border-gray-900 dark:border-gray-700 rounded-xl cursor-pointer shrink-0"
             title="Attach"
           >
             <PaperclipIcon />

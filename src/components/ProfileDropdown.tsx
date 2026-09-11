@@ -44,23 +44,22 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
       {isOpen && (
         <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-900 border-3 border-gray-900 dark:border-gray-700 shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] rounded-xl z-50 overflow-hidden">
           <div className="p-3 border-b-2 border-gray-200 dark:border-gray-800">
-            <p className="text-[10px] font-mono text-gray-400 uppercase">Signed in as</p>
+            <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase">Signed in as</p>
             <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{email || 'User'}</p>
           </div>
 
-          <div className="p-2 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Dark Mode</span>
+          <div className="p-2 border-b-2 border-gray-200 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" onClick={toggleDarkMode}>
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">Dark Mode</span>
             <button
-              onClick={toggleDarkMode}
-              className={`w-9 h-5 rounded-full border-2 border-gray-900 transition-colors relative ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}
+              className={`w-9 h-5 rounded-full border-2 border-gray-900 dark:border-gray-300 transition-colors relative ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}
             >
-              <div className={`absolute top-0.5 w-3 h-3 bg-white border border-gray-900 rounded-full transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              <div className={`absolute top-0.5 w-3 h-3 bg-white border border-gray-900 dark:border-gray-700 rounded-full transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
           </div>
 
           <button
             onClick={handleSignOut}
-            className="w-full p-2.5 text-left text-xs font-black uppercase tracking-wider text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+            className="w-full p-3 text-left text-xs font-black uppercase tracking-wider text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
           >
             Sign Out
           </button>

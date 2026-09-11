@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { useTheme } from '@/context/ThemeContext';
 
 const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -66,33 +66,11 @@ export default function Sidebar({
   handleAddCategory
 }: SidebarProps) {
   
-  const { isDarkMode, toggleDarkMode, bgTheme, setBgTheme } = useTheme();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  const BACKGROUND_OPTIONS = [
-    { 
-      id: 'solid-yellow', 
-      name: 'Pure Yellow', 
-      url: '', 
-      hexColor: '#9dc7d6' 
-    },
-    { 
-      id: 'retro-grid', 
-      name: 'Retro Grid', 
-      url: '/backgrounds/3.gif', 
-      hexColor: '#bfdbfe' 
-    },
-    { 
-      id: 'animated-waves', 
-      name: 'Animated Waves', 
-      url: '/backgrounds/background.jpg', 
-      hexColor: '#e5e7eb' 
-    }
-  ];
+  const { isDarkMode, toggleDarkMode } = useTheme();
 
   return (
-    <aside className="w-full h-full flex flex-col justify-between p-4 sm:p-5 overflow-y-auto bg-[#fafafa] dark:bg-gray-900 transition-colors [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 [&::-webkit-scrollbar-thumb]:rounded-full">
-      <div className="flex flex-col space-y-5">
+    <aside className="w-full h-full flex flex-col p-4 sm:p-5 overflow-y-auto bg-[#fafafa] dark:bg-gray-900 transition-colors [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 [&::-webkit-scrollbar-thumb]:rounded-full">
+      <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between pb-3 border-b-2 border-gray-200 dark:border-gray-700">
           <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Folders</h2>
           <button
@@ -105,7 +83,7 @@ export default function Sidebar({
 
         <div className="flex flex-col gap-2">
           <div
-            onClick={() => { setActiveFilter('All'); setActiveSubFilter(null); }}
+            onClick={() => { setActiveFilter('All'); setActiveSubFilter(null); setIsMobileMenuOpen(false); }}
             className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${activeFilter === 'All' ? 'border-gray-900 bg-gray-900 text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-900 dark:hover:border-white text-gray-800 dark:text-gray-200'}`}
           >
             <span className="font-bold text-xs uppercase tracking-wider">All Bookmarks</span>
@@ -169,6 +147,7 @@ export default function Sidebar({
                             e.stopPropagation();
                             setActiveFilter(parentFolder);
                             setActiveSubFilter(sub);
+                            setIsMobileMenuOpen(false);
                           }}
                           className={`flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition-all ${isSubActive ? 'border-gray-900 dark:border-white bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-bold' : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600 text-gray-600 dark:text-gray-300'}`}
                         >
@@ -232,55 +211,35 @@ export default function Sidebar({
         </div>
       </div>
 
-      <div className="pt-4 mt-6 border-t-2 border-gray-200 dark:border-gray-700 bg-transparent relative">
-        {isProfileOpen && (
-          <div className="absolute bottom-full left-0 mb-2 w-full z-50">
-            <div className="bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-700 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-3 flex flex-col gap-3 rounded-xl">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-900 dark:text-white text-xs">Dark Mode</span>
-                <button
-                  onClick={toggleDarkMode}
-                  className={`w-10 h-5 rounded-full border-2 border-gray-900 dark:border-white transition-colors relative ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}
-                >
-                  <div className={`absolute top-0.5 w-3 h-3 bg-white border-2 border-gray-900 dark:border-white rounded-full transition-transform ${isDarkMode ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <span className="font-bold text-gray-900 dark:text-white text-xs">Theme Preset</span>
-                <div className="flex gap-2 overflow-x-auto py-1">
-                  {BACKGROUND_OPTIONS.map((bg) => (
-                    <button
-                      key={bg.id}
-                      onClick={() => setBgTheme({ url: bg.url, hex: bg.hexColor })}
-                      title={bg.name}
-                      className={`relative shrink-0 w-8 h-7 rounded border-2 border-gray-900 dark:border-gray-700 overflow-hidden ${bgTheme.url === bg.url && bgTheme.hex === bg.hexColor ? 'ring-2 ring-yellow-400' : ''}`}
-                      style={{ backgroundColor: bg.hexColor, backgroundImage: bg.url ? `url('${bg.url}')` : 'none' }}
-                    />
-                  ))}
-                </div>
-              </div>
-
+      {/* MOBILE-ONLY ALWAYS VISIBLE BOTTOM PROFILE BLOCK */}
+      <div className="md:hidden mt-auto pt-6 flex flex-col gap-3">
+        <div className="p-3 bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-700 rounded-xl flex flex-col gap-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col overflow-hidden pr-2">
+              <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Signed in</span>
+              <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{userEmail}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">Dark Mode</span>
               <button
-                onClick={handleSignOut}
-                className="w-full py-1.5 font-bold text-white bg-red-500 border-2 border-gray-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-none transition-all uppercase tracking-wider text-xs rounded-lg cursor-pointer"
+                onClick={toggleDarkMode}
+                className={`w-9 h-5 rounded-full border-2 border-gray-900 dark:border-gray-100 transition-colors relative ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}
               >
-                Sign Out
+                <div className={`absolute top-[1px] w-3.5 h-3.5 bg-white border-2 border-gray-900 dark:border-gray-100 rounded-full transition-transform ${isDarkMode ? 'translate-x-[16px]' : 'translate-x-0.5'}`} />
               </button>
             </div>
           </div>
-        )}
-
-        <button 
-          onClick={() => setIsProfileOpen(!isProfileOpen)}
-          className="w-full flex items-center justify-between p-2.5 bg-yellow-200 dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-700 shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-none transition-all rounded-xl cursor-pointer"
-        >
-          <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
-            {userEmail ?? "Settings"}
-          </span>
-          <ChevronDown />
-        </button>
+          
+          <button
+            onClick={handleSignOut}
+            className="w-full py-2 bg-red-100 text-red-700 border-2 border-red-200 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 font-bold uppercase tracking-wider text-[11px] rounded-lg cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
+
     </aside>
   )
 }
