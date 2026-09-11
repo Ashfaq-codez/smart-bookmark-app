@@ -101,37 +101,41 @@ export default function BookmarkCard({
         className={`group relative flex flex-col bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-700 rounded-2xl overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.25)] hover:-translate-y-1 transition-all cursor-pointer select-none break-inside-avoid mb-4 inline-block w-full ${isDragged ? 'opacity-40 scale-95' : ''}`}
       >
         {bookmark.type === 'note' ? (
-          <div className="p-5 flex flex-col justify-between bg-[#fffdfa] dark:bg-gray-800">
-            <p className="font-serif text-sm sm:text-base text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+          <div className="p-6 bg-[#fffdfa] dark:bg-gray-800 h-full">
+            <p className="font-serif text-base md:text-lg text-gray-800 dark:text-gray-100 leading-relaxed break-words whitespace-pre-wrap">
               {bookmark.description || bookmark.title}
             </p>
           </div>
         ) : (
           <div className={`w-full overflow-hidden bg-gray-100 dark:bg-gray-700 ${theme.card}`}>
-            <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+            <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
           </div>
         )}
       </div>
 
-      {/* Detail Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }}>
-          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row bg-[#fafafa] dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row bg-[#fafafa] dark:bg-gray-900 border-4 border-gray-900 dark:border-gray-600 rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => { setIsModalOpen(false); setActiveModalTab('view'); }} className="absolute top-4 right-4 z-50 p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-none transition-all cursor-pointer" title="Close"><CloseIcon /></button>
 
-            <div className="w-full md:w-1/2 min-h-[260px] md:min-h-[460px] bg-gray-100 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex items-center justify-center overflow-hidden p-6">
+            {/* MODIFIED: Dynamically handle layout based on note vs image */}
+            <div className={`w-full md:w-1/2 min-h-[260px] md:min-h-[540px] bg-gray-50 dark:bg-gray-800 border-b-4 md:border-b-0 md:border-r-4 border-gray-900 dark:border-gray-600 relative flex ${bookmark.type === 'note' ? 'items-start p-8 sm:p-12 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full' : 'items-center justify-center overflow-hidden p-6'}`}>
               {bookmark.type === 'note' ? (
-                <div className="flex flex-col justify-center h-full max-w-md w-full"><span className="text-3xl mb-3">📝</span><blockquote className="font-serif text-base sm:text-lg italic text-gray-800 dark:text-gray-100 leading-relaxed border-l-4 border-yellow-400 pl-4 py-1">"{bookmark.description || bookmark.title}"</blockquote></div>
+                <div className="w-full h-full max-w-lg mx-auto">
+                  <p className="font-serif text-lg sm:text-xl text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+                    {bookmark.description || bookmark.title}
+                  </p>
+                </div>
               ) : (
                 <>
-                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full max-h-[440px] object-contain cursor-pointer" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full max-h-[500px] object-contain cursor-pointer" onClick={() => setIsFullscreenImage(true)} title="Click for fullscreen" />
                   <button onClick={() => setIsFullscreenImage(true)} className="absolute bottom-4 right-4 p-2 bg-white/90 dark:bg-gray-800/90 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-600 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"><FullscreenIcon /> Fullscreen</button>
                 </>
               )}
             </div>
 
-            <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[80vh] md:max-h-[540px]">
-              <div className="flex items-center justify-between pb-4 border-b-2 border-gray-200 dark:border-gray-700 mb-4 pr-10">
+            <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[80vh] md:max-h-[540px] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+              <div className="flex items-center justify-between pb-4 border-b-2 border-gray-200 dark:border-gray-700 mb-4 pr-10 shrink-0">
                 <span className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">{bookmark.type ? bookmark.type.toUpperCase() : 'LINK'} DETAILS</span>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setActiveModalTab(activeModalTab === 'edit' ? 'view' : 'edit')} className={`p-1.5 border-2 border-gray-900 dark:border-gray-600 rounded-lg transition-all cursor-pointer ${activeModalTab === 'edit' ? 'bg-cyan-300 text-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`}><EditIcon /></button>
@@ -171,12 +175,12 @@ export default function BookmarkCard({
                   </div>
                   <div className="flex flex-col gap-1.5 pt-2">
                     <label className="text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300">Personal Notes</label>
-                    <textarea rows={4} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Add personal thoughts, summaries, or context..." className="w-full p-3 text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] resize-none transition-shadow" />
+                    <textarea rows={4} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Add personal thoughts, summaries, or context..." className="w-full p-3 text-sm font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-600 rounded-xl outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] resize-none transition-shadow" />
                     <button onClick={handleSaveEdit} className="self-end px-4 py-1.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-xs font-bold rounded-lg hover:opacity-90 transition-opacity cursor-pointer">Save Note</button>
                   </div>
                 </div>
               )}
-              <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-800 text-[10px] font-medium text-gray-400 dark:text-gray-500">Added on {new Date(bookmark.created_at).toLocaleDateString()}</div>
+              <div className="pt-4 mt-4 shrink-0 border-t border-gray-200 dark:border-gray-800 text-[10px] font-medium text-gray-400 dark:text-gray-500">Added on {new Date(bookmark.created_at).toLocaleDateString()}</div>
             </div>
           </div>
         </div>
