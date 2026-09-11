@@ -11,30 +11,19 @@ import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
 const PaperclipIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-  </svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
 )
 
 const SendIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="22" y1="2" x2="11" y2="13"></line>
-    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 )
 
 const MenuIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
-  </svg>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
 )
 
 const ChevronRight = ({ className = '' }: { className?: string }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-    <path d="M9 18l6-6-6-6" />
-  </svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}><path d="M9 18l6-6-6-6" /></svg>
 )
 
 function normalizeUrl(rawUrl: string): string {
@@ -68,7 +57,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isInputVisible, setIsInputVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
-  // Masonry layout state
   const [columnsCount, setColumnsCount] = useState(4)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -83,7 +71,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // 1. Container-Aware Resize Observer for perfect horizontal Masonry
   useEffect(() => {
     const updateColumns = () => {
       if (!gridRef.current) return
@@ -92,42 +79,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       else if (width >= 1280) setColumnsCount(5)
       else if (width >= 1024) setColumnsCount(4)
       else if (width >= 768) setColumnsCount(3)
-      else setColumnsCount(2) // Always 2 on mobile
+      else setColumnsCount(2)
     }
 
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
     
-    updateColumns() // Initial calculation
+    updateColumns()
     const timer = setTimeout(() => setIsLoading(false), 300)
     
-    return () => {
-      observer.disconnect()
-      clearTimeout(timer)
-    }
+    return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
 
-  // 2. Hide bottom bar on scroll down
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      if (currentScrollY > lastScrollY && currentScrollY > 60) {
-        setIsInputVisible(false)
-      } else {
-        setIsInputVisible(true)
-      }
+      if (currentScrollY > lastScrollY && currentScrollY > 60) setIsInputVisible(false)
+      else setIsInputVisible(true)
       setLastScrollY(currentScrollY)
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
 
-  // 3. Global Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && duplicateMatch) {
-        setDuplicateMatch(null)
-      }
+      if (e.key === 'Escape' && duplicateMatch) setDuplicateMatch(null)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -149,11 +126,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     if (isAllUrls && tokens.length === 1) {
       const targetNormalized = normalizeUrl(tokens[0])
       const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetNormalized)
-      
-      if (existing) {
-        setDuplicateMatch(existing)
-        return
-      }
+      if (existing) { setDuplicateMatch(existing); return }
     }
 
     setIsSaving(true)
@@ -162,16 +135,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     try {
       if (isAllUrls && tokens.length > 1) {
         const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
-
         if (validNewTokens.length === 0) {
           toast.error('All entered links are already in your hub!')
-          setIsSaving(false)
-          return
+          setIsSaving(false); return
         }
-
-        if (validNewTokens.length < tokens.length) {
-          toast('Skipped duplicate URLs.', { icon: 'ℹ️' })
-        }
+        if (validNewTokens.length < tokens.length) toast('Skipped duplicate URLs.', { icon: 'ℹ️' })
 
         await Promise.all(validNewTokens.map(token => {
           const finalUrl = /^https?:\/\//i.test(token) ? token : 'https://' + token
@@ -185,10 +153,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       } else {
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
-
-        if (isSingleUrl) {
-          finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
-        }
+        if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
 
         const payload = isSingleUrl
           ? { url: finalUrl }
@@ -202,16 +167,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
         if (res.status === 409) {
           const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
-          if (match) {
-            setDuplicateMatch(match)
-            setIsSaving(false)
-            return
-          }
+          if (match) { setDuplicateMatch(match); setIsSaving(false); return }
           toast.error('This bookmark already exists!')
-          setIsSaving(false)
-          return
+          setIsSaving(false); return
         }
-
         if (!res.ok) throw new Error('Failed to save.')
       }
       setInputValue('')
@@ -222,11 +181,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     }
   }
 
-  // Generate Filtered & Search Results
   const filteredBookmarks = useMemo(() => {
     return bookmarks.filter((bookmark) => {
       const matchCategory = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter
-      const matchSubCategory = activeFilter === 'All' ? true : (activeSubFilter ? bookmark.sub_category === activeSubFilter : !bookmark.sub_category)
+      const matchSubCategory = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter
 
       const searchLower = searchQuery.toLowerCase()
       const matchSearch = searchQuery === '' || 
@@ -241,7 +199,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     })
   }, [bookmarks, activeFilter, activeSubFilter, searchQuery])
 
-  // Distribute mathematically left-to-right
   const masonryColumns = useMemo(() => {
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
     filteredBookmarks.forEach((bookmark, index) => {
@@ -311,8 +268,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const handleDeleteCategory = async (catToDelete: string) => {
     toast((t) => (
       <div className="flex flex-col gap-3 font-sans">
-        <span className="text-base font-semibold text-gray-900 dark:text-white">Delete folder "{catToDelete}"?</span>
-        <span className="text-xs text-gray-500">Saved items will remain in Uncategorized.</span>
+        <span className="text-base font-black uppercase text-black dark:text-white">Delete folder "{catToDelete}"?</span>
+        <span className="text-xs font-bold text-gray-500">Saved items remain in Uncategorized.</span>
         <div className="flex gap-2 mt-2">
           <button 
             onClick={() => {
@@ -323,13 +280,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               }
               toast.dismiss(t.id)
             }} 
-            className="flex-1 px-3 py-2 bg-red-500 text-white font-medium text-xs rounded-lg cursor-pointer"
+            className="flex-1 px-3 py-2 bg-red-500 text-black border-2 border-black font-black uppercase text-xs hover:translate-x-[2px] hover:translate-y-[2px] shadow-[2px_2px_0_0_#000] hover:shadow-none transition-all cursor-pointer"
           >
             Delete
           </button>
           <button 
             onClick={() => toast.dismiss(t.id)} 
-            className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium text-xs rounded-lg cursor-pointer"
+            className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white font-black uppercase text-xs hover:translate-x-[2px] hover:translate-y-[2px] shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] hover:shadow-none transition-all cursor-pointer"
           >
             Cancel
           </button>
@@ -350,50 +307,46 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f2f3f5] dark:bg-[#0c0d0f] min-h-screen font-sans text-gray-900 dark:text-gray-100 flex flex-col overflow-x-hidden selection:bg-blue-200 dark:selection:bg-blue-900/50">
+    <div className="bg-[#f4f4f0] dark:bg-[#0a0a0c] min-h-screen font-sans text-black dark:text-white flex flex-col overflow-x-hidden selection:bg-cyan-300 dark:selection:bg-cyan-900">
       
-      {/* ────────────────────────────────────────────────────────────
-          1. MINIMALIST MOBILE HEADER
-          ──────────────────────────────────────────────────────────── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] z-30 bg-[#f2f3f5]/90 dark:bg-[#0c0d0f]/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/5 flex items-center px-4 justify-between select-none">
+      {/* ─── BRUTALIST MOBILE HEADER ─── */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] z-30 bg-[#f4f4f0] dark:bg-[#0a0a0c] border-b-4 border-black dark:border-white shadow-[0_4px_0_0_#000] dark:shadow-[0_4px_0_0_#fff] flex items-center px-4 justify-between select-none">
         <button 
           onClick={() => setIsSidebarOpen(true)} 
-          className="p-2 -ml-2 text-gray-600 dark:text-gray-400 cursor-pointer"
+          className="p-2 -ml-2 text-black dark:text-white hover:bg-yellow-400 dark:hover:bg-cyan-700 transition-colors cursor-pointer"
         >
           <MenuIcon />
         </button>
-        <span className="font-medium text-sm text-gray-900 dark:text-white">
-          Smart Bookmark
+        <span className="font-black uppercase tracking-widest text-lg text-black dark:text-white">
+          Smart Hub
         </span>
-        <div className="w-8" /> {/* Balance spacer */}
+        <div className="w-8" />
       </header>
 
-      {/* ────────────────────────────────────────────────────────────
-          2. MINIMALIST SIDEBAR & PROFILE
-          ──────────────────────────────────────────────────────────── */}
+      {/* ─── SIDEBAR OVERLAY ─── */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm transition-opacity"
         />
       )}
 
+      {/* ─── SIDEBAR CONTAINER ─── */}
       <div 
-        className={`fixed left-0 top-0 bottom-0 z-40 bg-[#fbfbfc] dark:bg-[#121316] border-r border-gray-200/60 dark:border-white/5 transition-all duration-300 ease-in-out flex flex-col ${
+        className={`fixed left-0 top-0 bottom-0 z-40 bg-[#f4f4f0] dark:bg-[#121212] border-r-4 border-black dark:border-white transition-transform duration-300 ease-in-out flex flex-col ${
           isSidebarOpen 
-            ? 'translate-x-0 w-[85vw] sm:w-[320px] md:w-[260px] shadow-2xl md:shadow-none' 
-            : '-translate-x-full md:translate-x-0 md:w-[60px]'
+            ? 'translate-x-0 w-[85vw] sm:w-[320px] md:w-[260px] shadow-[12px_0_0_0_#000] dark:shadow-[12px_0_0_0_#fff]' 
+            : '-translate-x-full md:translate-x-0 md:w-[70px]'
         }`}
       >
-        {/* Profile Dropdown moved seamlessly into the top of the Sidebar on Desktop */}
         <div className="hidden md:flex flex-col">
            {isSidebarOpen ? (
-             <div className="p-4 border-b border-gray-200/60 dark:border-white/5">
+             <div className="p-4 border-b-4 border-black dark:border-white">
                 <ProfileDropdown email={userEmail ?? ""} />
              </div>
            ) : (
-             <div className="h-[72px] flex items-center justify-center border-b border-gray-200/60 dark:border-white/5">
-               <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+             <div className="h-[76px] flex items-center justify-center border-b-4 border-black dark:border-white bg-cyan-400 dark:bg-pink-600 text-black">
+               <div className="w-10 h-10 border-4 border-black rounded-full flex items-center justify-center font-black text-lg bg-white">
                  {userEmail?.[0].toUpperCase()}
                </div>
              </div>
@@ -434,36 +387,34 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         {/* Desktop Collapse Flap */}
         <div 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-          className="hidden md:flex w-full h-[60px] items-center justify-center cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors border-t border-gray-200/60 dark:border-white/5 text-gray-400 dark:text-gray-500"
+          className="hidden md:flex w-full h-[60px] items-center justify-center cursor-pointer bg-yellow-400 dark:bg-cyan-600 hover:bg-yellow-300 dark:hover:bg-cyan-500 border-t-4 border-black dark:border-white text-black transition-colors"
         >
           <ChevronRight className={`transition-transform duration-300 ${isSidebarOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
-      {/* ────────────────────────────────────────────────────────────
-          3. MAIN LAYOUT: GIANT SEARCH + MASONRY
-          ──────────────────────────────────────────────────────────── */}
+      {/* ─── MAIN CONTENT ─── */}
       <main 
-        className={`flex-1 flex flex-col px-4 sm:px-8 md:px-12 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-32 pt-[80px] md:pt-16 ${
-          isSidebarOpen ? 'md:ml-[260px]' : 'md:ml-[60px]'
+        className={`flex-1 flex flex-col px-4 sm:px-8 md:px-12 transition-all duration-300 ease-in-out min-w-0 max-w-full pb-36 pt-[80px] md:pt-16 ${
+          isSidebarOpen ? 'md:ml-[260px]' : 'md:ml-[70px]'
         }`}
       >
-        {/* The "MyMind" style giant search header */}
-        <div className="w-full max-w-6xl mx-auto mb-10 md:mb-16 mt-4 md:mt-8">
+        {/* Giant Brutalist Search Header */}
+        <div className="w-full max-w-7xl mx-auto mb-12 md:mb-20 mt-4 md:mt-10">
           <input
             type="text"
-            placeholder="Search my mind..."
+            placeholder="SEARCH MY MIND..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none outline-none font-serif text-4xl sm:text-5xl md:text-6xl text-gray-800 dark:text-gray-200 placeholder-gray-400/60 dark:placeholder-gray-600/50 transition-colors"
+            className="w-full bg-transparent border-none outline-none font-black text-5xl sm:text-6xl md:text-8xl tracking-tighter text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-800 transition-colors"
           />
         </div>
 
-        {/* The Programmatic Masonry Grid */}
-        <div className="w-full max-w-7xl mx-auto flex gap-4 sm:gap-6 items-start" ref={gridRef}>
+        {/* Masonry Grid */}
+        <div className="w-full max-w-7xl mx-auto flex gap-6 sm:gap-8 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 w-full flex-1 min-w-0">
+              <div key={colIndex} className="flex flex-col gap-6 sm:gap-8 w-full flex-1 min-w-0">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <BookmarkSkeleton key={i} />
                 ))}
@@ -471,12 +422,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             ))
           ) : (
             masonryColumns.map((colBookmarks, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 w-full flex-1 min-w-0">
+              <div key={colIndex} className="flex flex-col gap-6 sm:gap-8 w-full flex-1 min-w-0">
                 {colBookmarks.map(bookmark => (
                   <BookmarkCard 
                     key={bookmark.id}
                     bookmark={bookmark}
-                    theme={{ card: '', btn: '', hover: '' }} // Let the card handle its own sleek UI
+                    theme={{ card: '', btn: '', hover: '' }}
                     isDragged={draggedId === bookmark.id}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
@@ -492,18 +443,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ────────────────────────────────────────────────────────────
-          4. FLOATING GLASS PILL INPUT BAR
-          ──────────────────────────────────────────────────────────── */}
+      {/* ─── FLOATING CAPTURE BAR ─── */}
       <div 
-        className={`fixed bottom-6 md:bottom-10 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-in-out ${
+        className={`fixed bottom-8 md:bottom-12 z-30 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${
           isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'
-        } ${isSidebarOpen ? 'md:left-[260px]' : 'md:left-[60px]'} left-0 right-0`}
+        } ${isSidebarOpen ? 'md:left-[260px]' : 'md:left-[70px]'} left-0 right-0`}
       >
-        <div className="pointer-events-auto w-full max-w-2xl bg-white/90 dark:bg-[#1f2024]/90 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] flex items-center p-1.5 sm:p-2 gap-2 transition-transform hover:-translate-y-1">
+        <div className="pointer-events-auto w-full max-w-3xl bg-[#f4f4f0] dark:bg-[#1a1a1a] border-4 border-black dark:border-white rounded-full shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] flex items-center p-2 gap-2 transition-transform hover:-translate-y-1">
           <button
-            onClick={() => toast('Attachment uploads coming with the storage bucket!', { icon: '📎' })}
-            className="p-2.5 sm:p-3 bg-gray-100/50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white rounded-full cursor-pointer shrink-0 transition-colors"
+            onClick={() => toast('Attachment uploads coming soon!', { icon: '📎' })}
+            className="p-3.5 bg-white dark:bg-[#121212] border-4 border-black dark:border-white text-black dark:text-white rounded-full cursor-pointer shrink-0 transition-all hover:bg-pink-300 dark:hover:bg-pink-700 shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
             title="Attach"
           >
             <PaperclipIcon />
@@ -515,67 +464,61 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
-            placeholder="Save link, note, or bulk URLs..."
-            className="flex-1 bg-transparent border-none outline-none px-3 font-medium text-sm md:text-base text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 min-w-0"
+            placeholder="SAVE LINK, NOTE, OR BULK URLs..."
+            className="flex-1 bg-transparent border-none outline-none px-4 font-black uppercase text-sm md:text-lg text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-600 disabled:opacity-50 min-w-0"
           />
 
           <button
             onClick={handleQuickCapture}
             disabled={isSaving || !inputValue.trim()}
-            className="p-2.5 sm:p-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full shadow-md active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center shrink-0 transition-all hover:opacity-90"
+            className="p-3.5 bg-yellow-400 dark:bg-cyan-400 border-4 border-black text-black rounded-full shadow-[4px_4px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 disabled:grayscale cursor-pointer flex items-center justify-center shrink-0 transition-all"
           >
             <SendIcon />
           </button>
         </div>
       </div>
 
-      {/* ────────────────────────────────────────────────────────────
-          5. DUPLICATE INSPECTION DIALOG (Strict, No Override)
-          ──────────────────────────────────────────────────────────── */}
+      {/* ─── STRICT DUPLICATE DIALOG ─── */}
       {duplicateMatch && (
         <div 
-          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           onClick={() => setDuplicateMatch(null)}
         >
           <div 
-            className="w-full max-w-md bg-white dark:bg-[#1a1b1e] border border-gray-200 dark:border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col gap-4"
+            className="w-full max-w-md bg-white dark:bg-[#121212] border-4 border-black dark:border-white p-8 rounded-xl shadow-[12px_12px_0_0_#000] dark:shadow-[12px_12px_0_0_#fff] flex flex-col gap-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 text-yellow-500 font-semibold text-xs uppercase tracking-widest">
-              <span>⚠️ Already Saved</span>
+            <div className="inline-block px-3 py-1 bg-yellow-400 text-black font-black uppercase tracking-widest text-xs border-2 border-black w-max shadow-[2px_2px_0_0_#000]">
+              ⚠️ Duplicate Found
             </div>
             
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white leading-snug">
-              This item is already in your mind.
+            <h3 className="text-3xl font-black uppercase text-black dark:text-white leading-tight">
+              ALREADY IN YOUR MIND.
             </h3>
 
-            <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            <div className="p-5 bg-[#f4f4f0] dark:bg-[#1a1a1a] border-4 border-black dark:border-white flex flex-col gap-2">
+              <span className="text-lg font-black text-black dark:text-white truncate">
                 {duplicateMatch.title}
               </span>
-              <span className="text-xs text-gray-500 truncate">
+              <span className="text-xs font-bold text-gray-500 truncate">
                 {duplicateMatch.url}
               </span>
             </div>
 
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              A second brain prevents clutter by rejecting duplicates. Would you like to review the existing note?
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="flex flex-col gap-3 mt-4">
               <button
                 onClick={() => {
                   setForcedInspectId(duplicateMatch.id)
                   setDuplicateMatch(null)
                   setInputValue('')
                 }}
-                className="flex-1 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-sm rounded-xl hover:opacity-90 transition-opacity cursor-pointer"
+                className="w-full py-4 bg-cyan-400 text-black border-4 border-black font-black uppercase text-sm hover:translate-x-[2px] hover:translate-y-[2px] shadow-[4px_4px_0_0_#000] hover:shadow-none transition-all cursor-pointer"
               >
-                Open Note
+                Inspect Note
               </button>
               <button
                 onClick={() => setDuplicateMatch(null)}
-                className="py-3 px-6 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-medium text-sm rounded-xl cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                className="w-full py-4 bg-white dark:bg-gray-800 text-black dark:text-white border-4 border-black dark:border-white font-black uppercase text-sm hover:translate-x-[2px] hover:translate-y-[2px] shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:shadow-none transition-all cursor-pointer"
               >
                 Dismiss
               </button>
