@@ -58,11 +58,34 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [customSubCategories, setCustomSubCategories] = useState<Record<string, string[]>>({})
+  const [foldersLoaded, setFoldersLoaded] = useState(false)
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
+
+  // 1. Load persisted folders from local storage on initial client mount
+  useEffect(() => {
+    try {
+      const savedCats = localStorage.getItem('space_custom_cats')
+      const savedSubs = localStorage.getItem('space_custom_subs')
+      if (savedCats) setCustomCategories(JSON.parse(savedCats))
+      if (savedSubs) setCustomSubCategories(JSON.parse(savedSubs))
+    } catch (e) {
+      console.error('Failed to parse folders from local storage', e)
+    } finally {
+      setFoldersLoaded(true)
+    }
+  }, [])
+
+  // 2. Sync folders back to local storage whenever they change
+  useEffect(() => {
+    if (foldersLoaded) {
+      localStorage.setItem('space_custom_cats', JSON.stringify(customCategories))
+      localStorage.setItem('space_custom_subs', JSON.stringify(customSubCategories))
+    }
+  }, [customCategories, customSubCategories, foldersLoaded])
 
   useEffect(() => {
     const updateColumns = () => {
@@ -172,15 +195,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         
-        // Parse the backend JSON payload BEFORE the 409 check[cite: 14]
+        // Parse the backend JSON payload BEFORE the 409 check
         const data = await res.json().catch(() => ({}))
 
         if (res.status === 409) {
-          // Force the modal open using the exact database entry returned by the backend[cite: 14]
+          // Force the modal open using the exact database entry returned by the backend
           if (data.existing) {
             setDuplicateMatch(data.existing)
           } else {
-            // Fallback to local state if the backend data payload drops[cite: 14]
+            // Fallback to local state if the backend data payload drops
             const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
             if (match) setDuplicateMatch(match)
             else toast.error('Item exists.')

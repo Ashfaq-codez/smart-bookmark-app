@@ -1,16 +1,15 @@
-import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
 
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
   const supabase = await createClient()
 
-  // Sign out effectively clears the cookies
+  // Destroy the session on the server
   await supabase.auth.signOut()
 
+  // 303 "See Other" prevents the browser from caching this redirect
   return NextResponse.redirect(`${requestUrl.origin}/login`, {
-    // a 301 status is a permanent redirect
-    // 303 is "See Other", often used for redirecting after a POST action
-    status: 301,
+    status: 303,
   })
 }

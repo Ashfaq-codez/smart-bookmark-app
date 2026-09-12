@@ -1,5 +1,5 @@
 // src/hooks/useBookmarks.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Bookmark } from '@/types';
 import { normalizeUrl } from '@/utils/normalizeUrl';
@@ -7,7 +7,9 @@ import toast from 'react-hot-toast';
 
 export const useBookmarks = (initialBookmarks: Bookmark[]) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
-  const supabase = createClient();
+  
+  // FIX: Memoize the client to prevent infinite WebSocket reconnects on every render
+  const supabase = useMemo(() => createClient(), []);
 
   // ---> BACKGROUND SYNC ENGINE (Realtime + Focus Revalidation) <---
   useEffect(() => {
@@ -36,7 +38,7 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
 
               return [newItem, ...prev];
             });
-            toast.success('Saved to Hub!');
+            // Removed redundant toast.success('Saved to Hub!') to fix double-notification bug
           } else if (payload.eventType === 'DELETE') {
             setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id));
           } else if (payload.eventType === 'UPDATE') {
@@ -76,83 +78,6 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
     };
   }, [supabase]);
 
-  // Add Single Bookmark Logic
-  const addBookmark = async (newBookmark: Omit<Bookmark, 'id' | 'created_at' | 'user_id'>) => {
-    const isLink = newBookmark.type === 'link' || !newBookmark.type;
-    const cleanUrl = newBookmark.url ? normalizeUrl(newBookmark.url) : '';
-
-    // Pre-check client state
-    if (isLink && cleanUrl) {
-      const alreadyExists = bookmarks.some(
-        (b) => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === cleanUrl
-      );
-      if (alreadyExists) {
-        toast.error('This bookmark already exists!');
-        return;
-      }
-    }
-
-    const payload = {
-      ...newBookmark,
-      url: cleanUrl || newBookmark.url,
-    };
-
-    const { data, error } = await supabase.from('bookmarks').insert([payload]).select();
-    if (error) {
-      // 23505 is PostgreSQL's unique constraint violation code
-      if (error.code === '23505') {
-        toast.error('This bookmark already exists!');
-        return;
-      }
-      toast.error('Failed to save bookmark');
-      return;
-    }
-
-    setBookmarks((prev) => {
-      if (prev.some((b) => b.id === data[0].id)) return prev;
-      return [data[0], ...prev];
-    });
-    toast.success('Bookmark saved!');
-  };
-
-  // Add Bulk Bookmarks Logic
-  const addBulkBookmarks = async (newBookmarks: Omit<Bookmark, 'id' | 'created_at' | 'user_id'>[]) => {
-    const existingUrlSet = new Set(
-      bookmarks
-        .filter((b) => b.type === 'link' || !b.type)
-        .map((b) => normalizeUrl(b.url))
-    );
-
-    // Filter out items already in local state
-    const uniqueToInsert = newBookmarks
-      .map((item) => ({
-        ...item,
-        url: normalizeUrl(item.url),
-      }))
-      .filter((item) => !existingUrlSet.has(item.url));
-
-    if (uniqueToInsert.length === 0) {
-      toast.error('All bookmarks already exist in your hub!');
-      return;
-    }
-
-    if (uniqueToInsert.length < newBookmarks.length) {
-      toast(`Skipped ${newBookmarks.length - uniqueToInsert.length} duplicates.`, { icon: 'ℹ️' });
-    }
-
-    const { data, error } = await supabase.from('bookmarks').insert(uniqueToInsert).select();
-    if (error) {
-      toast.error('Failed to save bulk bookmarks');
-      return;
-    }
-
-    setBookmarks((prev) => {
-      const newItems = data.filter((d) => !prev.some((p) => p.id === d.id));
-      return [...newItems, ...prev];
-    });
-    toast.success(`${data.length} bookmarks saved!`);
-  };
-
   // Delete Bookmark Logic
   const deleteBookmark = async (id: number) => {
     const { error } = await supabase.from('bookmarks').delete().eq('id', id);
@@ -185,8 +110,6 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
 
   return {
     bookmarks,
-    addBookmark,
-    addBulkBookmarks,
     deleteBookmark,
     updateBookmark,
   };
