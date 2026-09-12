@@ -28,10 +28,20 @@ function normalizeUrl(rawUrl: string, type: string = 'link'): string {
     const parsed = new URL(withProto);
     const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
     const path = parsed.pathname.replace(/\/+$/, '') || '/';
-    
+    let search = parsed.search;
+
+    // Clean YouTube URLs to ONLY keep the video ID
+    if (host === 'youtube.com' && path === '/watch') {
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) search = `?v=${videoId}`;
+    } else if (host === 'youtu.be') {
+      const videoId = path.substring(1);
+      if (videoId) return `${parsed.protocol}//youtube.com/watch?v=${videoId}`;
+    }
+
     const hash = type === 'note' ? parsed.hash : '';
     
-    return `${parsed.protocol}//${host}${path}${parsed.search}${hash}`;
+    return `${parsed.protocol}//${host}${path}${search}${hash}`;
   } catch {
     return trimmed.toLowerCase().replace(/\/+$/, '');
   }
