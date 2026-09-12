@@ -130,7 +130,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       {mounted && isModalOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onMouseDown={handleCloseModal}>
           
-          <div className="relative w-full max-w-[1600px] h-[95vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-2xl transition-colors duration-500 rounded-sm" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="relative w-full  h-[95vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-2xl transition-colors duration-500 rounded-sm" onMouseDown={(e) => e.stopPropagation()}>
             
             <button onClick={handleCloseModal} className="absolute top-4 right-4 z-50 p-2 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center">
               <CloseIcon />

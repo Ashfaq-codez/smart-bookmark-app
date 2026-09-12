@@ -27,7 +27,8 @@ function normalizeUrl(rawUrl: string): string {
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [lastScrollY, setLastScrollY] = useState(0)
   const supabase = createClient()
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
@@ -65,6 +66,22 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     if (window.innerWidth < 768) setIsSidebarOpen(false)
     return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      
+      // Close sidebar automatically when scrolling down
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        setIsSidebarOpen(false) 
+      }
+      
+      setLastScrollY(currentScrollY)
+    }
+    
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
