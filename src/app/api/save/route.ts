@@ -2,14 +2,24 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import * as cheerio from 'cheerio';
 
+const ALLOWED_ORIGINS = new Set([
+  'https://smart-bookmark-app-lime.vercel.app',
+  'http://localhost:3000',
+  `chrome-extension://${process.env.CHROME_EXTENSION_ID || 'YOUR_EXTENSION_ID_HERE'}`
+]);
+
 function corsHeaders(origin: string | null) {
-  const allowedOrigin = origin || 'https://smart-bookmark-app-lime.vercel.app';
+  const isAllowed = origin && ALLOWED_ORIGINS.has(origin);
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'https://smart-bookmark-app-lime.vercel.app',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
   };
+}
+
+function isPrivateIP(hostname: string): boolean {
+  return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.)/.test(hostname);
 }
 
 export async function OPTIONS(request: Request) {
@@ -61,7 +71,12 @@ export async function POST(request: Request) {
       sub_category
     } = body;
 
-    if (!rawUrl && !customContent) {
+    const itemType = customType || 'link';
+    const isLink = itemType === 'link';
+    // Map extension descriptions to content for notes
+    const finalContent = customContent || (itemType === 'note' ? customDesc : null); 
+
+    if (!rawUrl && !finalContent) {
       return NextResponse.json(
         { error: 'URL or content is required' },
         { status: 400, headers: corsHeaders(origin) }
@@ -78,16 +93,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const itemType = customType || 'link';
-    const isLink = itemType === 'link';
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
 
-    // --- BULLETPROOF SPLIT DUPLICATE CHECK ---
     if (cleanUrl) {
       let existingRecord = null;
 
       if (isLink) {
-        // For general links, use fuzzy matching (ignores slashes, www, hash, extra query params)
         const flexiblePath = cleanUrl
           .replace(/^https?:\/\/(www\.)?/, '')
           .replace(/\/$/, '')
@@ -103,8 +114,19 @@ export async function POST(request: Request) {
           .maybeSingle();
 
         existingRecord = data;
+      } else if (itemType === 'note' && finalContent) {
+        // Content-based deduplication for notes to prevent snippet conflicts
+        const { data } = await supabase
+          .from('bookmarks')
+          .select('id, title, url')
+          .eq('user_id', user.id)
+          .eq('type', 'note')
+          .eq('content', finalContent)
+          .limit(1)
+          .maybeSingle();
+          
+        existingRecord = data;
       } else {
-        // For notes and images, require an EXACT match to allow multiple snippets from one page
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')
@@ -126,25 +148,50 @@ export async function POST(request: Request) {
     }
 
     let finalTitle = customTitle;
-    let finalDescription = customDesc || null;
+    let finalDescription = itemType === 'note' ? null : (customDesc || null);
     let finalImage = customImg || null;
 
     if (cleanUrl && isLink) {
       try {
-        const response = await fetch(cleanUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          signal: AbortSignal.timeout(4000),
-        });
+        const parsedUrl = new URL(cleanUrl);
+        if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
+          const response = await fetch(cleanUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            signal: AbortSignal.timeout(3000), // Enforce strict 3-second timeout
+          });
 
-        if (response.ok) {
-          const html = await response.text();
-          const $ = cheerio.load(html);
-          finalTitle = finalTitle || $('meta[property="og:title"]').attr('content') || $('title').text().trim() || cleanUrl;
-          finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-          finalImage = finalImage || $('meta[property="og:image"]').attr('content') || null;
+          if (response.ok) {
+            // Stream response to prevent OOM memory exhaustion on massive files (512KB max)
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let html = '';
+            let bytesReceived = 0;
+            const MAX_BYTES = 512 * 1024;
+
+            if (reader) {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (value) {
+                  bytesReceived += value.length;
+                  html += decoder.decode(value, { stream: true });
+                  if (bytesReceived > MAX_BYTES) break;
+                }
+              }
+            } else {
+              html = await response.text();
+              if (html.length > MAX_BYTES) html = html.substring(0, MAX_BYTES);
+            }
+
+            const $ = cheerio.load(html);
+            const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
+            finalTitle = customTitle || scrapedTitle || cleanUrl; // Preserve customTitle
+            finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
+            finalImage = finalImage || $('meta[property="og:image"]').attr('content') || null;
+          }
         }
       } catch (e) {
-        finalTitle = finalTitle || cleanUrl;
+        finalTitle = customTitle || cleanUrl;
       }
     }
 
@@ -160,10 +207,11 @@ export async function POST(request: Request) {
       .from('bookmarks')
       .insert([{
         user_id: user.id,
-        url: cleanUrl || `${process.env.NEXT_PUBLIC_SITE_URL || ''}/note-${Date.now()}`,
+        // Enforce absolute fallback URL
+        url: cleanUrl || `https://smart-bookmark.internal/note-${Date.now()}`,
         title: finalTitle,
         description: finalDescription,
-        content: customContent || null,
+        content: finalContent,
         image_url: finalImage,
         category: category || 'Inbox',
         sub_category: sub_category || null,

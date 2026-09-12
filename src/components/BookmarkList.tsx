@@ -291,7 +291,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         <div className="flex-[1.2] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
           <input
             type="text"
-            placeholder="Search publications..."
+            placeholder="Search your space..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-transparent border-none outline-none px-4 sm:px-6 py-3.5 sm:py-4 font-serif text-base sm:text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"

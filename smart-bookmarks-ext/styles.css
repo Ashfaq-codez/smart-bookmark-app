@@ -1,6 +1,6 @@
 /* Force a high-contrast highlight for text fragments globally */
 ::target-text {
-  background-color: #F6AD55 !important; /* High-visibility orange */
+  background-color: #ffbf71 !important; /* High-visibility orange */
   color: #1A202C !important; /* Dark text for strict contrast */
   text-decoration: underline !important;
   text-decoration-color: #DD6B20 !important;
