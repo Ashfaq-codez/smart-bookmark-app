@@ -354,38 +354,40 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ─── NEW WARNING COLLISION MODAL ─── */}
+      {/* ─── EDITORIAL COLLISION MODAL ─── */}
       {duplicateMatch && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/40 dark:bg-black/70 backdrop-blur-sm transition-colors duration-500" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
-          <div className="w-full max-w-md bg-white dark:bg-[#1A202C] border-t-4 border-[#D97706] dark:border-[#F6AD55] shadow-2xl transition-colors duration-500 rounded-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8 flex flex-col gap-5">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
+          <div className="w-full max-w-sm bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col shadow-xl transition-colors duration-500 rounded-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-8 md:p-10 flex flex-col gap-6 text-center">
               
-              <div className="flex items-center gap-3 text-[#D97706] dark:text-[#F6AD55]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                <span className="text-[10px] uppercase tracking-widest font-bold">Duplicate Detected</span>
+              <div className="flex flex-col gap-3 items-center">
+                <span className="text-[10px] font-sans text-[#C53030] dark:text-[#FC8181] uppercase tracking-widest font-bold">Conflict</span>
+                <h3 className="text-3xl font-serif text-[#2D3748] dark:text-[#E2E8F0] leading-none">
+                  Already Cataloged
+                </h3>
               </div>
               
-              <h3 className="text-2xl font-serif text-[#2D3748] dark:text-[#E2E8F0] leading-snug">
-                This item is already cataloged in your Space.
-              </h3>
+              <p className="text-xs font-sans text-[#718096] dark:text-[#A0AEC0]">
+                This source currently exists in your Space.
+              </p>
               
-              <div className="flex flex-col gap-1 p-4 bg-[#FFFBEB] dark:bg-[#2D3748] border border-[#FDE68A] dark:border-[#4A5568] rounded-sm">
-                <span className="text-sm font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate">{duplicateMatch.title}</span>
-                <span className="text-xs text-[#718096] dark:text-[#A0AEC0] truncate">{duplicateMatch.url}</span>
+              {/* Conflicting Data Box */}
+              <div className="flex flex-col gap-1 p-4 border border-[#E5E0D8] dark:border-[#4A5568] bg-[#FDFCF8] dark:bg-[#1A202C] text-left rounded-sm">
+                <span className="text-sm font-serif font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate">{duplicateMatch.title}</span>
+                <span className="text-[9px] font-sans uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] truncate mt-1">
+                  {duplicateMatch.url.replace(/^https?:\/\/(www\.)?/, '')}
+                </span>
               </div>
               
-              <div className="flex gap-3 mt-4">
-                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-3 bg-[#D97706] dark:bg-[#F6AD55] text-white dark:text-[#1A202C] font-medium text-xs tracking-widest uppercase hover:opacity-90 transition-opacity rounded-sm cursor-pointer">
+              <div className="flex flex-col gap-2 mt-2">
+                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="w-full py-3 bg-[#2D3748] dark:bg-[#E2E8F0] text-white dark:text-[#1A202C] font-sans font-medium text-xs tracking-widest uppercase hover:opacity-80 transition-opacity rounded-sm cursor-pointer">
                   View Entry
                 </button>
-                <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-3 bg-transparent text-[#4A5568] dark:text-[#A0AEC0] border border-[#CBD5E0] dark:border-[#4A5568] font-medium text-xs tracking-widest uppercase hover:bg-[#F7FAFC] dark:hover:bg-[#2D3748] transition-colors rounded-sm cursor-pointer">
-                  Cancel
+                <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="w-full py-3 bg-transparent text-[#4A5568] dark:text-[#A0AEC0] border border-[#CBD5E0] dark:border-[#4A5568] font-sans font-medium text-xs tracking-widest uppercase hover:bg-[#FDFCF8] dark:hover:bg-[#171923] transition-colors rounded-sm cursor-pointer">
+                  Dismiss
                 </button>
               </div>
+
             </div>
           </div>
         </div>
