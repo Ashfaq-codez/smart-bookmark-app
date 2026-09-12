@@ -14,9 +14,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "save-image") {
     payload = { ...payload, image_url: info.srcUrl, type: 'image' };
   } else if (info.menuItemId === "save-text") {
-    let capturedText = info.selectionText;
+    let capturedText = info.selectionText || '';
 
-    // Run in-page extraction to retain pure newlines and build the scroll fragment
+    // Run in-page extraction to retain pure newlines and exact source formatting
     try {
       const [{ result }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -27,13 +27,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
       if (result) capturedText = result;
     } catch {
-      // Fallback to info.selectionText if script injection is blocked
+      // Fallback to info.selectionText if script injection is blocked by the site
     }
 
     // Generate Chrome Scroll-To-Text URL fragment
-    // Takes the first ~60 clean chars of snippet for precise matching
-    const cleanMatch = capturedText.trim().replace(/\s+/g, ' ').slice(0, 80);
-    const scrollUrl = `${tab.url.split('#')[0]}#:~:text=${encodeURIComponent(cleanMatch)}`;
+    // Extracting whole words prevents breaking Chrome's highlighting engine
+    const words = capturedText.trim().replace(/\s+/g, ' ').split(' ');
+    const matchAnchor = words.slice(0, 8).join(' ');
+    const scrollUrl = `${tab.url.split('#')[0]}#:~:text=${encodeURIComponent(matchAnchor)}`;
 
     payload = {
       ...payload,

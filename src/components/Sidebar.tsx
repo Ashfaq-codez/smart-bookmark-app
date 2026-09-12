@@ -14,7 +14,7 @@ export default function Sidebar(props: SidebarProps) {
     <aside className="w-full h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] text-[#2D3748] dark:text-[#E2E8F0] border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 overflow-y-auto [&::-webkit-scrollbar]:w-0 font-sans pt-[72px]">
       
       <div className="px-6 py-5 flex items-center justify-between border-b border-[#E5E0D8] dark:border-[#4A5568]">
-        <h2 className="text-[10px] uppercase tracking-widest text-[#718096] dark:text-[#A0AEC0]">Index</h2>
+        <h2 className="text-[10px] uppercase tracking-widest text-[#718096] dark:text-[#A0AEC0]">Folders</h2>
         <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 transition-colors" title="New Category">
           <PlusIcon />
         </button>
