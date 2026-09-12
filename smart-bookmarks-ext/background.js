@@ -27,19 +27,31 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
       if (result) capturedText = result;
     } catch {
-      // Fallback to info.selectionText if script injection is blocked by the site
+      // Fallback to info.selectionText if script injection is blocked
     }
 
-    // Generate Chrome Scroll-To-Text URL fragment
-    // Extracting whole words prevents breaking Chrome's highlighting engine
-    const words = capturedText.trim().replace(/\s+/g, ' ').split(' ');
-    const matchAnchor = words.slice(0, 8).join(' ');
-    const scrollUrl = `${tab.url.split('#')[0]}#:~:text=${encodeURIComponent(matchAnchor)}`;
+    // --- BULLETPROOF TEXT FRAGMENT BUILDER ---
+    // 1. Clean whitespace to a single space
+    const cleanText = capturedText.replace(/\s+/g, ' ').trim();
+    
+    // 2. Strip ALL punctuation to prevent Chrome parser crashes (just for the URL tracker)
+    const safeWords = cleanText.replace(/[^\w\s]/g, '').split(' ').filter(w => w.length > 0);
+    
+    let scrollUrl = (tab.url || info.pageUrl).split('#')[0];
+    
+    // 3. Create a Start and End boundary so Chrome highlights the entire block
+    if (safeWords.length >= 8) {
+      const startStr = encodeURIComponent(safeWords.slice(0, 4).join(' '));
+      const endStr = encodeURIComponent(safeWords.slice(-4).join(' '));
+      scrollUrl += `#:~:text=${startStr},${endStr}`;
+    } else if (safeWords.length > 0) {
+      scrollUrl += `#:~:text=${encodeURIComponent(safeWords.join(' '))}`;
+    }
 
     payload = {
       ...payload,
-      content: capturedText,
-      url: scrollUrl, // Links directly to the exact highlighted paragraph
+      content: capturedText, // Keep exact original formatting for the database text box
+      url: scrollUrl,        // Send the safe jump-to-link
       type: 'note'
     };
   }
