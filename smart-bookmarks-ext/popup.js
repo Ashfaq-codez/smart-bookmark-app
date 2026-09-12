@@ -24,17 +24,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         credentials: 'include', 
         body: JSON.stringify({ url: activeTab.url }),
       });
-      const data = await res.json();
+      
+      const data = await res.json().catch(() => ({}));
 
+      // Intercept the Duplicate Conflict
       if (res.status === 409) {
         status.style.display = 'block';
-        status.style.backgroundColor = '#fef08a'; // yellow-200
+        status.style.backgroundColor = '#fef08a'; // Yellow warning
         status.style.color = '#854d0e';
         status.textContent = 'Already in Space';
         setTimeout(() => window.close(), 1500);
       } else if (res.ok) {
         status.style.display = 'block';
-        status.style.backgroundColor = '#bbf7d0'; // green-200
+        status.style.backgroundColor = '#bbf7d0'; 
         status.style.color = '#15803d';
         status.textContent = 'Saved to Inbox!';
         setTimeout(() => window.close(), 1200);
@@ -43,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (err) {
       status.style.display = 'block';
-      status.style.backgroundColor = '#fecaca'; // red-200
+      status.style.backgroundColor = '#fecaca'; 
       status.style.color = '#b91c1c';
       status.textContent = err.message || 'Error saving tab';
       btn.disabled = false;

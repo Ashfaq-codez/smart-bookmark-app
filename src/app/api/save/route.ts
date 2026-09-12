@@ -75,12 +75,21 @@ export async function POST(request: Request) {
     
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
 
-    if (cleanUrl && isLink) {
+    // --- BULLETPROOF FUZZY DUPLICATE CHECK ---
+    if (cleanUrl) {
+      // Strip protocol, www, trailing slashes, and hash fragments for a highly flexible search
+      const flexiblePath = cleanUrl
+        .replace(/^https?:\/\/(www\.)?/, '')
+        .replace(/\/$/, '')
+        .split('#')[0];
+
+      // Match exact path, path with slash, or path with fragments
       const { data: existing } = await supabase
         .from('bookmarks')
         .select('id, title, url')
         .eq('user_id', user.id)
-        .eq('url', cleanUrl)
+        .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
+        .limit(1)
         .maybeSingle();
 
       if (existing) {
