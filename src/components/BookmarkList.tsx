@@ -63,7 +63,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     if (gridRef.current) observer.observe(gridRef.current)
     updateColumns()
     const timer = setTimeout(() => setIsLoading(false), 300)
-    if (window.innerWidth < 768) setIsSidebarOpen(false)
+    
+    // Default open on desktop, closed on mobile
+    if (window.innerWidth >= 768) setIsSidebarOpen(true)
+    
     return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
 
@@ -94,25 +97,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
     
     try {
-      // 1. Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('attachments')
         .upload(fileName, file)
         
       if (uploadError) throw uploadError
 
-      // 2. Get Public URL
       const { data: { publicUrl } } = supabase.storage
         .from('attachments')
         .getPublicUrl(fileName)
 
-      // 3. Determine Format Type
       let type = 'file'
       if (file.type.startsWith('image/')) type = 'image'
       else if (file.type.startsWith('video/')) type = 'video'
       else if (file.type === 'application/pdf') type = 'pdf'
 
-      // 4. Save to Database
       const { error: dbError } = await supabase.from('bookmarks').insert([{
         title: file.name,
         url: publicUrl,
@@ -262,55 +261,61 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </header>
 
-      {/* ─── EDITORIAL INPUT / SEARCH RIBBON WITH ATTACHMENT ─── */}
+      {/* ─── EDITORIAL INPUT / SEARCH RIBBON WITH INTUITIVE MOBILE LAYOUT ─── */}
       <div className={`fixed top-[72px] right-0 z-40 flex flex-col sm:flex-row border-b border-[#E5E0D8] dark:border-[#4A5568] bg-white dark:bg-[#2D3748] transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${isSidebarOpen ? 'md:w-[calc(100%-320px)] left-0 md:left-[320px]' : 'w-full left-0'}`}>
         
-        <div className="flex-[1.5] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
+        {/* Search Field */}
+        <div className="flex-[1.2] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
           <input
             type="text"
             placeholder="Search publications..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none outline-none px-6 py-4 font-serif text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"
+            className="w-full bg-transparent border-none outline-none px-4 sm:px-6 py-3.5 sm:py-4 font-serif text-base sm:text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"
           />
         </div>
 
-        {/* New Attachment Upload Node */}
-        <div className="flex shrink-0 items-center justify-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568] px-4 md:px-5">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            className="hidden" 
-            accept="image/*,video/*,application/pdf" 
-          />
-          <button 
-            onClick={() => fileInputRef.current?.click()} 
-            disabled={isUploading}
-            title="Upload Image, Video, or PDF"
-            className="text-[#718096] dark:text-[#A0AEC0] hover:text-[#2B6CB0] dark:hover:text-[#90CDF4] disabled:opacity-50 transition-colors cursor-pointer"
-          >
-            {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
-          </button>
-        </div>
+        {/* Input & Action Group (Unified for Mobile Intuition) */}
+        <div className="flex-[1.5] flex items-stretch w-full">
+          
+          {/* Attachment Button */}
+          <div className="flex shrink-0 items-center justify-center border-r border-[#E5E0D8] dark:border-[#4A5568] px-3 sm:px-5">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileUpload} 
+              className="hidden" 
+              accept="image/*,video/*,application/pdf" 
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              disabled={isUploading}
+              title="Upload Image, Video, or PDF"
+              className="text-[#718096] dark:text-[#A0AEC0] hover:text-[#2B6CB0] dark:hover:text-[#90CDF4] disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center h-full"
+            >
+              {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
+            </button>
+          </div>
 
-        <div className="flex-[1.5] flex items-center">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
-            disabled={isSaving}
-            placeholder="Add link or text snippet..."
-            className="w-full bg-transparent border-none outline-none px-6 py-4 font-serif text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"
-          />
-          <button 
-            onClick={handleQuickCapture} 
-            disabled={isSaving || !inputValue.trim()} 
-            className="px-6 py-4 text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 disabled:opacity-30 transition-opacity cursor-pointer"
-          >
-            <SendIcon />
-          </button>
+          {/* Text Input & Send Button */}
+          <div className="flex-1 flex items-stretch">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
+              disabled={isSaving}
+              placeholder="Add link or text snippet..."
+              className="w-full h-full bg-transparent border-none outline-none px-4 sm:px-6 py-3.5 sm:py-4 font-serif text-base sm:text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"
+            />
+            <button 
+              onClick={handleQuickCapture} 
+              disabled={isSaving || !inputValue.trim()} 
+              className="px-4 sm:px-6 py-3.5 sm:py-4 text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 disabled:opacity-30 transition-opacity cursor-pointer flex items-center justify-center border-l border-[#E5E0D8] dark:border-[#4A5568]"
+            >
+              <SendIcon />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -320,7 +325,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity" />}
 
-      <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[180px] md:pt-[130px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
+      {/* Padding top updated to accurately accommodate 2-row ribbon on mobile */}
+      <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[175px] md:pt-[135px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
         <div className="w-full p-4 sm:p-8 md:p-10 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
