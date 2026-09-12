@@ -20,7 +20,7 @@ export async function OPTIONS(request: Request) {
   });
 }
 
-function normalizeUrl(rawUrl: string): string {
+function normalizeUrl(rawUrl: string, type: string = 'link'): string {
   const trimmed = rawUrl.trim();
   if (!trimmed) return '';
   try {
@@ -28,7 +28,11 @@ function normalizeUrl(rawUrl: string): string {
     const parsed = new URL(withProto);
     const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
     const path = parsed.pathname.replace(/\/+$/, '') || '/';
-    return `${parsed.protocol}//${host}${path}${parsed.search}`;
+    
+    // Keep the hash for text fragments, drop it for strict link duplicate checks
+    const hash = type === 'note' ? parsed.hash : '';
+    
+    return `${parsed.protocol}//${host}${path}${parsed.search}${hash}`;
   } catch {
     return trimmed.toLowerCase().replace(/\/+$/, '');
   }
@@ -69,7 +73,9 @@ export async function POST(request: Request) {
 
     const itemType = customType || 'link';
     const isLink = itemType === 'link';
-    const cleanUrl = rawUrl ? normalizeUrl(rawUrl) : null;
+    
+    // Pass the itemType into the normalizer
+    const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
 
     if (cleanUrl && isLink) {
       const { data: existing } = await supabase

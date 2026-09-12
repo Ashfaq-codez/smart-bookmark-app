@@ -31,27 +31,25 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
 
     // --- BULLETPROOF TEXT FRAGMENT BUILDER ---
-    // 1. Clean whitespace to a single space
-    const cleanText = capturedText.replace(/\s+/g, ' ').trim();
-    
-    // 2. Strip ALL punctuation to prevent Chrome parser crashes (just for the URL tracker)
-    const safeWords = cleanText.replace(/[^\w\s]/g, '').split(' ').filter(w => w.length > 0);
+    // 1. Clean whitespace but KEEP original punctuation for perfect matching
+    const cleanText = capturedText.trim().replace(/\s+/g, ' ');
+    const words = cleanText.split(' ');
     
     let scrollUrl = (tab.url || info.pageUrl).split('#')[0];
     
-    // 3. Create a Start and End boundary so Chrome highlights the entire block
-    if (safeWords.length >= 8) {
-      const startStr = encodeURIComponent(safeWords.slice(0, 4).join(' '));
-      const endStr = encodeURIComponent(safeWords.slice(-4).join(' '));
+    // 2. Build the start/end bounds. encodeURIComponent safely escapes page commas into %2C
+    if (words.length > 8) {
+      const startStr = encodeURIComponent(words.slice(0, 4).join(' '));
+      const endStr = encodeURIComponent(words.slice(-4).join(' '));
       scrollUrl += `#:~:text=${startStr},${endStr}`;
-    } else if (safeWords.length > 0) {
-      scrollUrl += `#:~:text=${encodeURIComponent(safeWords.join(' '))}`;
+    } else if (words.length > 0) {
+      scrollUrl += `#:~:text=${encodeURIComponent(cleanText)}`;
     }
 
     payload = {
       ...payload,
-      content: capturedText, // Keep exact original formatting for the database text box
-      url: scrollUrl,        // Send the safe jump-to-link
+      content: capturedText, 
+      url: scrollUrl,        
       type: 'note'
     };
   }
