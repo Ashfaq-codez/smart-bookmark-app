@@ -24,40 +24,36 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
 
   return (
     <div className="relative w-full flex flex-col" ref={dropdownRef}>
-      
-      {/* ─── GLOSSY WINDOW BUTTON ─── */}
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="w-full flex items-center justify-between p-2.5 bg-white/80 dark:bg-[#151c28]/80 backdrop-blur-xl hover:bg-white dark:hover:bg-[#1a2332] border border-white/80 dark:border-[#2a3f5a] rounded-lg shadow-[0_4px_12px_rgba(44,64,84,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all cursor-pointer text-left group"
+        className="w-full flex items-center justify-between p-3 bg-white dark:bg-black border-4 border-black dark:border-white shadow-[6px_6px_0_0_#000] dark:shadow-[6px_6px_0_0_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] dark:hover:shadow-[4px_4px_0_0_#fff] transition-all cursor-pointer rounded-none text-left active:shadow-none active:translate-x-[6px] active:translate-y-[6px]"
       >
-        <div className="flex flex-col flex-1 min-w-0 px-1">
-          <span className="text-[9px] font-mono text-[#4a6b8c] dark:text-[#8ea4bd] tracking-widest uppercase drop-shadow-[0_1px_0_rgba(255,255,255,0.8)] dark:drop-shadow-none">++ user.session //</span>
-          <span className="text-sm font-bold text-[#2c4054] dark:text-gray-200 truncate mt-0.5">{displayName}</span>
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className="text-[10px] font-black text-black dark:text-white uppercase tracking-widest">ID:</span>
+          <span className="text-sm font-black text-black dark:text-white truncate uppercase">{displayName}</span>
         </div>
-        <div className="w-6 h-6 rounded bg-gradient-to-b from-[#eaf2f9] to-[#d1e2f3] dark:from-[#213045] dark:to-[#1a2332] border border-[#a9cbed] dark:border-[#2a3f5a] flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:shadow-none group-hover:scale-105 transition-transform">
-          <span className="text-[#5e81a5] dark:text-[#8ea4bd] text-[9px] drop-shadow-[0_1px_0_rgba(255,255,255,0.8)] dark:drop-shadow-none">▼</span>
+        <div className="w-8 h-8 bg-yellow-400 dark:bg-cyan-400 border-4 border-black dark:border-white flex items-center justify-center shadow-[inset_2px_2px_0_0_rgba(255,255,255,0.5)]">
+          <span className="text-black text-xs font-black">▼</span>
         </div>
       </button>
 
-      {/* ─── FROSTED PANEL DROPDOWN ─── */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-[240px] bg-white/95 dark:bg-[#080d14]/95 backdrop-blur-2xl border border-white dark:border-[#2a3f5a] shadow-[0_10px_40px_rgba(44,64,84,0.15),inset_0_1px_0_rgba(255,255,255,0.8)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)] rounded-lg flex flex-col overflow-hidden z-50">
-          
-          <div className="bg-gradient-to-b from-[#eaf2f9]/90 to-[#d1e2f3]/90 dark:from-[#1a2536]/90 dark:to-[#111824]/90 border-b border-[#a9cbed] dark:border-[#2a3f5a] px-4 py-3 flex flex-col gap-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-none">
-            <p className="text-[9px] font-mono text-[#4a6b8c] dark:text-[#5e81a5] tracking-widest uppercase drop-shadow-[0_1px_0_rgba(255,255,255,0.6)] dark:drop-shadow-none">++ connection.id</p>
-            <p className="text-xs font-semibold text-[#2c4054] dark:text-gray-200 truncate mt-0.5">{email || 'UNKNOWN'}</p>
+        <div className="absolute right-0 top-full mt-4 w-[260px] bg-white dark:bg-black border-4 border-black dark:border-white shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] rounded-none flex flex-col overflow-hidden z-50">
+          <div className="bg-yellow-400 dark:bg-cyan-400 border-b-4 border-black dark:border-white px-4 py-3 flex flex-col gap-1">
+            <p className="text-[10px] font-black text-black tracking-widest uppercase">SYS.USER // EMAIL</p>
+            <p className="text-sm font-black text-black truncate">{email || 'UNKNOWN'}</p>
           </div>
 
-          <div className="px-4 py-4 flex items-center justify-between cursor-pointer hover:bg-[#f2f7fc] dark:hover:bg-[#151c28] transition-colors border-b border-[#eaf2f9] dark:border-[#1a2536]" onClick={toggleDarkMode}>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#5e81a5] dark:text-[#8ea4bd]">UI.Theme</span>
-            <button className={`w-10 h-5 rounded-full shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] transition-colors relative flex items-center p-0.5 border ${isDarkMode ? 'bg-[#315174] border-[#2a3f5a]' : 'bg-[#e1eef9] border-[#a9cbed]'}`}>
-              <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
+          <div className="px-4 py-4 flex items-center justify-between cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors border-b-4 border-black dark:border-white group" onClick={toggleDarkMode}>
+            <span className="text-[11px] font-black uppercase tracking-widest text-black dark:text-white group-hover:text-white dark:group-hover:text-black">INVERT THEME</span>
+            <button className={`w-10 h-6 rounded-none transition-colors relative flex items-center p-0.5 border-4 ${isDarkMode ? 'bg-cyan-400 border-white' : 'bg-yellow-400 border-black'}`}>
+              <div className={`w-3 h-3 bg-black dark:bg-white rounded-none transition-transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
             </button>
           </div>
 
-          <button onClick={handleSignOut} className="w-full px-4 py-4 text-left text-[10px] font-mono uppercase tracking-widest text-[#c53030] dark:text-[#f87171] hover:bg-gradient-to-b hover:from-[#fdf2f3] hover:to-[#fadadd] dark:hover:from-[#3b1515] dark:hover:to-[#2a0e0e] transition-colors cursor-pointer flex items-center justify-between group">
-            <span>Terminate Session</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity font-bold">⏏</span>
+          <button onClick={handleSignOut} className="w-full px-4 py-4 text-left text-[11px] font-black uppercase tracking-widest bg-red-500 text-black hover:bg-black hover:text-red-500 dark:hover:text-red-500 transition-colors cursor-pointer flex items-center justify-between">
+            <span>TERMINATE</span>
+            <span className="font-black">X</span>
           </button>
         </div>
       )}

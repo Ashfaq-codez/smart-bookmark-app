@@ -10,7 +10,8 @@
   },
   "permissions": [
     "activeTab",
-    "contextMenus"
+    "contextMenus",
+    "scripting"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
