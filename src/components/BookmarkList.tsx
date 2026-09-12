@@ -10,7 +10,9 @@ import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
-const SendIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+const SendIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+const ExpandRightIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 18l6-6-6-6"/></svg>
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -52,7 +54,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       const width = gridRef.current.offsetWidth
       if (width >= 1600) setColumnsCount(4)
       else if (width >= 1024) setColumnsCount(3)
-      else setColumnsCount(2) // Strictly 2 on mobile
+      else setColumnsCount(2)
     }
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
@@ -61,6 +63,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     if (window.innerWidth < 768) setIsSidebarOpen(false)
     return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && duplicateMatch) setDuplicateMatch(null) }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [duplicateMatch])
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
@@ -82,9 +90,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     try {
       if (isAllUrls && tokens.length > 1) {
         const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
-        if (validNewTokens.length === 0) { toast.error('Already cataloged.'); setIsSaving(false); return }
+        if (validNewTokens.length === 0) { toast.error('DATA EXISTS'); setIsSaving(false); return }
         await Promise.all(validNewTokens.map(token => fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token }) })))
-        toast.success(`Cataloged ${validNewTokens.length} items`)
+        toast.success(`SAVED ${validNewTokens.length}`)
       } else {
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
@@ -94,12 +102,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (res.status === 409) {
           const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
           if (match) { setDuplicateMatch(match); setIsSaving(false); return }
-          toast.error('Item exists.'); setIsSaving(false); return
+          toast.error('RECORD EXISTS'); setIsSaving(false); return
         }
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')
-    } catch { toast.error('Error.') } finally { setIsSaving(false) }
+    } catch { toast.error('ERROR') } finally { setIsSaving(false) }
   }
 
   const filteredBookmarks = useMemo(() => {
@@ -157,11 +165,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const handleDeleteCategory = async (catToDelete: string) => {
     toast((t) => (
-      <div className="flex flex-col gap-4 font-sans p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800">
-        <span className="font-serif text-xl text-black dark:text-white">Delete {catToDelete}?</span>
+      <div className="flex flex-col gap-4 font-sans p-6 bg-white dark:bg-[#111] border-4 border-black dark:border-white shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff]">
+        <span className="font-black text-2xl text-black dark:text-white uppercase tracking-tighter">DELETE {catToDelete}?</span>
         <div className="flex gap-2 mt-2">
-          <button onClick={() => { setCustomCategories(p => p.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) }; toast.dismiss(t.id) }} className="flex-1 px-4 py-2 bg-red-600 text-white font-medium text-xs">Delete</button>
-          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 text-black dark:text-white font-medium text-xs">Cancel</button>
+          <button onClick={() => { setCustomCategories(p => p.filter(c => c !== catToDelete)); if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) }; toast.dismiss(t.id) }} className="flex-1 px-4 py-3 bg-[#FF0000] text-white border-4 border-black font-black uppercase text-sm hover:translate-x-[2px] hover:translate-y-[2px] shadow-[4px_4px_0_0_#000] hover:shadow-none transition-all">PURGE</button>
+          <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-4 py-3 bg-white text-black border-4 border-black font-black uppercase text-sm hover:translate-x-[2px] hover:translate-y-[2px] shadow-[4px_4px_0_0_#000] hover:shadow-none transition-all">CANCEL</button>
         </div>
       </div>
     ), { duration: Infinity, style: { background: 'transparent', boxShadow: 'none', padding: 0 } })
@@ -178,86 +186,93 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#f5f5f5] dark:bg-[#050505] min-h-screen font-sans text-black dark:text-white flex flex-col overflow-x-hidden selection:bg-gray-200 selection:text-black dark:selection:bg-gray-800 dark:selection:text-white transition-colors duration-500">
+    <div className="bg-[#f0f0f0] dark:bg-[#050505] min-h-screen font-sans text-black dark:text-white flex flex-col overflow-x-hidden selection:bg-[#0000FF] selection:text-white relative z-0 transition-colors duration-500">
       
-      {/* ─── EDITORIAL TOP NAVIGATION BAR ─── */}
-      <header className="fixed top-0 left-0 w-full h-16 border-b border-gray-300 dark:border-gray-800 flex items-center justify-between px-4 md:px-8 bg-[#f5f5f5]/95 dark:bg-[#050505]/95 backdrop-blur-md z-50 transition-colors duration-500">
-        
-        {/* Left: Index Toggle */}
-        <div className="w-1/3 flex items-center">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
-          >
-            <span>{isSidebarOpen ? 'Close Index' : 'Index'}</span>
-          </button>
-        </div>
-
-        {/* Center: Title */}
-        <div className="w-1/3 flex justify-center">
-          <h1 className="font-serif text-2xl tracking-widest uppercase">Space</h1>
-        </div>
-
-        {/* Right: Profile */}
-        <div className="w-1/3 flex justify-end">
-          <ProfileDropdown email={userEmail ?? ""} />
-        </div>
-      </header>
-
-      {/* ─── SIDEBAR ─── */}
-      <div className={`fixed left-0 top-[64px] bottom-0 z-40 bg-[#fafafa] dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[320px]' : '-translate-x-full w-[320px]'}`}>
-        <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
+      {/* DESKTOP PROFILE */}
+      <div className="hidden md:block fixed top-0 left-0 w-[320px] z-50">
+        <ProfileDropdown email={userEmail ?? ""} />
       </div>
 
-      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/10 dark:bg-black/50 backdrop-blur-sm z-30 md:hidden transition-opacity" />}
+      {/* MOBILE HEADER */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] z-50 bg-[#FFD700] dark:bg-[#0000FF] border-b-4 border-black dark:border-white flex items-center px-4 justify-between transition-colors duration-500">
+        <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-black dark:text-white">
+          <MenuIcon />
+        </button>
+        <span className="font-black text-xl tracking-tighter uppercase text-black dark:text-white">
+          INDEX
+        </span>
+        <div className="w-8" />
+      </header>
 
-      {/* ─── MAIN CONTENT ─── */}
-      <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[64px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity" />}
+
+      {/* TOGGLE TAB (CLOSED) */}
+      {!isSidebarOpen && (
+        <button 
+          onClick={() => setIsSidebarOpen(true)} 
+          className="hidden md:flex fixed left-0 top-[20%] z-40 bg-[#FFD700] dark:bg-[#0000FF] border-4 border-black dark:border-white border-l-0 px-2 py-8 text-black dark:text-white shadow-[6px_6px_0_0_#000] dark:shadow-[6px_6px_0_0_#fff] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all cursor-pointer"
+        >
+          <ExpandRightIcon />
+        </button>
+      )}
+
+      {/* COLORFUL BAUHAUS SIDEBAR */}
+      <div className={`fixed left-0 top-[0px] md:top-[65px] bottom-0 z-40 bg-white dark:bg-[#0a0a0a] border-r-4 border-black dark:border-white transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[320px]' : '-translate-x-full md:w-0 overflow-hidden border-none'}`}>
+        <div className={`h-full flex-1 overflow-hidden transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
+          <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
+        </div>
+      </div>
+
+      {/* FIXED TOP CONTROL PANEL */}
+      <div className={`fixed top-[60px] md:top-0 right-0 z-30 flex flex-col md:flex-row border-b-4 border-black dark:border-white shadow-[0_8px_0_0_rgba(0,0,0,1)] dark:shadow-[0_8px_0_0_rgba(255,255,255,1)] transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:w-[calc(100%-320px)] left-0 md:left-[320px]' : 'w-full left-0'}`}>
         
-        {/* EDITORIAL INPUT / SEARCH BLOCK */}
-        <div className="w-full border-b border-gray-300 dark:border-gray-800 flex flex-col sm:flex-row bg-[#fafafa] dark:bg-[#0a0a0a] transition-colors duration-500">
-          
-          <div className="flex-1 flex items-center border-b sm:border-b-0 sm:border-r border-gray-300 dark:border-gray-800">
-            <input
-              type="text"
-              placeholder="Search Space..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent border-none outline-none px-6 py-5 font-serif text-lg text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-colors"
-            />
-          </div>
+        <div className="md:w-[35%] border-b-4 md:border-b-0 md:border-r-4 border-black dark:border-white flex flex-col bg-[#0000FF] dark:bg-[#FF0000] transition-colors duration-500">
+          <label className="text-[10px] font-black uppercase tracking-widest px-6 pt-4 text-white">Search Query</label>
+          <input
+            type="text"
+            placeholder="FILTER INDEX..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent border-none outline-none px-6 pb-4 pt-1 font-black text-xl md:text-2xl text-white placeholder-white/50 uppercase"
+          />
+        </div>
 
-          <div className="flex-1 flex items-center">
+        <div className="flex-1 flex bg-[#FFD700] dark:bg-[#0000FF] transition-colors duration-500">
+          <div className="flex-1 flex flex-col">
+            <label className="text-[10px] font-black uppercase tracking-widest px-6 pt-4 text-black dark:text-white">Inject Data</label>
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
               disabled={isSaving}
-              placeholder="Publish link or note..."
-              className="w-full bg-transparent border-none outline-none px-6 py-5 font-serif text-lg text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-600 transition-colors"
+              placeholder="URL OR TEXT STRING..."
+              className="w-full bg-transparent border-none outline-none px-6 pb-4 pt-1 font-black text-xl md:text-2xl text-black dark:text-white placeholder-black/50 dark:placeholder-white/50 uppercase"
             />
-            <button 
-              onClick={handleQuickCapture} 
-              disabled={isSaving || !inputValue.trim()} 
-              className="px-6 py-5 text-gray-500 hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors"
-            >
-              <SendIcon />
-            </button>
           </div>
+          <button 
+            onClick={handleQuickCapture} 
+            disabled={isSaving || !inputValue.trim()} 
+            className="px-8 md:px-12 bg-[#FF0000] dark:bg-[#FFD700] text-white dark:text-black border-l-4 border-black dark:border-white flex items-center justify-center hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            <SendIcon />
+          </button>
         </div>
+      </div>
 
-        {/* EDITORIAL MASONRY GRID */}
-        <div className="w-full p-4 sm:p-8 md:p-12 flex gap-4 sm:gap-8 md:gap-12 items-start" ref={gridRef}>
+      {/* MAIN CONTENT AREA */}
+      <main className={`flex-1 flex flex-col transition-all duration-300 pb-32 pt-[220px] md:pt-[120px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
+        
+        <div className="w-full p-4 sm:p-6 md:p-8 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-4 sm:gap-8 md:gap-12 w-full flex-1 min-w-0">
+              <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 md:gap-8 w-full flex-1 min-w-0">
                 {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
               </div>
             ))
           ) : (
             masonryColumns.map((colBookmarks, colIndex) => (
-              <div key={colIndex} className="flex flex-col gap-4 sm:gap-8 md:gap-12 w-full flex-1 min-w-0">
+              <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 md:gap-8 w-full flex-1 min-w-0">
                 {colBookmarks.map(bookmark => (
                   <BookmarkCard 
                     key={bookmark.id} bookmark={bookmark} theme={{ card: '', btn: '', hover: '' }} isDragged={draggedId === bookmark.id} onDragStart={handleDragStart} onDragEnd={handleDragEnd} updateBookmark={updateBookmark} deleteBookmark={deleteBookmark} forceOpenModal={forcedInspectId === bookmark.id} onCloseForcedModal={() => setForcedInspectId(null)}
@@ -271,20 +286,22 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {/* COLLISION MODAL */}
       {duplicateMatch && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-[#f5f5f5]/90 dark:bg-[#050505]/90 backdrop-blur-md transition-colors duration-500" onClick={() => setDuplicateMatch(null)}>
-          <div className="w-full max-w-lg bg-white dark:bg-[#111] border border-gray-300 dark:border-gray-800 flex flex-col shadow-xl transition-colors duration-500" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-white/90 dark:bg-black/90 backdrop-blur-sm transition-colors duration-500" onClick={() => setDuplicateMatch(null)}>
+          <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[16px_16px_0_0_#000] dark:shadow-[16px_16px_0_0_#fff] flex flex-col rounded-none" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[#FF0000] text-white border-b-4 border-black dark:border-white px-6 py-4 flex items-center">
+              <span className="font-black text-sm uppercase tracking-widest">Error.Collision</span>
+            </div>
             <div className="p-8 flex flex-col gap-6">
-              <span className="text-[10px] uppercase tracking-widest text-gray-500">Notice</span>
-              <h3 className="text-3xl font-serif text-black dark:text-white leading-none">
-                Entry Exists
+              <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none text-black dark:text-white">
+                RECORD EXISTS
               </h3>
-              <div className="flex flex-col gap-1 border-l border-gray-300 dark:border-gray-700 pl-4 py-1">
-                <span className="text-sm font-medium text-black dark:text-white truncate">{duplicateMatch.title}</span>
-                <span className="text-xs text-gray-500 truncate">{duplicateMatch.url}</span>
+              <div className="flex flex-col gap-2 border-l-4 border-black dark:border-white pl-4 py-2">
+                <span className="text-xl font-black text-black dark:text-white truncate uppercase">{duplicateMatch.title}</span>
+                <span className="text-sm font-bold text-gray-500 truncate">{duplicateMatch.url}</span>
               </div>
               <div className="flex gap-4 mt-6">
-                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-3 bg-black dark:bg-white text-white dark:text-black font-medium text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">Review</button>
-                <button onClick={() => setDuplicateMatch(null)} className="flex-1 py-3 bg-transparent text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 font-medium text-xs tracking-widest uppercase hover:bg-gray-50 dark:hover:bg-[#151515] transition-colors">Dismiss</button>
+                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-4 bg-[#0000FF] dark:bg-[#FFD700] text-white dark:text-black border-4 border-black dark:border-white font-black uppercase tracking-widest text-sm shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">INSPECT</button>
+                <button onClick={() => setDuplicateMatch(null)} className="flex-1 py-4 bg-white dark:bg-black text-black dark:text-white border-4 border-black dark:border-white font-black uppercase tracking-widest text-sm shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">DISMISS</button>
               </div>
             </div>
           </div>
