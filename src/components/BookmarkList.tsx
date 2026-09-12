@@ -11,6 +11,8 @@ import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+const PaperclipIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+const SpinnerIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -33,6 +35,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [searchQuery, setSearchQuery] = useState('')
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [columnsCount, setColumnsCount] = useState(2) 
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
@@ -52,7 +56,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       const width = gridRef.current.offsetWidth
       if (width >= 1600) setColumnsCount(4)
       else if (width >= 1024) setColumnsCount(3)
-      else setColumnsCount(2) // 2 on mobile
+      else setColumnsCount(2)
     }
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
@@ -63,6 +67,53 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }, [])
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+    
+    try {
+      // 1. Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('attachments')
+        .upload(fileName, file)
+        
+      if (uploadError) throw uploadError
+
+      // 2. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(fileName)
+
+      // 3. Determine Format Type
+      let type = 'file'
+      if (file.type.startsWith('image/')) type = 'image'
+      else if (file.type.startsWith('video/')) type = 'video'
+      else if (file.type === 'application/pdf') type = 'pdf'
+
+      // 4. Save to Database
+      const { error: dbError } = await supabase.from('bookmarks').insert([{
+        title: file.name,
+        url: publicUrl,
+        type: type,
+        file_path: fileName,
+        file_type: file.type
+      }])
+
+      if (dbError) throw dbError
+      toast.success('Document archived successfully', { style: { background: '#FDFCF8', color: '#2B6CB0', border: '1px solid #E5E0D8' } })
+    } catch (err) {
+      toast.error('Upload failed. Check storage permissions.')
+      console.error(err)
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const handleQuickCapture = async () => {
     const rawInput = inputValue.trim()
@@ -180,34 +231,24 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-500">
       
-      {/* ─── COLORFUL EDITORIAL TOP BAR ─── */}
       <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
-        
-        {/* Left: Index Toggle */}
         <div className="w-1/3 flex items-center">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 transition-opacity font-medium cursor-pointer"
-          >
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 transition-opacity font-medium cursor-pointer">
             <span>{isSidebarOpen ? 'Close Index' : 'Index'}</span>
           </button>
         </div>
-
-        {/* Center: "Space" Title */}
         <div className="w-1/3 flex justify-center">
           <h1 className="font-serif text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0]">Space</h1>
         </div>
-
-        {/* Right: Profile */}
         <div className="w-1/3 flex justify-end">
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
 
-      {/* ─── EDITORIAL INPUT / SEARCH RIBBON ─── */}
+      {/* ─── EDITORIAL INPUT / SEARCH RIBBON WITH ATTACHMENT ─── */}
       <div className={`fixed top-[72px] right-0 z-40 flex flex-col sm:flex-row border-b border-[#E5E0D8] dark:border-[#4A5568] bg-white dark:bg-[#2D3748] transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${isSidebarOpen ? 'md:w-[calc(100%-320px)] left-0 md:left-[320px]' : 'w-full left-0'}`}>
         
-        <div className="flex-1 flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
+        <div className="flex-[1.2] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
           <input
             type="text"
             placeholder="Search publications..."
@@ -217,7 +258,26 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           />
         </div>
 
-        <div className="flex-1 flex items-center">
+        {/* New Attachment Upload Node */}
+        <div className="flex shrink-0 items-center justify-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568] px-4 md:px-5">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            className="hidden" 
+            accept="image/*,video/*,application/pdf" 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isUploading}
+            title="Upload Image, Video, or PDF"
+            className="text-[#718096] dark:text-[#A0AEC0] hover:text-[#2B6CB0] dark:hover:text-[#90CDF4] disabled:opacity-50 transition-colors cursor-pointer"
+          >
+            {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
+          </button>
+        </div>
+
+        <div className="flex-[1.5] flex items-center">
           <input
             type="text"
             value={inputValue}
@@ -237,16 +297,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {/* ─── SIDEBAR ─── */}
       <div className={`fixed left-0 top-[0px] bottom-0 z-40 bg-[#FDFCF8] dark:bg-[#1A202C] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[320px]' : '-translate-x-full w-[320px]'}`}>
         <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity" />}
 
-      {/* ─── MAIN CONTENT GRID ─── */}
       <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[180px] md:pt-[130px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
-        
         <div className="w-full p-4 sm:p-8 md:p-10 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
@@ -267,28 +324,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           )}
         </div>
       </main>
-
-      {/* COLLISION MODAL */}
-      {duplicateMatch && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-md transition-colors duration-500" onClick={() => setDuplicateMatch(null)}>
-          <div className="w-full max-w-lg bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col shadow-xl transition-colors duration-500 rounded-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8 flex flex-col gap-6">
-              <span className="text-[10px] uppercase tracking-widest text-[#718096] dark:text-[#A0AEC0]">Notice</span>
-              <h3 className="text-3xl font-serif text-[#2D3748] dark:text-[#E2E8F0] leading-none">
-                Entry Exists
-              </h3>
-              <div className="flex flex-col gap-1 border-l-2 border-[#2B6CB0] dark:border-[#90CDF4] pl-4 py-1">
-                <span className="text-sm font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate">{duplicateMatch.title}</span>
-                <span className="text-xs text-[#718096] dark:text-[#A0AEC0] truncate">{duplicateMatch.url}</span>
-              </div>
-              <div className="flex gap-4 mt-6">
-                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-3 bg-[#2B6CB0] dark:bg-[#90CDF4] text-white dark:text-[#1A202C] font-medium text-xs tracking-widest uppercase hover:opacity-80 transition-opacity rounded-sm">Review</button>
-                <button onClick={() => setDuplicateMatch(null)} className="flex-1 py-3 bg-transparent text-[#4A5568] dark:text-[#A0AEC0] border border-[#CBD5E0] dark:border-[#4A5568] font-medium text-xs tracking-widest uppercase hover:bg-[#FDFCF8] dark:hover:bg-[#171923] transition-colors rounded-sm">Dismiss</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

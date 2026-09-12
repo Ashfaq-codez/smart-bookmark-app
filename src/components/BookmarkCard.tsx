@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
 import toast from 'react-hot-toast'
 
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+const PdfIcon = () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#2B6CB0] dark:text-[#90CDF4]"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -25,6 +27,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
   const [editUrl, setEditUrl] = useState(bookmark.url || '')
@@ -56,7 +59,15 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     toast.success('Saved', { style: { background: 'transparent', color: 'inherit', border: '1px solid #CBD5E0', borderRadius: '4px' } })
   }
 
-  const handleConfirmDelete = async () => { await deleteBookmark(bookmark.id); setShowDeleteConfirm(false); handleCloseModal() }
+  const handleConfirmDelete = async () => { 
+    // Delete file from bucket if it exists
+    if (bookmark.file_path) {
+      await supabase.storage.from('attachments').remove([bookmark.file_path])
+    }
+    await deleteBookmark(bookmark.id); 
+    setShowDeleteConfirm(false); 
+    handleCloseModal(); 
+  }
 
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
   const isRealWebLink = bookmark.url && (bookmark.url.startsWith('http://') || bookmark.url.startsWith('https://')) && !bookmark.url.includes('/note-')
@@ -70,17 +81,36 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           
           <div className="border-b border-[#E5E0D8] dark:border-[#4A5568] px-4 py-2 flex items-center justify-between bg-[#FDFCF8] dark:bg-[#1A202C]">
             <span className="text-[9px] text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest truncate min-w-0">
-              {bookmark.type === 'note' ? 'Excerpt' : 'Reference'}
+              {bookmark.type === 'note' ? 'Excerpt' : bookmark.type === 'pdf' ? 'Document' : bookmark.type === 'video' ? 'Media' : 'Reference'}
             </span>
           </div>
 
           {bookmark.type === 'note' ? (
             <div className="p-6 md:p-8 flex flex-col min-w-0 gap-4 w-full">
               <span className="text-xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide truncate w-full">{bookmark.title}</span>
-              {/* FIX: Whitespace-pre-wrap natively handles single lines formatting */}
               <p className="text-sm font-serif text-[#4A5568] dark:text-[#CBD5E0] leading-relaxed whitespace-pre-wrap break-words line-clamp-6 w-full font-inherit">
                 {bookmark.content}
               </p>
+            </div>
+          ) : bookmark.type === 'video' ? (
+            <div className="w-full flex flex-col min-w-0">
+              <div className="w-full relative overflow-hidden border-b border-[#E5E0D8] dark:border-[#4A5568] bg-[#1A202C]">
+                <video src={bookmark.url} className="w-full h-48 object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
+              </div>
+              <div className="p-5 flex flex-col min-w-0 gap-1.5">
+                <h4 className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] truncate tracking-wide w-full">{bookmark.title}</h4>
+                <p className="text-[10px] text-[#2B6CB0] dark:text-[#90CDF4] uppercase tracking-widest truncate w-full">Local Media</p>
+              </div>
+            </div>
+          ) : bookmark.type === 'pdf' ? (
+            <div className="w-full flex flex-col min-w-0">
+              <div className="w-full h-48 relative overflow-hidden border-b border-[#E5E0D8] dark:border-[#4A5568] bg-[#F7FAFC] dark:bg-[#171923] flex items-center justify-center">
+                <PdfIcon />
+              </div>
+              <div className="p-5 flex flex-col min-w-0 gap-1.5">
+                <h4 className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] truncate tracking-wide w-full">{bookmark.title}</h4>
+                <p className="text-[10px] text-[#2B6CB0] dark:text-[#90CDF4] uppercase tracking-widest truncate w-full">Portable Document Format</p>
+              </div>
             </div>
           ) : (
             <div className="w-full flex flex-col min-w-0">
@@ -120,6 +150,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     spellCheck={false}
                   />
                 </div>
+              ) : bookmark.type === 'video' ? (
+                <div className="w-full h-full p-6 flex items-center justify-center bg-[#050505] transition-colors duration-500">
+                   <video src={bookmark.url} controls className="w-full max-h-full object-contain rounded-sm" />
+                </div>
+              ) : bookmark.type === 'pdf' ? (
+                <div className="w-full h-full flex items-center justify-center bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
+                   <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
+                </div>
               ) : (
                 <div className="w-full h-full p-8 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
                   <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center group">
@@ -146,11 +184,18 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     className="w-full bg-transparent border-none outline-none text-2xl md:text-4xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                   />
                   
-                  {/* Single Consolidated Source Link */}
                   {isRealWebLink && (
                     <div className="mt-4">
                       <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-medium">
                         <span>Read Source</span>
+                        <ExternalLinkIcon />
+                      </a>
+                    </div>
+                  )}
+                  {bookmark.file_path && (
+                    <div className="mt-4">
+                      <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-medium">
+                        <span>Download Original File</span>
                         <ExternalLinkIcon />
                       </a>
                     </div>
