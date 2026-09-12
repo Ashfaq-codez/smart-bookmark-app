@@ -248,7 +248,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── EDITORIAL INPUT / SEARCH RIBBON WITH ATTACHMENT ─── */}
       <div className={`fixed top-[72px] right-0 z-40 flex flex-col sm:flex-row border-b border-[#E5E0D8] dark:border-[#4A5568] bg-white dark:bg-[#2D3748] transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${isSidebarOpen ? 'md:w-[calc(100%-320px)] left-0 md:left-[320px]' : 'w-full left-0'}`}>
         
-        <div className="flex-[1.2] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
+        <div className="flex-[1.5] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
           <input
             type="text"
             placeholder="Search publications..."
