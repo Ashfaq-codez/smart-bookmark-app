@@ -12,7 +12,8 @@
     "activeTab",
     "contextMenus",
     "scripting",
-    "notifications"
+    "notifications",
+    "cookies"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
@@ -20,5 +21,11 @@
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["styles.css"]
+    }
+  ]
 }
