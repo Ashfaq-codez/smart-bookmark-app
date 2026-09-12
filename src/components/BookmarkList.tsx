@@ -20,7 +20,20 @@ function normalizeUrl(rawUrl: string): string {
   try {
     const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
     const parsed = new URL(withProto)
-    return `${parsed.protocol}//${parsed.hostname.toLowerCase().replace(/^www\./, '')}${parsed.pathname.replace(/\/+$/, '') || '/'}${parsed.search}`
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '')
+    const path = parsed.pathname.replace(/\/+$/, '') || '/'
+    let search = parsed.search
+
+    // Clean YouTube URLs to ONLY keep the video ID
+    if (host === 'youtube.com' && path === '/watch') {
+      const videoId = parsed.searchParams.get('v')
+      if (videoId) search = `?v=${videoId}`
+    } else if (host === 'youtu.be') {
+      const videoId = path.substring(1)
+      if (videoId) return `${parsed.protocol}//youtube.com/watch?v=${videoId}`
+    }
+
+    return `${parsed.protocol}//${host}${path}${search}`
   } catch { return trimmed.toLowerCase().replace(/\/+$/, '') }
 }
 
