@@ -136,6 +136,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
 
+    // Pre-check local state for exact matches
     if (isAllUrls && tokens.length === 1) {
       const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(tokens[0]))
       if (existing) { setDuplicateMatch(existing); return }
@@ -157,15 +158,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: rawInput, type: 'note' }
         
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        
+        // FIX: Parse the backend JSON payload BEFORE the 409 check
         const data = await res.json().catch(() => ({}))
 
         if (res.status === 409) {
+          // Force the modal open using the exact database entry returned by the backend
           if (data.existing) {
             setDuplicateMatch(data.existing)
           } else {
+            // Fallback to local state if the backend data payload drops
             const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
             if (match) setDuplicateMatch(match)
-            else toast.error('Item already cataloged.')
+            else toast.error('Item exists.')
           }
           setIsSaving(false)
           return
