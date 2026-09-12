@@ -1,9 +1,12 @@
 const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
 
+// Force Chrome to wipe the slate clean and rebuild the menus
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: "save-page", title: "Save Page to Hub", contexts: ["page"] });
-  chrome.contextMenus.create({ id: "save-image", title: "Save Image", contexts: ["image"] });
-  chrome.contextMenus.create({ id: "save-text", title: "Save as Note", contexts: ["selection"] });
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({ id: "save-page", title: "Save Page to Hub", contexts: ["page"] });
+    chrome.contextMenus.create({ id: "save-image", title: "Save Image", contexts: ["image"] });
+    chrome.contextMenus.create({ id: "save-text", title: "Save as Note", contexts: ["selection"] });
+  });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
