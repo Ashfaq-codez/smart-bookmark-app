@@ -11,7 +11,7 @@ interface SidebarProps {
 
 export default function Sidebar(props: SidebarProps) {
   return (
-    <aside className="w-full h-full flex flex-col bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white border-r border-gray-200 dark:border-gray-800 transition-colors duration-500 overflow-y-auto [&::-webkit-scrollbar]:w-0 font-sans pt-16">
+    <aside className="w-full h-full flex flex-col bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white border-r border-gray-200 dark:border-gray-800 transition-colors duration-500 overflow-y-auto [&::-webkit-scrollbar]:w-0 font-sans">
       
       <div className="px-6 py-5 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
         <h2 className="text-[10px] uppercase tracking-widest text-gray-500">The Index</h2>
