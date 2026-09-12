@@ -30,7 +30,6 @@ function normalizeUrl(rawUrl: string, type: string = 'link'): string {
     const path = parsed.pathname.replace(/\/+$/, '') || '/';
     let search = parsed.search;
 
-    // Clean YouTube URLs to ONLY keep the video ID
     if (host === 'youtube.com' && path === '/watch') {
       const videoId = parsed.searchParams.get('v');
       if (videoId) search = `?v=${videoId}`;
@@ -40,7 +39,6 @@ function normalizeUrl(rawUrl: string, type: string = 'link'): string {
     }
 
     const hash = type === 'note' ? parsed.hash : '';
-    
     return `${parsed.protocol}//${host}${path}${search}${hash}`;
   } catch {
     return trimmed.toLowerCase().replace(/\/+$/, '');
@@ -82,29 +80,46 @@ export async function POST(request: Request) {
 
     const itemType = customType || 'link';
     const isLink = itemType === 'link';
-    
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
 
-    // --- BULLETPROOF FUZZY DUPLICATE CHECK ---
+    // --- BULLETPROOF SPLIT DUPLICATE CHECK ---
     if (cleanUrl) {
-      // Strip protocol, www, trailing slashes, and hash fragments for a highly flexible search
-      const flexiblePath = cleanUrl
-        .replace(/^https?:\/\/(www\.)?/, '')
-        .replace(/\/$/, '')
-        .split('#')[0];
+      let existingRecord = null;
 
-      // Match exact path, path with slash, or path with fragments
-      const { data: existing } = await supabase
-        .from('bookmarks')
-        .select('id, title, url')
-        .eq('user_id', user.id)
-        .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
-        .limit(1)
-        .maybeSingle();
+      if (isLink) {
+        // For general links, use fuzzy matching (ignores slashes, www, hash, extra query params)
+        const flexiblePath = cleanUrl
+          .replace(/^https?:\/\/(www\.)?/, '')
+          .replace(/\/$/, '')
+          .split('#')[0];
 
-      if (existing) {
+        const { data } = await supabase
+          .from('bookmarks')
+          .select('id, title, url')
+          .eq('user_id', user.id)
+          .eq('type', 'link')
+          .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
+          .limit(1)
+          .maybeSingle();
+
+        existingRecord = data;
+      } else {
+        // For notes and images, require an EXACT match to allow multiple snippets from one page
+        const { data } = await supabase
+          .from('bookmarks')
+          .select('id, title, url')
+          .eq('user_id', user.id)
+          .eq('type', itemType)
+          .eq('url', cleanUrl)
+          .limit(1)
+          .maybeSingle();
+          
+        existingRecord = data;
+      }
+
+      if (existingRecord) {
         return NextResponse.json(
-          { error: 'Duplicate entry', message: 'Already saved', existing }, 
+          { error: 'Duplicate entry', message: 'Already saved', existing: existingRecord }, 
           { status: 409, headers: corsHeaders(origin) }
         );
       }
