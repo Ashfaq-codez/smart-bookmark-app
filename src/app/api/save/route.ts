@@ -29,7 +29,6 @@ function normalizeUrl(rawUrl: string, type: string = 'link'): string {
     const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
     const path = parsed.pathname.replace(/\/+$/, '') || '/';
     
-    // Keep the hash for text fragments, drop it for strict link duplicate checks
     const hash = type === 'note' ? parsed.hash : '';
     
     return `${parsed.protocol}//${host}${path}${parsed.search}${hash}`;
@@ -74,7 +73,6 @@ export async function POST(request: Request) {
     const itemType = customType || 'link';
     const isLink = itemType === 'link';
     
-    // Pass the itemType into the normalizer
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
 
     if (cleanUrl && isLink) {
@@ -87,7 +85,7 @@ export async function POST(request: Request) {
 
       if (existing) {
         return NextResponse.json(
-          { error: 'Duplicate entry', message: 'Already saved' },
+          { error: 'Duplicate entry', message: 'Already saved', existing }, 
           { status: 409, headers: corsHeaders(origin) }
         );
       }
@@ -97,7 +95,6 @@ export async function POST(request: Request) {
     let finalDescription = customDesc || null;
     let finalImage = customImg || null;
 
-    // ONLY scrape if it is an actual web link
     if (cleanUrl && isLink) {
       try {
         const response = await fetch(cleanUrl, {
@@ -117,7 +114,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Apply fallbacks ONLY if the title is still empty
     if (itemType === 'note') {
       finalTitle = finalTitle || 'Text Snippet';
     } else if (itemType === 'image') {

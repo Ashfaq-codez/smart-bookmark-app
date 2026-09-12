@@ -16,7 +16,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   } else if (info.menuItemId === "save-text") {
     let capturedText = info.selectionText || '';
 
-    // Run in-page extraction to retain pure newlines and exact source formatting
     try {
       const [{ result }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -27,17 +26,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
       if (result) capturedText = result;
     } catch {
-      // Fallback to info.selectionText if script injection is blocked
+      // Fallback to info.selectionText
     }
 
-    // --- BULLETPROOF TEXT FRAGMENT BUILDER ---
-    // 1. Clean whitespace but KEEP original punctuation for perfect matching
     const cleanText = capturedText.trim().replace(/\s+/g, ' ');
     const words = cleanText.split(' ');
     
     let scrollUrl = (tab.url || info.pageUrl).split('#')[0];
     
-    // 2. Build the start/end bounds. encodeURIComponent safely escapes page commas into %2C
     if (words.length > 8) {
       const startStr = encodeURIComponent(words.slice(0, 4).join(' '));
       const endStr = encodeURIComponent(words.slice(-4).join(' '));
@@ -65,6 +61,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (res.status === 409) {
       chrome.action.setBadgeText({ text: "DUP" });
       chrome.action.setBadgeBackgroundColor({ color: "#d97706" });
+      
+      chrome.notifications.create({
+        type: "basic",
+        iconUrl: "icon.png",
+        title: "Collision Detected",
+        message: "This entry already exists in your Space."
+      });
     } else if (res.ok) {
       chrome.action.setBadgeText({ text: "OK" });
       chrome.action.setBadgeBackgroundColor({ color: "#15803d" });

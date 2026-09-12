@@ -64,7 +64,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     updateColumns()
     const timer = setTimeout(() => setIsLoading(false), 300)
     
-    // Default open on desktop, closed on mobile
     if (window.innerWidth >= 768) setIsSidebarOpen(true)
     
     return () => { observer.disconnect(); clearTimeout(timer) }
@@ -74,7 +73,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const handleScroll = () => {
       const currentScrollY = window.scrollY
       
-      // Close sidebar automatically when scrolling down
       if (currentScrollY > lastScrollY && currentScrollY > 60) {
         setIsSidebarOpen(false) 
       }
@@ -157,11 +155,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         let finalUrl = rawInput
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: rawInput, type: 'note' }
+        
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        const data = await res.json().catch(() => ({}))
+
         if (res.status === 409) {
-          const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
-          if (match) { setDuplicateMatch(match); setIsSaving(false); return }
-          toast.error('Item exists.'); setIsSaving(false); return
+          if (data.existing) {
+            setDuplicateMatch(data.existing)
+          } else {
+            const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
+            if (match) setDuplicateMatch(match)
+            else toast.error('Item already cataloged.')
+          }
+          setIsSaving(false)
+          return
         }
         if (!res.ok) throw new Error('Failed')
       }
@@ -261,10 +268,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </header>
 
-      {/* ─── EDITORIAL INPUT / SEARCH RIBBON WITH INTUITIVE MOBILE LAYOUT ─── */}
       <div className={`fixed top-[72px] right-0 z-40 flex flex-col sm:flex-row border-b border-[#E5E0D8] dark:border-[#4A5568] bg-white dark:bg-[#2D3748] transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${isSidebarOpen ? 'md:w-[calc(100%-320px)] left-0 md:left-[320px]' : 'w-full left-0'}`}>
         
-        {/* Search Field */}
         <div className="flex-[1.2] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
           <input
             type="text"
@@ -275,10 +280,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           />
         </div>
 
-        {/* Input & Action Group (Unified for Mobile Intuition) */}
         <div className="flex-[1.5] flex items-stretch w-full">
           
-          {/* Attachment Button */}
           <div className="flex shrink-0 items-center justify-center border-r border-[#E5E0D8] dark:border-[#4A5568] px-3 sm:px-5">
             <input 
               type="file" 
@@ -297,7 +300,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </button>
           </div>
 
-          {/* Text Input & Send Button */}
           <div className="flex-1 flex items-stretch">
             <input
               type="text"
@@ -325,7 +327,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity" />}
 
-      {/* Padding top updated to accurately accommodate 2-row ribbon on mobile */}
       <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[175px] md:pt-[135px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
         <div className="w-full p-4 sm:p-8 md:p-10 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
           {isLoading ? (
