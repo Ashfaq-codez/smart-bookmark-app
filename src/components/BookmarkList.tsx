@@ -159,15 +159,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         
-        // FIX: Parse the backend JSON payload BEFORE the 409 check
+        // Parse the backend JSON payload BEFORE the 409 check[cite: 14]
         const data = await res.json().catch(() => ({}))
 
         if (res.status === 409) {
-          // Force the modal open using the exact database entry returned by the backend
+          // Force the modal open using the exact database entry returned by the backend[cite: 14]
           if (data.existing) {
             setDuplicateMatch(data.existing)
           } else {
-            // Fallback to local state if the backend data payload drops
+            // Fallback to local state if the backend data payload drops[cite: 14]
             const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
             if (match) setDuplicateMatch(match)
             else toast.error('Item exists.')
@@ -353,6 +353,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           )}
         </div>
       </main>
+
+      {/* ─── COLLISION MODAL ─── */}
+      {duplicateMatch && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-md transition-colors duration-500" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
+          <div className="w-full max-w-lg bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col shadow-xl transition-colors duration-500 rounded-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-8 flex flex-col gap-6">
+              <span className="text-[10px] uppercase tracking-widest text-[#718096] dark:text-[#A0AEC0]">Notice</span>
+              <h3 className="text-3xl font-serif text-[#2D3748] dark:text-[#E2E8F0] leading-none">
+                Entry Exists
+              </h3>
+              <div className="flex flex-col gap-1 border-l-2 border-[#2B6CB0] dark:border-[#90CDF4] pl-4 py-1">
+                <span className="text-sm font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate">{duplicateMatch.title}</span>
+                <span className="text-xs text-[#718096] dark:text-[#A0AEC0] truncate">{duplicateMatch.url}</span>
+              </div>
+              <div className="flex gap-4 mt-6">
+                <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-3 bg-[#2B6CB0] dark:bg-[#90CDF4] text-white dark:text-[#1A202C] font-medium text-xs tracking-widest uppercase hover:opacity-80 transition-opacity rounded-sm cursor-pointer">
+                  Review
+                </button>
+                <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-3 bg-transparent text-[#4A5568] dark:text-[#A0AEC0] border border-[#CBD5E0] dark:border-[#4A5568] font-medium text-xs tracking-widest uppercase hover:bg-[#FDFCF8] dark:hover:bg-[#171923] transition-colors rounded-sm cursor-pointer">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
