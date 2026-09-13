@@ -22,9 +22,10 @@ interface BookmarkCardProps {
   deleteBookmark: (id: number) => Promise<void>;
   forceOpenModal?: boolean;
   onCloseForcedModal?: () => void;
+  folderHierarchy?: Record<string, string[]>;
 }
 
-export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal }: BookmarkCardProps) {
+export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy }: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -80,7 +81,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (!isModalOpen) return
       
-      // Cascade Escape Priority
       if (e.key === 'Escape') {
         e.preventDefault()
         if (isFullscreenImage || isReaderMode) {
@@ -122,11 +122,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   return (
     <>
-      {/* ─── COLORFUL EDITORIAL CARD ─── */}
       <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full min-w-0 cursor-pointer select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
-        
         <div className="w-full bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col min-w-0 overflow-hidden transition-colors duration-500 shadow-sm hover:shadow-md rounded-sm">
-          
           <div className="border-b border-[#E5E0D8] dark:border-[#4A5568] px-4 py-2 flex items-center justify-between bg-[#FDFCF8] dark:bg-[#1A202C]">
             <span className="text-[9px] text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest truncate min-w-0">
               {bookmark.type === 'note' ? 'Excerpt' : bookmark.type === 'pdf' ? 'Document' : bookmark.type === 'video' ? 'Media' : 'Reference'}
@@ -184,7 +181,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <CloseIcon />
             </button>
 
-            {/* LEFT PANE: 60% */}
+            {/* LEFT PANE */}
             <div className={`w-full md:w-[60%] h-[50%] md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center'}`}>
               
               {bookmark.type === 'note' ? (
@@ -216,7 +213,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               )}
             </div>
 
-            {/* RIGHT PANE: 40% */}
+            {/* RIGHT PANE */}
             <div className="w-full md:w-[40%] h-[50%] md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto transition-colors duration-500">
               <div className="px-8 md:px-12 py-12 flex flex-col gap-12">
                 
@@ -238,7 +235,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                         <span>Read Source</span>
                         <ExternalLinkIcon />
                       </a>
-                      <span className="text-[11px] font-sans text-[#2B6CB0] dark:text-[#90CDF4] truncate max-w-full select-all mt-1">
+                      <span className="text-[11px] font-sans text-[#D97706] dark:text-[#FBD38D] truncate max-w-full select-all mt-1">
                         {bookmark.url}
                       </span>
                     </div>
@@ -253,26 +250,39 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   )}
                 </div>
 
-                {/* Organization */}
+                {/* Organization (Datalist Comboboxes) */}
                 <div className="flex flex-col gap-4 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">
                   <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Folder</label>
                   <div className="flex flex-col gap-4">
                     <input
                       type="text"
+                      list={`cats-${bookmark.id}`}
                       value={editCategory}
                       onChange={(e) => setEditCategory(e.target.value)}
                       onBlur={handleAutoSave}
                       placeholder="Main Folder"
                       className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                     />
+                    <datalist id={`cats-${bookmark.id}`}>
+                      {folderHierarchy && Object.keys(folderHierarchy).filter(c => c !== 'All').map(c => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+
                     <input
                       type="text"
+                      list={`subs-${bookmark.id}`}
                       value={editSubCategory}
                       onChange={(e) => setEditSubCategory(e.target.value)}
                       onBlur={handleAutoSave}
                       placeholder="Subfolder"
                       className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                     />
+                    <datalist id={`subs-${bookmark.id}`}>
+                      {folderHierarchy && editCategory && folderHierarchy[editCategory] && folderHierarchy[editCategory].map(s => (
+                        <option key={s} value={s} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 
@@ -335,7 +345,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
       {mounted && isReaderMode && createPortal(
         <div className="fixed inset-0 z-[100000] flex justify-center bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto" onClick={() => setIsReaderMode(false)}>
-          <button className="fixed top-6 right-6 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white p-2 z-10 transition-colors">
+          <button className="fixed top-6 right-6 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white p-2 z-10 transition-colors cursor-pointer">
             <CloseIcon />
           </button>
           <div className="w-full max-w-3xl py-16 md:py-24 px-6 md:px-12 flex flex-col" onClick={(e) => e.stopPropagation()}>

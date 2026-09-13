@@ -381,7 +381,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 md:gap-8 w-full flex-1 min-w-0">
                 {colBookmarks.map(bookmark => (
                   <BookmarkCard 
-                    key={bookmark.id} bookmark={bookmark} theme={{ card: '', btn: '', hover: '' }} isDragged={draggedId === bookmark.id} onDragStart={handleDragStart} onDragEnd={handleDragEnd} updateBookmark={updateBookmark} deleteBookmark={deleteBookmark} forceOpenModal={forcedInspectId === bookmark.id} onCloseForcedModal={() => setForcedInspectId(null)}
+                    key={bookmark.id} 
+                    bookmark={bookmark} 
+                    theme={{ card: '', btn: '', hover: '' }} 
+                    isDragged={draggedId === bookmark.id} 
+                    onDragStart={handleDragStart} 
+                    onDragEnd={handleDragEnd} 
+                    updateBookmark={updateBookmark} 
+                    deleteBookmark={deleteBookmark} 
+                    forceOpenModal={forcedInspectId === bookmark.id} 
+                    onCloseForcedModal={() => setForcedInspectId(null)}
+                    folderHierarchy={folderHierarchy}
                   />
                 ))}
               </div>
