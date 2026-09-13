@@ -31,7 +31,7 @@ export default function Sidebar(props: SidebarProps) {
           onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
           className={`flex items-center justify-between px-6 py-3 cursor-pointer transition-colors border-b border-[#E5E0D8] dark:border-[#4A5568] ${props.activeFilter === 'All' ? 'bg-[#EBF8FF] dark:bg-[#2A4365] text-[#2B6CB0] dark:text-[#90CDF4] font-medium' : 'hover:bg-white dark:hover:bg-[#2D3748] font-light text-[#4A5568] dark:text-[#A0AEC0]'}`}
         >
-          <span className="text-xs tracking-wide">All Publications</span>
+          <span className="text-xs tracking-wide">All Folders</span>
           <span className="text-[9px] font-mono">{props.getCounts['All'] || 0}</span>
         </div>
 

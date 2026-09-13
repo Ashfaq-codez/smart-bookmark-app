@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -38,19 +38,17 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (forceOpenModal) setIsModalOpen(true) }, [forceOpenModal])
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showDeleteConfirm) setShowDeleteConfirm(false)
-        else if (isModalOpen) handleCloseModal()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm])
 
-  const handleCloseModal = () => { setIsModalOpen(false); setShowDeleteConfirm(false); if (onCloseForcedModal) onCloseForcedModal() }
-  const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
+  // Sync local state when bookmark props update (e.g. dragging to a new folder)
+  useEffect(() => {
+    setEditTitle(bookmark.title || '')
+    setEditUrl(bookmark.url || '')
+    setEditCategory(bookmark.category || '')
+    setEditSubCategory(bookmark.sub_category || '')
+    setEditDescription(bookmark.description || '')
+    setEditContent(bookmark.content || '')
+  }, [bookmark])
+
   const formatUrl = (rawUrl: string) => { const t = rawUrl.trim(); if (!t) return ''; return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t }
 
   const handleAutoSave = async () => {
@@ -59,11 +57,47 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     toast.success('Saved', { style: { background: 'transparent', color: 'inherit', border: '1px solid #CBD5E0', borderRadius: '4px' } })
   }
 
-  const handleConfirmDelete = async () => { 
-    // Delete file from bucket if it exists
-    if (bookmark.file_path) {
-      await supabase.storage.from('attachments').remove([bookmark.file_path])
+  const handleCloseModal = () => { setIsModalOpen(false); setShowDeleteConfirm(false); if (onCloseForcedModal) onCloseForcedModal() }
+  
+  const handleCloseWithSave = async () => {
+    await handleAutoSave()
+    handleCloseModal()
+  }
+
+  // Smart Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (!isModalOpen) return
+      
+      if (showDeleteConfirm) {
+        if (e.key === 'Escape') setShowDeleteConfirm(false)
+        return
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        await handleCloseWithSave()
+        return
+      }
+
+      if (e.key === 'Enter') {
+        const activeTag = document.activeElement?.tagName.toLowerCase()
+        // Allow users to press enter inside text areas for new lines
+        if (activeTag === 'textarea') return 
+        
+        e.preventDefault()
+        await handleCloseWithSave()
+      }
     }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isModalOpen, showDeleteConfirm, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
+
+  const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
+
+  const handleConfirmDelete = async () => { 
+    if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
     await deleteBookmark(bookmark.id); 
     setShowDeleteConfirm(false); 
     handleCloseModal(); 
@@ -128,11 +162,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
       {/* ─── EDITORIAL MODAL ─── */}
       {mounted && isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onMouseDown={handleCloseModal}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onMouseDown={handleCloseWithSave}>
           
-          <div className="relative w-full  h-[95vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-2xl transition-colors duration-500 rounded-sm" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="relative w-full h-[95vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-2xl transition-colors duration-500 rounded-sm" onMouseDown={(e) => e.stopPropagation()}>
             
-            <button onClick={handleCloseModal} className="absolute top-4 right-4 z-50 p-2 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center">
+            <button onClick={handleCloseWithSave} className="absolute top-4 right-4 z-50 p-2 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center">
               <CloseIcon />
             </button>
 
@@ -172,7 +206,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               
               <div className="px-8 md:px-12 py-12 flex flex-col gap-12">
                 
-                {/* Title */}
+                {/* Title & Links */}
                 <div className="flex flex-col gap-2 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">
                   <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Title</label>
                   <input
@@ -185,11 +219,15 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   />
                   
                   {isRealWebLink && (
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-col gap-2">
                       <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-medium">
                         <span>Read Source</span>
                         <ExternalLinkIcon />
                       </a>
+                      {/* Non-editable, selectable URL field */}
+                      <span className="text-[11px] font-sans text-[#718096] dark:text-[#A0AEC0] truncate max-w-full select-all bg-black/5 dark:bg-white/5 px-2 py-1.5 rounded-sm border border-[#E5E0D8] dark:border-[#4A5568]">
+                        {bookmark.url}
+                      </span>
                     </div>
                   )}
                   {bookmark.file_path && (
@@ -204,14 +242,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                 {/* Organization */}
                 <div className="flex flex-col gap-4 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">
-                  <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Filing</label>
+                  <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Folder</label>
                   <div className="flex flex-col gap-4">
                     <input
                       type="text"
                       value={editCategory}
                       onChange={(e) => setEditCategory(e.target.value)}
                       onBlur={handleAutoSave}
-                      placeholder="Publication / Folder"
+                      placeholder="Main Folder"
                       className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                     />
                     <input
@@ -219,7 +257,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                       value={editSubCategory}
                       onChange={(e) => setEditSubCategory(e.target.value)}
                       onBlur={handleAutoSave}
-                      placeholder="Section / Subfolder"
+                      placeholder="Subfolder"
                       className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                     />
                   </div>
@@ -227,7 +265,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                 {/* Notes */}
                 <div className="flex-1 flex flex-col min-h-[160px] gap-4">
-                  <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Author Notes</label>
+                  <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Personal Notes</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
