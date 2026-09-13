@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -170,22 +170,25 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         </div>
       </div>
 
-      {/* ─── EDITORIAL MODAL ─── */}
+      {/* ─── EDITORIAL MODAL (Mobile Drawer / Desktop Modal) ─── */}
       {mounted && isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 md:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onMouseDown={handleCloseWithSave}>
+        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onMouseDown={handleCloseWithSave}>
           
-          <div className="relative w-full h-[95vh] sm:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-2xl transition-colors duration-500 rounded-sm" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-[0_-15px_40px_rgba(0,0,0,0.15)] md:shadow-2xl transition-all duration-300 rounded-t-2xl md:rounded-sm overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
             
-            <button onClick={handleCloseWithSave} className="absolute top-4 right-4 z-50 p-2 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center">
+            {/* Mobile Drag Indicator */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-[60] md:hidden pointer-events-none" />
+
+            <button onClick={handleCloseWithSave} className="absolute top-4 right-4 md:top-6 md:right-6 z-[100] p-2 bg-white/90 dark:bg-black/80 md:bg-transparent md:dark:bg-transparent backdrop-blur-md md:backdrop-blur-none text-[#2D3748] dark:text-white md:text-[#718096] md:dark:text-[#A0AEC0] hover:text-black md:hover:text-[#2D3748] md:dark:hover:text-white rounded-full md:rounded-none shadow-sm md:shadow-none transition-all cursor-pointer flex items-center justify-center">
               <CloseIcon />
             </button>
 
-            {/* LEFT PANE */}
-            <div className={`w-full md:w-[60%] h-[50%] md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center'}`}>
+            {/* LEFT PANE (Preview) */}
+            <div className={`w-full md:w-[60%] h-[35%] min-h-[200px] md:min-h-0 md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center'}`}>
               
               {bookmark.type === 'note' ? (
                 <div className="w-full h-full flex flex-col overflow-hidden relative group">
-                  <button onClick={() => setIsReaderMode(true)} className="absolute top-6 right-6 z-10 p-2 bg-white/80 dark:bg-black/50 hover:bg-white dark:hover:bg-black text-[#4A5568] dark:text-[#A0AEC0] rounded-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm border border-[#E5E0D8] dark:border-[#4A5568]" title="Fullscreen Reader">
+                  <button onClick={() => setIsReaderMode(true)} className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 p-2 bg-white/80 dark:bg-black/50 hover:bg-white dark:hover:bg-black text-[#4A5568] dark:text-[#A0AEC0] rounded-sm opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm border border-[#E5E0D8] dark:border-[#4A5568]" title="Fullscreen Reader">
                     <ExpandIcon />
                   </button>
                   <textarea
@@ -193,31 +196,37 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     onChange={(e) => setEditContent(e.target.value)}
                     onBlur={handleAutoSave}
                     placeholder="Enter text..."
-                    className="w-full h-full bg-transparent p-8 sm:p-12 md:p-20 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
+                    className="w-full h-full bg-transparent p-6 pt-12 md:p-20 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
                     spellCheck={false}
                   />
                 </div>
               ) : bookmark.type === 'video' ? (
-                <div className="w-full h-full p-6 flex items-center justify-center bg-[#050505] transition-colors duration-500">
+                <div className="w-full h-full p-6 pt-12 flex items-center justify-center bg-[#050505] transition-colors duration-500">
                    <video src={bookmark.url} controls className="w-full max-h-full object-contain rounded-sm" />
                 </div>
               ) : bookmark.type === 'pdf' ? (
-                <div className="w-full h-full flex items-center justify-center bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
+                <div className="w-full h-full pt-12 md:pt-0 flex items-center justify-center bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
                    <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
                 </div>
-              ) : (
-                <div className="w-full h-full p-8 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
+              ) : bookmark.type === 'image' ? (
+                <div className="w-full h-full p-6 pt-12 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
                   <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border border-[#E5E0D8] dark:border-[#4A5568] shadow-sm rounded-sm" />
+                </div>
+              ) : (
+                <div className="w-full h-full p-6 pt-12 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center group cursor-pointer hover:opacity-90 transition-opacity">
+                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border border-[#E5E0D8] dark:border-[#4A5568] shadow-sm rounded-sm" />
+                  </a>
                 </div>
               )}
             </div>
 
-            {/* RIGHT PANE */}
-            <div className="w-full md:w-[40%] h-[50%] md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto transition-colors duration-500">
-              <div className="px-8 md:px-12 py-12 flex flex-col gap-12">
+            {/* RIGHT PANE (Editor) */}
+            <div className="w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto transition-colors duration-500 pb-16 md:pb-0">
+              <div className="px-6 md:px-12 py-8 md:py-12 flex flex-col gap-10 md:gap-12">
                 
                 {/* Title & Links */}
-                <div className="flex flex-col gap-2 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">
+                <div className="flex flex-col gap-2 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-6 md:pb-8">
                   <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Title</label>
                   <input
                     type="text"
@@ -225,7 +234,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     onChange={(e) => setEditTitle(e.target.value)}
                     onBlur={handleAutoSave}
                     placeholder="Enter Title"
-                    className="w-full bg-transparent border-none outline-none text-2xl md:text-4xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
+                    className="w-full bg-transparent border-none outline-none text-xl md:text-4xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                   />
                   
                   {isRealWebLink && (
@@ -250,7 +259,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
                 {/* Organization (Custom Dropdowns) */}
-                <div className="flex flex-col gap-4 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">
+                <div className="flex flex-col gap-4 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-6 md:pb-8">
                   <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Folder</label>
                   <div className="flex flex-col gap-4">
                     
@@ -308,7 +317,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
                 {/* Notes */}
-                <div className="flex-1 flex flex-col min-h-[160px] gap-4">
+                <div className="flex-1 flex flex-col min-h-[140px] gap-4">
                   <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Personal Notes</label>
                   <textarea
                     value={editDescription}
@@ -320,7 +329,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
                 {/* Delete */}
-                <div className="flex items-center justify-start pt-8 border-t border-[#E5E0D8] dark:border-[#4A5568]">
+                <div className="flex items-center justify-start pt-6 border-t border-[#E5E0D8] dark:border-[#4A5568]">
                   <button 
                     onClick={() => setShowDeleteConfirm(true)} 
                     className="text-[#A0AEC0] dark:text-[#718096] hover:text-[#C53030] dark:hover:text-[#FC8181] font-sans text-[10px] uppercase tracking-widest transition-colors flex items-center gap-2 cursor-pointer"
