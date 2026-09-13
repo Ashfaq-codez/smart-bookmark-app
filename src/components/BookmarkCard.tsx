@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -30,9 +30,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
-  // Fullscreen States
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
   const [isReaderMode, setIsReaderMode] = useState(false)
+  
+  const [showCatDropdown, setShowCatDropdown] = useState(false)
+  const [showSubDropdown, setShowSubDropdown] = useState(false)
   
   const supabase = createClient()
 
@@ -46,7 +48,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (forceOpenModal) setIsModalOpen(true) }, [forceOpenModal])
 
-  // Lock background scroll when modal is open
   useEffect(() => {
     if (isModalOpen || forceOpenModal) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
@@ -93,14 +94,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           return
         }
         await handleCloseWithSave()
-        return
-      }
-
-      if (e.key === 'Enter') {
-        const activeTag = document.activeElement?.tagName.toLowerCase()
-        if (activeTag === 'textarea') return 
-        e.preventDefault()
-        await handleCloseWithSave()
       }
     }
     
@@ -119,6 +112,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
   const isRealWebLink = bookmark.url && (bookmark.url.startsWith('http://') || bookmark.url.startsWith('https://')) && !bookmark.url.includes('/note-')
+
+  const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
+  const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
+  
+  const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
+  const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
   return (
     <>
@@ -250,39 +249,61 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   )}
                 </div>
 
-                {/* Organization (Datalist Comboboxes) */}
+                {/* Organization (Custom Dropdowns) */}
                 <div className="flex flex-col gap-4 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">
                   <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Folder</label>
                   <div className="flex flex-col gap-4">
-                    <input
-                      type="text"
-                      list={`cats-${bookmark.id}`}
-                      value={editCategory}
-                      onChange={(e) => setEditCategory(e.target.value)}
-                      onBlur={handleAutoSave}
-                      placeholder="Main Folder"
-                      className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
-                    />
-                    <datalist id={`cats-${bookmark.id}`}>
-                      {folderHierarchy && Object.keys(folderHierarchy).filter(c => c !== 'All').map(c => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
+                    
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editCategory}
+                        onChange={(e) => { setEditCategory(e.target.value); setShowCatDropdown(true); }}
+                        onFocus={() => setShowCatDropdown(true)}
+                        onBlur={() => { setTimeout(() => setShowCatDropdown(false), 200); handleAutoSave(); }}
+                        placeholder="Main Folder"
+                        className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
+                      />
+                      {showCatDropdown && filteredCats.length > 0 && (
+                        <ul className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-lg rounded-sm py-1">
+                          {filteredCats.map(c => (
+                            <li 
+                              key={c} 
+                              onMouseDown={(e) => { e.preventDefault(); setEditCategory(c); setShowCatDropdown(false); }}
+                              className="px-4 py-2 text-sm text-[#2D3748] dark:text-[#E2E8F0] hover:bg-[#F7FAFC] dark:hover:bg-[#1A202C] cursor-pointer transition-colors"
+                            >
+                              {c}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
 
-                    <input
-                      type="text"
-                      list={`subs-${bookmark.id}`}
-                      value={editSubCategory}
-                      onChange={(e) => setEditSubCategory(e.target.value)}
-                      onBlur={handleAutoSave}
-                      placeholder="Subfolder"
-                      className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
-                    />
-                    <datalist id={`subs-${bookmark.id}`}>
-                      {folderHierarchy && editCategory && folderHierarchy[editCategory] && folderHierarchy[editCategory].map(s => (
-                        <option key={s} value={s} />
-                      ))}
-                    </datalist>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editSubCategory}
+                        onChange={(e) => { setEditSubCategory(e.target.value); setShowSubDropdown(true); }}
+                        onFocus={() => setShowSubDropdown(true)}
+                        onBlur={() => { setTimeout(() => setShowSubDropdown(false), 200); handleAutoSave(); }}
+                        placeholder="Subfolder"
+                        className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#2D3748] text-[#2D3748] dark:text-[#E2E8F0] border border-[#E5E0D8] dark:border-[#4A5568] outline-none focus:border-[#2B6CB0] dark:focus:border-[#90CDF4] transition-colors rounded-sm placeholder-[#A0AEC0] dark:placeholder-[#718096]"
+                      />
+                      {showSubDropdown && filteredSubs.length > 0 && (
+                        <ul className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-lg rounded-sm py-1">
+                          {filteredSubs.map(s => (
+                            <li 
+                              key={s} 
+                              onMouseDown={(e) => { e.preventDefault(); setEditSubCategory(s); setShowSubDropdown(false); }}
+                              className="px-4 py-2 text-sm text-[#2D3748] dark:text-[#E2E8F0] hover:bg-[#F7FAFC] dark:hover:bg-[#1A202C] cursor-pointer transition-colors"
+                            >
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
                   </div>
                 </div>
 
