@@ -99,7 +99,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal()
   }
 
-  // Swipe to close logic
+  // Swipe to close logic - Strictly bound to the drag handle
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY)
     setTouchEnd(0)
@@ -109,14 +109,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     setTouchEnd(e.targetTouches[0].clientY)
   }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return
     const distance = touchEnd - touchStart
-    const target = e.target as HTMLElement
-    const scrollable = target.closest('.overflow-y-auto')
     
-    // Trigger close if swiped down more than 80px and not currently scrolling down a list
-    if (distance > 80 && (!scrollable || scrollable.scrollTop <= 0)) {
+    // Explicit pull down of at least 45px on the top handle triggers close
+    if (distance > 45) {
       handleCloseWithSave()
     }
     
@@ -223,13 +221,17 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           <div 
             className={`relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-[0_-15px_40px_rgba(0,0,0,0.15)] md:shadow-2xl rounded-t-2xl md:rounded-sm overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
             onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             
-            {/* Mobile Drag Indicator */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-[60] md:hidden pointer-events-none" />
+            {/* Dedicated Mobile Drag Handle (Top Zone) */}
+            <div 
+              className="absolute top-0 left-0 w-full h-12 z-[60] md:hidden flex items-start justify-center pt-3 touch-none"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full pointer-events-none" />
+            </div>
 
             {/* Desktop Close Button (Hidden on Mobile) */}
             <button onClick={handleCloseWithSave} className="hidden md:flex absolute top-6 right-6 z-[100] p-2 bg-transparent text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-all cursor-pointer items-center justify-center">
@@ -249,7 +251,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     onChange={(e) => setEditContent(e.target.value)}
                     onBlur={handleAutoSave}
                     placeholder="Enter text..."
-                    className="w-full h-full bg-transparent p-6 pt-12 md:p-16 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
+                    className="w-full h-full bg-transparent p-6 pt-14 md:p-20 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
                     spellCheck={false}
                   />
                 </div>
