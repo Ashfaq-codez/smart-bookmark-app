@@ -1,4 +1,3 @@
-// src/components/BookmarkCard.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -29,7 +28,7 @@ interface BookmarkCardProps {
 export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy }: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isVisible, setIsVisible] = useState(false) // Controls CSS slide animation
+  const [isVisible, setIsVisible] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
@@ -37,6 +36,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
+  
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
   
   const supabase = createClient()
 
@@ -53,11 +55,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     if (forceOpenModal) setIsModalOpen(true) 
   }, [forceOpenModal])
 
-  // Slide Animation Trigger
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden'
-      const timer = setTimeout(() => setIsVisible(true), 10) // Micro-delay allows DOM mount before transition starts
+      const timer = setTimeout(() => setIsVisible(true), 10)
       return () => clearTimeout(timer)
     } else {
       document.body.style.overflow = ''
@@ -82,11 +83,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     toast.success('Saved', { style: { background: 'transparent', color: 'inherit', border: '1px solid #CBD5E0', borderRadius: '4px' } })
   }
 
-  // Graceful Unmount Pipeline
   const handleCloseModal = () => { 
-    setIsVisible(false) // Trigger CSS slide down
+    setIsVisible(false) 
     setTimeout(() => {
-      setIsModalOpen(false) // Physically unmount after transition
+      setIsModalOpen(false)
       setShowDeleteConfirm(false)
       setIsFullscreenImage(false)
       setIsReaderMode(false)
@@ -97,6 +97,31 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const handleCloseWithSave = async () => {
     await handleAutoSave()
     handleCloseModal()
+  }
+
+  // Swipe to close logic
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientY)
+    setTouchEnd(0)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientY)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchEnd - touchStart
+    const target = e.target as HTMLElement
+    const scrollable = target.closest('.overflow-y-auto')
+    
+    // Trigger close if swiped down more than 80px and not currently scrolling down a list
+    if (distance > 80 && (!scrollable || scrollable.scrollTop <= 0)) {
+      handleCloseWithSave()
+    }
+    
+    setTouchStart(0)
+    setTouchEnd(0)
   }
 
   useEffect(() => {
@@ -195,12 +220,19 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       {mounted && isModalOpen && createPortal(
         <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
           
-          <div className={`relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-[0_-15px_40px_rgba(0,0,0,0.15)] md:shadow-2xl rounded-t-2xl md:rounded-sm overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} onMouseDown={(e) => e.stopPropagation()}>
+          <div 
+            className={`relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] shadow-[0_-15px_40px_rgba(0,0,0,0.15)] md:shadow-2xl rounded-t-2xl md:rounded-sm overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             
             {/* Mobile Drag Indicator */}
             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-[60] md:hidden pointer-events-none" />
 
-            <button onClick={handleCloseWithSave} className="absolute top-4 right-4 md:top-6 md:right-6 z-[100] p-2 bg-[#F7FAFC] dark:bg-[#171923] md:bg-transparent md:dark:bg-transparent backdrop-blur-md md:backdrop-blur-none text-[#4A5568] dark:text-[#A0AEC0] md:text-[#718096] md:dark:text-[#A0AEC0] hover:bg-[#E2E8F0] dark:hover:bg-[#2D3748] md:hover:bg-transparent hover:text-black md:hover:text-[#2D3748] md:dark:hover:text-white rounded-full md:rounded-none shadow-sm md:shadow-none transition-all cursor-pointer flex items-center justify-center">
+            {/* Desktop Close Button (Hidden on Mobile) */}
+            <button onClick={handleCloseWithSave} className="hidden md:flex absolute top-6 right-6 z-[100] p-2 bg-transparent text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-all cursor-pointer items-center justify-center">
               <CloseIcon />
             </button>
 
@@ -217,26 +249,26 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     onChange={(e) => setEditContent(e.target.value)}
                     onBlur={handleAutoSave}
                     placeholder="Enter text..."
-                    className="w-full h-full bg-transparent p-6 pt-14 md:p-20 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
+                    className="w-full h-full bg-transparent p-6 pt-12 md:p-16 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
                     spellCheck={false}
                   />
                 </div>
               ) : bookmark.type === 'video' ? (
-                <div className="w-full h-full p-6 pt-14 flex items-center justify-center bg-[#050505] transition-colors duration-500">
-                   <video src={bookmark.url} controls className="w-full max-h-full object-contain rounded-sm" />
+                <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
+                   <video src={bookmark.url} controls className="w-full h-full object-contain" />
                 </div>
               ) : bookmark.type === 'pdf' ? (
-                <div className="w-full h-full pt-14 md:pt-0 flex items-center justify-center bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
+                <div className="w-full h-full bg-[#FDFCF8] dark:bg-[#1A202C] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                    <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
                 </div>
               ) : bookmark.type === 'image' ? (
-                <div className="w-full h-full p-6 pt-14 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
-                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border border-[#E5E0D8] dark:border-[#4A5568] shadow-sm rounded-sm" />
+                <div className="w-full h-full relative overflow-hidden bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
                 </div>
               ) : (
-                <div className="w-full h-full p-6 pt-14 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center group cursor-pointer hover:opacity-90 transition-opacity">
-                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border border-[#E5E0D8] dark:border-[#4A5568] shadow-sm rounded-sm" />
+                <div className="w-full h-full relative overflow-hidden bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
+                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
                   </a>
                 </div>
               )}
