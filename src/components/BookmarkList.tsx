@@ -362,12 +362,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      <div className={`fixed left-0 top-[0px] bottom-0 z-40 bg-[#FDFCF8] dark:bg-[#1A202C] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col ${isSidebarOpen ? 'translate-x-0 w-[85vw] sm:w-[320px]' : '-translate-x-full w-[320px]'}`}>
+      <div className={`fixed left-0 top-[0px] bottom-0 z-40 bg-[#FDFCF8] dark:bg-[#1A202C] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col w-[85vw] sm:w-[320px] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
-      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity" />}
-
+      <div onClick={() => setIsSidebarOpen(false)} className={`fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
+        
       <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[175px] md:pt-[135px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
         <div className="w-full p-4 sm:p-8 md:p-10 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
           {isLoading ? (

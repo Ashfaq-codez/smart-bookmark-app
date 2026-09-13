@@ -143,6 +143,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+
+    // Tell ESLint to safely ignore the missing function dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }

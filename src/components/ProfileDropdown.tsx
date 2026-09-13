@@ -15,6 +15,16 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
   const displayName = email ? email.split('@')[0] : 'Author'
 
   useEffect(() => {
+    const handleScroll = () => {
+      // Assuming your state variable is called 'isOpen' or 'isMenuOpen'
+      setIsOpen(false); 
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false) }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
