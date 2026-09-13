@@ -187,7 +187,23 @@ export async function POST(request: Request) {
             const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
             finalTitle = customTitle || scrapedTitle || cleanUrl; // Preserve customTitle
             finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-            finalImage = finalImage || $('meta[property="og:image"]').attr('content') || null;
+            
+            // --- NEW: Sanitize Image URLs to prevent 404s and Mixed Content ---
+            let scrapedImg = $('meta[property="og:image"]').attr('content');
+            if (scrapedImg) {
+              try {
+                // Convert relative URLs to absolute using the base URL
+                scrapedImg = new URL(scrapedImg, cleanUrl).href;
+                
+                // Force HTTPS to prevent Mixed Content warnings
+                if (scrapedImg.startsWith('http://')) {
+                  scrapedImg = scrapedImg.replace('http://', 'https://');
+                }
+                finalImage = finalImage || scrapedImg;
+              } catch (e) {
+                // Fails silently if URL construction crashes, falling back to null
+              }
+            }
           }
         }
       } catch (e) {
