@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PdfIcon = () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#2B6CB0] dark:text-[#90CDF4]"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
 
 interface BookmarkCardProps {
@@ -27,6 +28,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  
+  // Fullscreen States
+  const [isFullscreenImage, setIsFullscreenImage] = useState(false)
+  const [isReaderMode, setIsReaderMode] = useState(false)
+  
   const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
@@ -39,7 +45,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (forceOpenModal) setIsModalOpen(true) }, [forceOpenModal])
 
-  // Sync local state when bookmark props update (e.g. dragging to a new folder)
+  // Lock background scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen || forceOpenModal) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [isModalOpen, forceOpenModal])
+
   useEffect(() => {
     setEditTitle(bookmark.title || '')
     setEditUrl(bookmark.url || '')
@@ -57,34 +69,36 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     toast.success('Saved', { style: { background: 'transparent', color: 'inherit', border: '1px solid #CBD5E0', borderRadius: '4px' } })
   }
 
-  const handleCloseModal = () => { setIsModalOpen(false); setShowDeleteConfirm(false); if (onCloseForcedModal) onCloseForcedModal() }
+  const handleCloseModal = () => { setIsModalOpen(false); setShowDeleteConfirm(false); setIsFullscreenImage(false); setIsReaderMode(false); if (onCloseForcedModal) onCloseForcedModal() }
   
   const handleCloseWithSave = async () => {
     await handleAutoSave()
     handleCloseModal()
   }
 
-  // Smart Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (!isModalOpen) return
       
-      if (showDeleteConfirm) {
-        if (e.key === 'Escape') setShowDeleteConfirm(false)
-        return
-      }
-
+      // Cascade Escape Priority
       if (e.key === 'Escape') {
         e.preventDefault()
+        if (isFullscreenImage || isReaderMode) {
+          setIsFullscreenImage(false)
+          setIsReaderMode(false)
+          return
+        }
+        if (showDeleteConfirm) {
+          setShowDeleteConfirm(false)
+          return
+        }
         await handleCloseWithSave()
         return
       }
 
       if (e.key === 'Enter') {
         const activeTag = document.activeElement?.tagName.toLowerCase()
-        // Allow users to press enter inside text areas for new lines
         if (activeTag === 'textarea') return 
-        
         e.preventDefault()
         await handleCloseWithSave()
       }
@@ -92,7 +106,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
+  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
 
@@ -174,7 +188,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             <div className={`w-full md:w-[60%] h-[50%] md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center'}`}>
               
               {bookmark.type === 'note' ? (
-                <div className="w-full h-full flex flex-col overflow-hidden relative">
+                <div className="w-full h-full flex flex-col overflow-hidden relative group">
+                  <button onClick={() => setIsReaderMode(true)} className="absolute top-6 right-6 z-10 p-2 bg-white/80 dark:bg-black/50 hover:bg-white dark:hover:bg-black text-[#4A5568] dark:text-[#A0AEC0] rounded-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm border border-[#E5E0D8] dark:border-[#4A5568]" title="Fullscreen Reader">
+                    <ExpandIcon />
+                  </button>
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
@@ -193,17 +210,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                    <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
                 </div>
               ) : (
-                <div className="w-full h-full p-8 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500">
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center group">
-                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border border-[#E5E0D8] dark:border-[#4A5568] shadow-sm rounded-sm" />
-                  </a>
+                <div className="w-full h-full p-8 md:p-16 flex items-center justify-center relative bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
+                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-contain border border-[#E5E0D8] dark:border-[#4A5568] shadow-sm rounded-sm" />
                 </div>
               )}
             </div>
 
             {/* RIGHT PANE: 40% */}
             <div className="w-full md:w-[40%] h-[50%] md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto transition-colors duration-500">
-              
               <div className="px-8 md:px-12 py-12 flex flex-col gap-12">
                 
                 {/* Title & Links */}
@@ -224,8 +238,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                         <span>Read Source</span>
                         <ExternalLinkIcon />
                       </a>
-                      {/* Non-editable, selectable URL field */}
-                      <span className="text-[11px] font-sans text-[#718096] dark:text-[#A0AEC0] truncate max-w-full select-all bg-black/5 dark:bg-white/5 px-2 py-1.5 rounded-sm border border-[#E5E0D8] dark:border-[#4A5568]">
+                      <span className="text-[11px] font-sans text-[#2B6CB0] dark:text-[#90CDF4] truncate max-w-full select-all mt-1">
                         {bookmark.url}
                       </span>
                     </div>
@@ -304,6 +317,30 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ─── FULLSCREEN OVERLAYS ─── */}
+      {mounted && isFullscreenImage && createPortal(
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/95 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenImage(false)}>
+          <button className="absolute top-6 right-6 text-white/50 hover:text-white p-2">
+            <CloseIcon />
+          </button>
+          <img src={previewImageUrl} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
+        </div>,
+        document.body
+      )}
+
+      {mounted && isReaderMode && createPortal(
+        <div className="fixed inset-0 z-[100000] flex justify-center bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto" onClick={() => setIsReaderMode(false)}>
+          <button className="fixed top-6 right-6 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white p-2 z-10 transition-colors">
+            <CloseIcon />
+          </button>
+          <div className="w-full max-w-3xl py-16 md:py-24 px-6 md:px-12 flex flex-col" onClick={(e) => e.stopPropagation()}>
+             <h2 className="text-3xl md:text-5xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide mb-12 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">{bookmark.title}</h2>
+             <p className="font-serif text-lg md:text-xl text-[#2D3748] dark:text-[#E2E8F0] leading-relaxed whitespace-pre-wrap break-words">{bookmark.content}</p>
           </div>
         </div>,
         document.body
