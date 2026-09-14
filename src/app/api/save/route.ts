@@ -13,7 +13,7 @@ function corsHeaders(origin: string | null) {
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : 'https://smart-bookmark-app-lime.vercel.app',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, x-shortcut-token',
     'Access-Control-Allow-Credentials': 'true',
   };
 }
@@ -73,7 +73,6 @@ export async function POST(request: Request) {
 
     const itemType = customType || 'link';
     const isLink = itemType === 'link';
-    // Map extension descriptions to content for notes
     const finalContent = customContent || (itemType === 'note' ? customDesc : null); 
 
     if (!rawUrl && !finalContent) {
@@ -84,13 +83,30 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    // --- MULTI-TENANT AUTHENTICATION ROUTING ---
+    const apiKey = request.headers.get('x-api-key') || request.headers.get('x-shortcut-token');
+    let userId = null;
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders(origin) }
-      );
+    if (apiKey) {
+      // 1. Authenticate via SaaS API Key (iOS Shortcut / External Integrations)
+      const { data: keyData, error: keyError } = await supabase
+        .from('api_keys')
+        .select('user_id')
+        .eq('token', apiKey)
+        .single();
+
+      if (keyError || !keyData) {
+        return NextResponse.json({ error: 'Invalid or revoked API Key' }, { status: 401, headers: corsHeaders(origin) });
+      }
+      userId = keyData.user_id;
+    } else {
+      // 2. Authenticate via Web Browser Session
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders(origin) });
+      }
+      userId = user.id;
     }
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
@@ -107,7 +123,7 @@ export async function POST(request: Request) {
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('type', 'link')
           .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
           .limit(1)
@@ -115,11 +131,10 @@ export async function POST(request: Request) {
 
         existingRecord = data;
       } else if (itemType === 'note' && finalContent) {
-        // Content-based deduplication for notes to prevent snippet conflicts
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('type', 'note')
           .eq('content', finalContent)
           .limit(1)
@@ -130,7 +145,7 @@ export async function POST(request: Request) {
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('type', itemType)
           .eq('url', cleanUrl)
           .limit(1)
@@ -157,11 +172,10 @@ export async function POST(request: Request) {
         if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
           const response = await fetch(cleanUrl, {
             headers: { 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(3000), // Enforce strict 3-second timeout
+            signal: AbortSignal.timeout(3000), 
           });
 
           if (response.ok) {
-            // Stream response to prevent OOM memory exhaustion on massive files (512KB max)
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             let html = '';
@@ -185,24 +199,18 @@ export async function POST(request: Request) {
 
             const $ = cheerio.load(html);
             const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
-            finalTitle = customTitle || scrapedTitle || cleanUrl; // Preserve customTitle
+            finalTitle = customTitle || scrapedTitle || cleanUrl; 
             finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
             
-            // --- NEW: Sanitize Image URLs to prevent 404s and Mixed Content ---
             let scrapedImg = $('meta[property="og:image"]').attr('content');
             if (scrapedImg) {
               try {
-                // Convert relative URLs to absolute using the base URL
                 scrapedImg = new URL(scrapedImg, cleanUrl).href;
-                
-                // Force HTTPS to prevent Mixed Content warnings
                 if (scrapedImg.startsWith('http://')) {
                   scrapedImg = scrapedImg.replace('http://', 'https://');
                 }
                 finalImage = finalImage || scrapedImg;
-              } catch (e) {
-                // Fails silently if URL construction crashes, falling back to null
-              }
+              } catch (e) {}
             }
           }
         }
@@ -222,8 +230,7 @@ export async function POST(request: Request) {
     const { data: newBookmark, error: insertError } = await supabase
       .from('bookmarks')
       .insert([{
-        user_id: user.id,
-        // Enforce absolute fallback URL
+        user_id: userId,
         url: cleanUrl || `https://smart-bookmark.internal/note-${Date.now()}`,
         title: finalTitle,
         description: finalDescription,
