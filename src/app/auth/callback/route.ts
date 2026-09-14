@@ -10,10 +10,32 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient()
     
-    // This swaps the "Code" for a "Session"
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    // This swaps the "Code" for a "Session" and extracts the user data
+    const { data: authData, error } = await supabase.auth.exchangeCodeForSession(code)
     
-    if (!error) {
+    if (!error && authData?.user) {
+      
+      // --- NEW: Zero-Friction Onboarding for First-Time Users ---
+      const { count } = await supabase
+        .from('bookmarks')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', authData.user.id)
+
+      if (count === 0) {
+        await supabase.from('bookmarks').insert([
+          {
+            user_id: authData.user.id,
+            url: 'https://smart-bookmark.internal/welcome',
+            title: 'Welcome to Space',
+            description: 'Your personal, real-time curation engine. Drop links, highlight text, or save images from anywhere.',
+            category: 'Inbox',
+            type: 'note',
+            tags: ['onboarding']
+          }
+        ])
+      }
+      // ---------------------------------------------------------
+
       const forwardedHost = request.headers.get('x-forwarded-host') 
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
@@ -26,7 +48,7 @@ export async function GET(request: Request) {
       }
     } else {
       // Log the exact error to your terminal so you can see why it failed
-      console.error("Auth Exchange Error:", error.message)
+      console.error("Auth Exchange Error:", error?.message)
     }
   }
 
