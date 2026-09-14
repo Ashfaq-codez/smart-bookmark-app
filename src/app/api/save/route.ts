@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 
 const ALLOWED_ORIGINS = new Set([
@@ -82,15 +83,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    // Default to cookie-based client for web app requests
+    let supabase = await createClient();
     
     // --- MULTI-TENANT AUTHENTICATION ROUTING ---
     const apiKey = request.headers.get('x-api-key') || request.headers.get('x-shortcut-token');
     let userId = null;
 
     if (apiKey) {
-      // 1. Authenticate via SaaS API Key (iOS Shortcut / External Integrations)
-      const { data: keyData, error: keyError } = await supabase
+      // 1. Authenticate via SaaS API Key using Admin Client to bypass RLS
+      const adminSupabase = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: keyData, error: keyError } = await adminSupabase
         .from('api_keys')
         .select('user_id')
         .eq('token', apiKey)
@@ -99,7 +106,11 @@ export async function POST(request: Request) {
       if (keyError || !keyData) {
         return NextResponse.json({ error: 'Invalid or revoked API Key' }, { status: 401, headers: corsHeaders(origin) });
       }
+      
       userId = keyData.user_id;
+      
+      // Override the database client for the rest of this execution so inserts succeed
+      supabase = adminSupabase;
     } else {
       // 2. Authenticate via Web Browser Session
       const { data: { user }, error: authError } = await supabase.auth.getUser();
