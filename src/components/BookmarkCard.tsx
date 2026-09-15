@@ -20,7 +20,6 @@ const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill
 const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
 const TikTokIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
 
-// Safe Fallback PDF Icon
 const CleanPdfIcon = () => (
   <svg width="48" height="64" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0 2C0 0.895431 0.89543 0 2 0H14L24 10V30C24 31.1046 23.1046 32 22 32H2C0.89543 32 0 31.1046 0 30V2Z" fill="#3B82F6"/>
@@ -34,6 +33,18 @@ const CleanPdfIcon = () => (
 const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
+};
+
+// Safe Text Parser to turn mentions, hashtags, and links into Twitter Blue
+const renderTwitterText = (text: string) => {
+  if (!text) return null;
+  const parts = text.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
+  return parts.map((part, i) => {
+    if (part.match(/^(https?:\/\/[^\s]+|@\w+|#\w+)$/)) {
+      return <span key={i} className="text-[#1DA1F2]">{part}</span>;
+    }
+    return <span key={i}>{part}</span>;
+  });
 };
 
 interface BookmarkCardProps {
@@ -178,14 +189,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return match ? match[1] : '';
   }
 
-  const getTweetId = (url: string) => {
-    const match = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
-    return match ? match[1] : '';
-  }
-
   const getTwitterAuthor = (url: string) => {
     const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)/);
     return match ? match[1] : 'unknown';
+  }
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toISOString().split('T')[0];
   }
 
   const deriveDisplayType = (b: Bookmark) => {
@@ -228,21 +239,20 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         {/* 1. THE OBJECT SHAPE */}
         {displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#1E2024] rounded-2xl p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5 relative">
-            <p className="text-[15px] font-serif text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full">
+            <p className="text-[16px] font-serif text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full">
               {bookmark.content}
             </p>
           </div>
           
         ) : displayType === 'twitter' ? (
-          // Custom X Layout for Grid (Using fallback image because backend cannot pull .mp4 autonomously)
           <div className="w-full bg-white dark:bg-[#15171A] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
               <XIcon />
             </div>
             
-            <p className="text-[13px] font-sans text-gray-900 dark:text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1">
-              {bookmark.description || bookmark.content || bookmark.title}
+            <p className="text-[14px] font-sans text-gray-900 dark:text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1">
+              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
             </p>
             
             {bookmark.image_url && (
@@ -261,7 +271,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               </div>
             )}
             
-            <p className="text-[11px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
+            <p className="text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
               by {getTwitterAuthor(bookmark.url)}
             </p>
           </div>
@@ -284,6 +294,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
         ) : displayType === 'youtube' ? (
           <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-sm bg-black border border-transparent dark:border-white/5">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
             <img src={ytHighResThumbnail || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10">
               <PlayCircleIcon className="w-12 h-12 text-white drop-shadow-lg" />
@@ -296,7 +307,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'pdf' ? (
-          // PERFECT PDF FOLDED PAPER UI (Scaled iframe crops out native browser padding)
+          // PERFECT PDF FOLDED PAPER UI (Centered scale crops out native browser padding)
           <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl overflow-hidden flex items-center justify-center p-4 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5">
             <div 
               className="w-full h-full bg-white shadow-xl relative flex flex-col items-center justify-center overflow-hidden"
@@ -306,7 +317,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
                    src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                   className="absolute top-[-16px] left-[-16px] w-[calc(200%+32px)] h-[calc(200%+32px)] scale-[0.5] origin-top-left border-none pointer-events-none" 
+                   className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
                    title="PDF Preview"
                    scrolling="no"
                    tabIndex={-1}
@@ -327,11 +338,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         {displayType !== 'note' && displayType !== 'twitter' && (
           <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1">
             {hasValidTitle && (
-              <h4 className="text-[13px] font-semibold font-sans text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug w-full">
+              <h4 className="text-[14px] font-semibold font-sans text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug w-full">
                 {bookmark.title}
               </h4>
             )}
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
+            <p className="text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
               {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
             </p>
           </div>
@@ -379,16 +390,33 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // NATIVE TWITTER WIDGET IN MODAL WITH NO SCROLLBARS
-                <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#000000] p-0 overflow-hidden">
-                  <div className="w-full max-w-[550px] h-full overflow-hidden relative pointer-events-auto flex items-center justify-center">
-                    <iframe 
-                      src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${getTweetId(bookmark.url)}`} 
-                      className="w-full h-[95%] border-none bg-transparent block" 
-                      scrolling="no"
-                      style={{ overflow: 'hidden' }}
-                      title="X Post"
-                    />
+                // EXACT CUSTOM TWITTER MODAL UI (Perfectly Centered via m-auto)
+                <div className="w-full h-full flex bg-[#151618] overflow-y-auto p-4 md:p-8">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto">
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+                    
+                    <div className="p-6 md:p-8 flex flex-col gap-5">
+                      <p className="text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
+                      </p>
+                      
+                      {bookmark.image_url && (
+                        <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
+                          {isVideoMedia(bookmark.image_url) ? (
+                             <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain max-h-[50vh] block" />
+                          ) : (
+                             <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-[#718096]">
+                      <span className="text-[12px] font-sans">
+                        Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
+                      </span>
+                      <XIcon />
+                    </div>
                   </div>
                 </div>
 
@@ -585,7 +613,18 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         document.body
       )}
 
-      {/* Reader Overlay omitted here for brevity since it's unmodified */}
+      {mounted && isReaderMode && createPortal(
+        <div className="fixed inset-0 z-[100000] flex justify-center bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto" onClick={() => setIsReaderMode(false)}>
+          <button className="fixed top-4 right-4 md:top-6 md:right-6 text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-2 z-[110] transition-colors cursor-pointer">
+            <CloseIcon />
+          </button>
+          <div className="w-full max-w-3xl py-20 md:py-24 px-6 md:px-12 flex flex-col" onClick={(e) => e.stopPropagation()}>
+             <h2 className="text-3xl md:text-5xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide mb-12 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-8">{bookmark.title}</h2>
+             <p className="font-serif text-lg md:text-xl text-[#2D3748] dark:text-[#E2E8F0] leading-relaxed whitespace-pre-wrap break-words">{bookmark.content}</p>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   )
 }
