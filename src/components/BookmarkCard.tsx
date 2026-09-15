@@ -20,6 +20,16 @@ const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill
 const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
 const TikTokIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
 
+const CleanPdfIcon = () => (
+  <svg width="48" height="64" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 2C0 0.895431 0.89543 0 2 0H14L24 10V30C24 31.1046 23.1046 32 22 32H2C0.89543 32 0 31.1046 0 30V2Z" fill="#3B82F6"/>
+    <path d="M14 0V10H24L14 0Z" fill="#93C5FD"/>
+    <rect x="4" y="14" width="16" height="2" rx="1" fill="white"/>
+    <rect x="4" y="19" width="16" height="2" rx="1" fill="white"/>
+    <rect x="4" y="24" width="10" height="2" rx="1" fill="white"/>
+  </svg>
+)
+
 interface BookmarkCardProps {
   bookmark: Bookmark;
   theme: { card: string; btn: string; hover: string };
@@ -156,15 +166,20 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal(); 
   }
 
-  // --- NATIVE ID EXTRACTORS ---
+  // --- NATIVE ID & DATA EXTRACTORS ---
   const getYouTubeId = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
     return match ? match[1] : '';
   }
 
-  const getTweetId = (url: string) => {
-    const match = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
-    return match ? match[1] : '';
+  const getTwitterAuthor = (url: string) => {
+    const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)/);
+    return match ? match[1] : 'unknown';
+  }
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toISOString().split('T')[0];
   }
 
   const deriveDisplayType = (b: Bookmark) => {
@@ -213,22 +228,27 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'twitter' ? (
-          <div className="w-full bg-white dark:bg-[#15171A] rounded-2xl p-4 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 relative overflow-hidden">
+          // NATIVE TWITTER CUSTOM GRID UI (Matching mymind DOM)
+          <div className="w-full bg-[#1C1D21] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
-            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
+            <div className="text-gray-500 mt-1 pl-1">
               <XIcon />
             </div>
-            <p className="text-[14px] font-sans text-gray-900 dark:text-gray-100 line-clamp-6 w-full leading-snug whitespace-pre-wrap px-1">
+            <p className="text-[13px] font-sans text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1">
               {bookmark.content || bookmark.title}
             </p>
             {bookmark.image_url && (
-              <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
-                <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
-                   <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
+              <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-white/5">
+                {bookmark.image_url.endsWith('.mp4') ? (
+                  <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto max-h-56 object-cover block" />
+                ) : (
+                  <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
+                )}
               </div>
             )}
+            <p className="text-[11px] text-[#6B7280] font-sans mt-1 px-1">
+              by {getTwitterAuthor(bookmark.url)}
+            </p>
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
@@ -261,30 +281,23 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'pdf' ? (
-          // EXACT DOM REPLICA FOR PDF COVER
           <div className="w-full relative aspect-[3/4] bg-[#8CA3AE] dark:bg-[#334155] rounded-xl overflow-hidden flex items-center justify-center p-5 md:p-6 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] border border-transparent dark:border-white/5">
-            
             <div 
               className="w-full h-full bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] relative flex flex-col items-center justify-center overflow-hidden"
               style={{ clipPath: 'polygon(0 0, calc(100% - 48px) 0, 100% 48px, 100% 100%, 0 100%)' }}
             >
-              {/* Folded Corner */}
               <div className="absolute top-0 right-0 w-[48px] h-[48px] bg-[#E2E8F0] shadow-[-4px_4px_10px_rgba(0,0,0,0.1)] rounded-bl-xl z-30" />
-              
-              {/* Scaled Iframe to Render Actual PDF Page cleanly */}
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
-                    src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                    className="absolute top-[-16px] left-[-16px] w-[calc(200%+32px)] h-[calc(200%+32px)] scale-[0.5] origin-top-left border-none bg-white pointer-events-none" 
-                    title="PDF Preview"
-                    scrolling="no"
-                    tabIndex={-1}
-                  />
-                 {/* Invisible Overlay blocks all iframe clicks so card drags/clicks normally */}
+                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                   className="absolute top-[-16px] left-[-16px] w-[calc(200%+32px)] h-[calc(200%+32px)] scale-[0.5] origin-top-left border-none bg-white pointer-events-none" 
+                   title="PDF Preview"
+                   scrolling="no"
+                   tabIndex={-1}
+                 />
                  <div className="absolute inset-0 z-20 bg-transparent" />
               </div>
             </div>
-
           </div>
           
         ) : (
@@ -350,17 +363,37 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // NATIVE TWITTER IFRAME EMBED
-                <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#000000] overflow-y-auto p-2 md:p-4">
-                  <iframe 
-                    src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${getTweetId(bookmark.url)}`} 
-                    className="w-full max-w-[550px] h-full border-none bg-transparent" 
-                    title="X Post"
-                  />
+                // EXACT CUSTOM TWITTER MODAL UI (Replaces Native Iframe)
+                <div className="w-full h-full flex items-center justify-center bg-[#151618] overflow-y-auto p-4 md:p-8">
+                  <div className="w-full max-w-[480px] bg-[#1C1E23] rounded-xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5">
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+                    
+                    <div className="p-6 md:p-8 flex flex-col gap-4">
+                      <p className="text-[14px] md:text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {bookmark.content || bookmark.title}
+                      </p>
+                      
+                      {bookmark.image_url && (
+                        <div className="w-full relative rounded-lg overflow-hidden border border-white/5">
+                          {bookmark.image_url.endsWith('.mp4') ? (
+                             <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain bg-black/20" />
+                          ) : (
+                             <img src={bookmark.image_url} className="w-full h-auto object-contain bg-black/20" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-[#718096]">
+                      <span className="text-[11px] font-sans">
+                        Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
+                      </span>
+                      <XIcon />
+                    </div>
+                  </div>
                 </div>
 
               ) : displayType === 'youtube' ? (
-                // NATIVE YOUTUBE IFRAME EMBED (Autoplay off)
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                   <iframe 
                     src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
@@ -372,7 +405,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
-                // DISCREET INFO ICON FOR RESTRICTED PLATFORMS (No screen blocking)
                 <div className="w-full h-full relative flex items-center justify-center bg-gray-100 dark:bg-[#0f1419] overflow-hidden">
                   <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
                   
