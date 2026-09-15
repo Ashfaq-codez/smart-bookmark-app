@@ -177,7 +177,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 <span className="text-sm font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest truncate w-full">{bookmark.title}</span>
               )}
               <p className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] leading-relaxed whitespace-pre-wrap break-words line-clamp-6 w-full italic">
-                "{bookmark.content}"
+                &quot;{bookmark.content}&quot;
               </p>
             </div>
             
