@@ -12,6 +12,7 @@ const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" f
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 
 // Social Brand Icons
 const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
@@ -19,9 +20,8 @@ const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill
 const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
 const TikTokIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
 
-// Pure CSS SVG Document Icon for PDF
 const CleanPdfIcon = () => (
-  <svg width="64" height="84" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="48" height="64" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0 2C0 0.895431 0.89543 0 2 0H14L24 10V30C24 31.1046 23.1046 32 22 32H2C0.89543 32 0 31.1046 0 30V2Z" fill="#3B82F6"/>
     <path d="M14 0V10H24L14 0Z" fill="#93C5FD"/>
     <rect x="4" y="14" width="16" height="2" rx="1" fill="white"/>
@@ -166,7 +166,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal(); 
   }
 
-  // Native ID extractors for Modal iFrames
+  // Extractors for Native Modal Embeds
   const getYouTubeId = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
     return match ? match[1] : '';
@@ -177,7 +177,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return match ? match[1] : '';
   }
 
-  // --- DYNAMIC TYPE DERIVATION ---
   const deriveDisplayType = (b: Bookmark) => {
     if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
     if (b.url) {
@@ -191,16 +190,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
     return b.type || 'link';
   }
+  
   const displayType = deriveDisplayType(bookmark);
-
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
+  const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
-
-  // Clean identification to hide default database strings
-  const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
 
   return (
     <>
@@ -271,14 +268,21 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'pdf' ? (
-          // Pure CSS Folded Paper layout with static blue Document SVG inside
-          <div className="w-full relative aspect-[3/4] p-2">
-            <div 
-              className="w-full h-full bg-white dark:bg-[#E2E8F0] shadow-sm relative flex flex-col items-center justify-center"
-              style={{ clipPath: 'polygon(0 0, calc(100% - 40px) 0, 100% 40px, 100% 100%, 0 100%)' }}
-            >
-              <div className="absolute top-0 right-0 w-[40px] h-[40px] bg-gray-200 dark:bg-gray-300 shadow-[-4px_4px_8px_rgba(0,0,0,0.1)] rounded-bl-lg z-10" />
-              <CleanPdfIcon />
+          // Pure CSS Folded Paper layout with actual cover image
+          <div className="w-full relative aspect-[3/4] bg-[#F4F4F5] dark:bg-[#1A202C] rounded-2xl overflow-hidden border border-transparent dark:border-white/5">
+            <div className="absolute inset-4">
+              <div 
+                className="w-full h-full bg-white dark:bg-[#2D3748] shadow-md relative flex flex-col items-center justify-center overflow-hidden"
+                style={{ clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)' }}
+              >
+                <div className="absolute top-0 right-0 w-[32px] h-[32px] bg-gray-200 dark:bg-gray-600 shadow-[-2px_2px_4px_rgba(0,0,0,0.15)] rounded-bl z-20" />
+                <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display='none'; }} />
+                {!bookmark.image_url && (
+                  <div className="absolute inset-0 flex items-center justify-center z-0">
+                    <CleanPdfIcon />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
@@ -345,8 +349,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // NATIVE TWITTER IFRAME EMBED (No more Sorry Note)
-                <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#000000] overflow-y-auto p-4">
+                // EXACT NATIVE TWITTER IFRAME EMBED (No more Sorry Note)
+                <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#000000] overflow-y-auto p-2 md:p-4">
                   <iframe 
                     src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${getTweetId(bookmark.url)}`} 
                     className="w-full max-w-[550px] h-[95%] border-none bg-transparent" 
@@ -355,35 +359,40 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'youtube' ? (
-                // NATIVE YOUTUBE IFRAME EMBED
+                // EXACT NATIVE YOUTUBE IFRAME EMBED (Autoplay off)
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                   <iframe 
-                    src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}?autoplay=1`} 
+                    src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
                     className="w-full h-full border-none" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                     allowFullScreen 
                     title="YouTube Video"
                   />
                 </div>
 
               ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
-                // RESTRICTED PLATFORMS (Sorry Note Overlay remains)
-                <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-[#0f1419]">
-                  <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover absolute inset-0 blur-2xl opacity-40 scale-110" />
+                // SLEEK INSTAGRAM/TIKTOK INFO BANNER (No screen blocking)
+                <div className="w-full h-full relative flex items-center justify-center bg-gray-100 dark:bg-[#0f1419] overflow-hidden">
+                  <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
                   
-                  <div className="relative z-10 p-6 md:p-8 w-[85%] max-w-[320px] bg-white/90 dark:bg-[#1A202C]/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl flex flex-col items-center gap-4 text-center border border-white/20">
-                     <div className="w-14 h-14 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm mb-1">
-                        <PlayCircleIcon className="w-7 h-7 text-gray-800 dark:text-gray-200" />
+                  {/* Floating Information Banner */}
+                  <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 right-4 md:right-8 z-20">
+                     <div className="w-full max-w-md bg-white/95 dark:bg-[#1A202C]/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-5 flex flex-col md:flex-row items-start md:items-center gap-4">
+                        <div className="bg-[#E1306C]/10 dark:bg-[#E1306C]/20 p-3 rounded-full shrink-0">
+                           <InfoIcon className="w-6 h-6 text-[#E1306C]" />
+                        </div>
+                        <div className="flex flex-col gap-1.5 flex-1">
+                           <p className="text-[13px] font-medium font-sans text-gray-900 dark:text-white leading-tight">
+                             This content will play at the original link.
+                           </p>
+                           <p className="text-[11px] font-sans text-gray-500 dark:text-gray-400 leading-relaxed">
+                             Platforms like {displayType === 'instagram' ? 'Instagram' : 'TikTok'} sadly block us from saving videos outside their platforms. This is out of our control.
+                           </p>
+                        </div>
+                        <a href={bookmark.url} target="_blank" rel="noreferrer" className="shrink-0 px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform shadow-md mt-2 md:mt-0">
+                           Watch
+                        </a>
                      </div>
-                     <p className="text-[14px] font-medium font-sans text-gray-900 dark:text-gray-100 leading-tight">
-                       This content plays at the original link, not within Space.
-                     </p>
-                     <p className="text-[12px] font-sans text-gray-500 dark:text-gray-400 leading-relaxed px-2">
-                       Platforms like {displayType === 'instagram' ? 'Instagram' : 'TikTok'} actively block us from embedding their content outside their walls. This is out of our control.
-                     </p>
-                     <a href={bookmark.url} target="_blank" rel="noreferrer" className="mt-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform shadow-md">
-                       Watch Original
-                     </a>
                   </div>
                 </div>
 
