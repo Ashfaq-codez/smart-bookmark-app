@@ -30,6 +30,12 @@ const CleanPdfIcon = () => (
   </svg>
 )
 
+// Bulletproof check for video files hidden behind query parameters
+const isVideoMedia = (url?: string | null) => {
+  if (!url) return false;
+  return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
+};
+
 interface BookmarkCardProps {
   bookmark: Bookmark;
   theme: { card: string; btn: string; hover: string };
@@ -228,24 +234,27 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'twitter' ? (
-          // NATIVE TWITTER CUSTOM GRID UI (Matching mymind DOM)
+          // EXACT MYMIND TWITTER GRID LAYOUT
           <div className="w-full bg-[#1C1D21] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-gray-500 mt-1 pl-1">
               <XIcon />
             </div>
+            
             <p className="text-[13px] font-sans text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1">
-              {bookmark.content || bookmark.title}
+              {bookmark.description || bookmark.content || bookmark.title}
             </p>
+            
             {bookmark.image_url && (
               <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-white/5">
-                {bookmark.image_url.endsWith('.mp4') ? (
+                {isVideoMedia(bookmark.image_url) ? (
                   <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto max-h-56 object-cover block" />
                 ) : (
                   <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
                 )}
               </div>
             )}
+            
             <p className="text-[11px] text-[#6B7280] font-sans mt-1 px-1">
               by {getTwitterAuthor(bookmark.url)}
             </p>
@@ -277,7 +286,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
         ) : displayType === 'video' ? (
           <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-sm bg-black border border-transparent dark:border-white/5">
-            <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
+            <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
         ) : displayType === 'pdf' ? (
@@ -308,8 +317,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         )}
 
         {/* 2. THE FLOATING METADATA */}
-        {displayType !== 'note' && (
-          <div className="px-1 flex flex-col min-w-0 gap-1 w-full">
+        {displayType !== 'note' && displayType !== 'twitter' && (
+          <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1">
             {hasValidTitle && (
               <h4 className="text-[13px] font-semibold font-sans text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug w-full">
                 {bookmark.title}
@@ -363,29 +372,29 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // EXACT CUSTOM TWITTER MODAL UI (Replaces Native Iframe)
+                // EXACT MYMIND CUSTOM TWITTER MODAL UI
                 <div className="w-full h-full flex items-center justify-center bg-[#151618] overflow-y-auto p-4 md:p-8">
-                  <div className="w-full max-w-[480px] bg-[#1C1E23] rounded-xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 my-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                     
-                    <div className="p-6 md:p-8 flex flex-col gap-4">
-                      <p className="text-[14px] md:text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
-                        {bookmark.content || bookmark.title}
+                    <div className="p-6 md:p-8 flex flex-col gap-5">
+                      <p className="text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {bookmark.description || bookmark.content || bookmark.title}
                       </p>
                       
                       {bookmark.image_url && (
-                        <div className="w-full relative rounded-lg overflow-hidden border border-white/5">
-                          {bookmark.image_url.endsWith('.mp4') ? (
-                             <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain bg-black/20" />
+                        <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
+                          {isVideoMedia(bookmark.image_url) ? (
+                             <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain max-h-[50vh] block" />
                           ) : (
-                             <img src={bookmark.image_url} className="w-full h-auto object-contain bg-black/20" />
+                             <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
                           )}
                         </div>
                       )}
                     </div>
                     
                     <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-[#718096]">
-                      <span className="text-[11px] font-sans">
+                      <span className="text-[12px] font-sans">
                         Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
                       </span>
                       <XIcon />
@@ -423,7 +432,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
               ) : displayType === 'video' ? (
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                   <video src={bookmark.url} controls className="w-full h-full object-contain" />
+                   <video src={bookmark.url} controls autoPlay className="w-full h-full object-contain" />
                 </div>
               ) : displayType === 'pdf' ? (
                 <div className="w-full h-full bg-[#FDFCF8] dark:bg-[#1A202C] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
