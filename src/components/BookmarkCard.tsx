@@ -20,6 +20,13 @@ const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill
 const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
 const TikTokIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
 
+// Instagram Native Modal Icons
+const InstaHeartIcon = () => <svg aria-label="Like" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.438-.283-1.791-1.509-4.303-3.752C5.152 14.081 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.514 1.117 1.514s.277-.339 1.117-1.514a4.21 4.21 0 0 1 3.675-1.941z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></path></svg>
+const InstaCommentIcon = () => <svg aria-label="Comment" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></path></svg>
+const InstaShareIcon = () => <svg aria-label="Share Post" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><line fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" x1="22" x2="9.218" y1="3" y2="10.083"></line><polygon fill="none" points="11.698 20.334 22 3.001 2 3.001 9.218 10.084 11.698 20.334" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></polygon></svg>
+const InstaSaveIcon = () => <svg aria-label="Save" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><polygon fill="none" points="20 21 12 13.44 4 21 4 3 20 3 20 21" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></polygon></svg>
+const InstaDotsIcon = () => <svg aria-label="More Options" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><circle cx="12" cy="12" r="1.5"></circle><circle cx="6" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>
+
 const CleanPdfIcon = () => (
   <svg width="48" height="64" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0 2C0 0.895431 0.89543 0 2 0H14L24 10V30C24 31.1046 23.1046 32 22 32H2C0.89543 32 0 31.1046 0 30V2Z" fill="#3B82F6"/>
@@ -35,7 +42,6 @@ const isVideoMedia = (url?: string | null) => {
   return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
 };
 
-// Safe Text Parser to turn mentions, hashtags, and links into Twitter Blue
 const renderTwitterText = (text: string) => {
   if (!text) return null;
   const parts = text.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
@@ -194,6 +200,26 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return match ? match[1] : 'unknown';
   }
 
+  const getInstaMeta = (b: Bookmark) => {
+    let username = 'instagram_user';
+    let likes = '';
+    let caption = b.content || b.description || '';
+
+    const descMatch = b.description?.match(/([\d,KMB]+)\s+likes?.*?-\s+([^ ]+)\s+on\s+[^:]+:\s+"(.*)"/i);
+    if (descMatch) {
+        likes = descMatch[1];
+        username = descMatch[2];
+        caption = descMatch[3];
+    } else if (b.title && b.title.includes('on Instagram:')) {
+        username = b.title.split(' on Instagram:')[0].replace(/[^a-zA-Z0-9_.]/g, '').toLowerCase();
+        caption = b.title.split('on Instagram: "')[1]?.slice(0, -1) || caption;
+    } else if (b.url) {
+        const urlMatch = b.url.match(/instagram\.com\/([^/]+)/);
+        if (urlMatch && !['p','reel','tv'].includes(urlMatch[1])) username = urlMatch[1];
+    }
+    return { username, likes, caption };
+  }
+
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     return new Date(dateString).toISOString().split('T')[0];
@@ -219,6 +245,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   const previewImageUrl = bookmark.image_url || ytHighResThumbnail || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
+  const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
   
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
@@ -245,9 +272,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'twitter' ? (
-          <div className="w-full bg-white dark:bg-[#15171A] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 relative overflow-hidden">
+          <div className="w-full bg-white dark:bg-[#1C1D21] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-transparent relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
-            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
+            <div className="text-gray-500 mt-1 pl-1">
               <XIcon />
             </div>
             
@@ -262,7 +289,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 ) : (
                   <>
                     <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
-                    {/* Fake play button purely for UI consistency since X blocks backend video extraction */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
                        <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -307,7 +333,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'pdf' ? (
-          // PERFECT PDF FOLDED PAPER UI (Centered scale crops out native browser padding)
+          // PERFECT PDF FOLDED PAPER UI WITH ACTUAL CONTENT PREVIEW VIA IFRAME
           <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl overflow-hidden flex items-center justify-center p-4 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5">
             <div 
               className="w-full h-full bg-white shadow-xl relative flex flex-col items-center justify-center overflow-hidden"
@@ -315,13 +341,17 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             >
               <div className="absolute top-0 right-0 w-[36px] h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
               <div className="w-full h-full relative z-10 bg-white">
-                 <iframe 
-                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                   className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
-                   title="PDF Preview"
-                   scrolling="no"
-                   tabIndex={-1}
-                 />
+                 {bookmark.url ? (
+                   <iframe 
+                     src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                     className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
+                     title="PDF Preview"
+                     scrolling="no"
+                     tabIndex={-1}
+                   />
+                 ) : (
+                   <div className="absolute inset-0 flex items-center justify-center"><CleanPdfIcon /></div>
+                 )}
                  <div className="absolute inset-0 z-20 bg-transparent" />
               </div>
             </div>
@@ -337,7 +367,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         {/* 2. THE FLOATING METADATA */}
         {displayType !== 'note' && displayType !== 'twitter' && (
           <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1">
-            {hasValidTitle && (
+            {hasValidTitle && displayType !== 'instagram' && (
               <h4 className="text-[14px] font-semibold font-sans text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug w-full">
                 {bookmark.title}
               </h4>
@@ -390,7 +420,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // EXACT CUSTOM TWITTER MODAL UI (Perfectly Centered via m-auto)
+                // EXACT CUSTOM TWITTER MODAL UI
                 <div className="w-full h-full flex bg-[#151618] overflow-y-auto p-4 md:p-8">
                   <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
@@ -420,6 +450,53 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   </div>
                 </div>
 
+              ) : displayType === 'instagram' && instaData ? (
+                // INSTAGRAM NATIVE MODAL REPLICA
+                <div className="w-full h-full flex bg-gray-50 dark:bg-[#000000] overflow-y-auto p-0 md:p-4">
+                  <div className="w-full h-full md:h-auto max-h-full md:max-w-[450px] bg-white dark:bg-[#000000] md:border border-gray-200 dark:border-white/10 md:rounded-sm flex flex-col m-auto overflow-y-auto shadow-xl">
+                    
+                    <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-white/10 shrink-0">
+                      <div className="flex items-center gap-3">
+                        <img src={`https://ui-avatars.com/api/?name=${instaData.username}&background=random&color=fff`} alt={instaData.username} className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10" />
+                        <span className="text-[14px] font-semibold text-gray-900 dark:text-white leading-none">{instaData.username}</span>
+                      </div>
+                      <div className="text-gray-900 dark:text-white"><InstaDotsIcon /></div>
+                    </div>
+
+                    <div className="w-full bg-black relative shrink-0 flex items-center justify-center">
+                      {isVideoMedia(bookmark.image_url) ? (
+                         <video src={bookmark.image_url!} autoPlay muted playsInline loop className="w-full h-auto max-h-[500px] object-contain block" />
+                      ) : (
+                         <img src={bookmark.image_url || previewImageUrl} className="w-full h-auto max-h-[500px] object-contain block" />
+                      )}
+                    </div>
+
+                    <div className="p-4 flex flex-col gap-2 shrink-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-4 text-gray-900 dark:text-white">
+                          <InstaHeartIcon />
+                          <InstaCommentIcon />
+                          <InstaShareIcon />
+                        </div>
+                        <div className="text-gray-900 dark:text-white"><InstaSaveIcon /></div>
+                      </div>
+                      
+                      {instaData.likes && (
+                        <div className="text-[14px] font-semibold text-gray-900 dark:text-white">{instaData.likes} likes</div>
+                      )}
+                      
+                      <div className="text-[14px] text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed mt-1">
+                        <span className="font-semibold mr-2">{instaData.username}</span>
+                        {instaData.caption}
+                      </div>
+                      
+                      <div className="text-[10px] text-gray-400 uppercase mt-2 tracking-wide">
+                        {formatDate(bookmark.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               ) : displayType === 'youtube' ? (
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                   <iframe 
@@ -431,13 +508,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   />
                 </div>
 
-              ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
+              ) : displayType === 'tiktok' ? (
                 <div className="w-full h-full relative flex items-center justify-center bg-gray-100 dark:bg-[#0f1419] overflow-hidden">
                   <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
                   
                   <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
                      <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur text-white text-[12px] p-3 rounded-xl max-w-[260px] shadow-lg pointer-events-none">
-                         This content plays at the original link. Platforms like {displayType === 'instagram' ? 'Instagram' : 'TikTok'} block us from embedding their media.
+                         This content plays at the original link. TikTok blocks us from embedding their media.
                          <div className="mt-2">
                             <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
                          </div>
