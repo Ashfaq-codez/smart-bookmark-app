@@ -6,11 +6,18 @@ import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
 import toast from 'react-hot-toast'
 
+// Base UI Icons
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PdfIcon = () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#2B6CB0] dark:text-[#90CDF4]"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+
+// Social Brand Icons (Inline SVGs = 100% Reliability)
+const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+const GitHubIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 8.84 21.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -79,7 +86,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   const handleAutoSave = async () => {
     if (editTitle.trim() === (bookmark.title || '') && formatUrl(editUrl) === bookmark.url && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent === (bookmark.content || '')) return;
-    await updateBookmark(bookmark.id, { title: editTitle.trim() || 'Untitled', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
+    await updateBookmark(bookmark.id, { title: editTitle.trim() || '', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
     toast.success('Saved', { style: { background: 'transparent', color: 'inherit', border: '1px solid #CBD5E0', borderRadius: '4px' } })
   }
 
@@ -99,7 +106,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal()
   }
 
-  // Swipe to close logic - Strictly bound to the drag handle
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY)
     setTouchEnd(0)
@@ -112,12 +118,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return
     const distance = touchEnd - touchStart
-    
-    // Explicit pull down of at least 45px on the top handle triggers close
     if (distance > 45) {
       handleCloseWithSave()
     }
-    
     setTouchStart(0)
     setTouchEnd(0)
   }
@@ -125,7 +128,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (!isModalOpen) return
-      
       if (e.key === 'Escape') {
         e.preventDefault()
         if (isFullscreenImage || isReaderMode) {
@@ -140,11 +142,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         await handleCloseWithSave()
       }
     }
-    
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-
-    // Tell ESLint to safely ignore the missing function dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
@@ -162,55 +161,78 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
-  
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
+
+  const isSocial = ['twitter', 'instagram', 'youtube', 'github'].includes(bookmark.type || '')
 
   return (
     <>
       <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={() => setIsModalOpen(true)} className={`group relative flex flex-col w-full min-w-0 cursor-pointer select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
-        <div className="w-full bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col min-w-0 overflow-hidden transition-colors duration-500 shadow-sm hover:shadow-md rounded-sm">
-          <div className="border-b border-[#E5E0D8] dark:border-[#4A5568] px-4 py-2 flex items-center justify-between bg-[#FDFCF8] dark:bg-[#1A202C]">
-            <span className="text-[9px] text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest truncate min-w-0">
-              {bookmark.type === 'note' ? 'Excerpt' : bookmark.type === 'pdf' ? 'Document' : bookmark.type === 'video' ? 'Media' : 'Reference'}
-            </span>
-          </div>
-
+        <div className="w-full bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col min-w-0 overflow-hidden shadow-sm hover:shadow-md rounded-sm">
+          
           {bookmark.type === 'note' ? (
-            <div className="p-6 md:p-8 flex flex-col min-w-0 gap-4 w-full">
-              <span className="text-xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide truncate w-full">{bookmark.title}</span>
-              <p className="text-sm font-serif text-[#4A5568] dark:text-[#CBD5E0] leading-relaxed whitespace-pre-wrap break-words line-clamp-6 w-full font-inherit">
-                {bookmark.content}
+            <div className="p-6 flex flex-col min-w-0 gap-3 w-full bg-[#FDFCF8] dark:bg-[#1A202C]">
+              {bookmark.title && bookmark.title !== '' && (
+                <span className="text-sm font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest truncate w-full">{bookmark.title}</span>
+              )}
+              <p className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] leading-relaxed whitespace-pre-wrap break-words line-clamp-6 w-full italic">
+                "{bookmark.content}"
               </p>
             </div>
+            
+          ) : isSocial ? (
+            <div className="w-full flex flex-col min-w-0">
+              <div className={`flex items-center gap-2 p-4 pb-2 
+                ${bookmark.type === 'twitter' ? 'text-[#0f1419] dark:text-[#e7e9ea]' : 
+                  bookmark.type === 'instagram' ? 'text-[#E1306C]' : 
+                  bookmark.type === 'youtube' ? 'text-[#FF0000]' : 
+                  'text-[#24292e] dark:text-[#E2E8F0]'}`}>
+                {bookmark.type === 'twitter' && <XIcon />}
+                {bookmark.type === 'instagram' && <InstagramIcon />}
+                {bookmark.type === 'youtube' && <YouTubeIcon />}
+                {bookmark.type === 'github' && <GitHubIcon />}
+              </div>
+              
+              {bookmark.image_url && (
+                <div className="w-full px-4 pt-1 pb-1">
+                  <img src={bookmark.image_url} alt={bookmark.title} className="w-full h-auto max-h-48 object-cover rounded-sm border border-[#E5E0D8] dark:border-[#4A5568]" loading="lazy" />
+                </div>
+              )}
+              
+              <div className="p-4 pt-2 flex flex-col min-w-0">
+                <h4 className="text-sm font-sans text-[#2D3748] dark:text-[#E2E8F0] line-clamp-3 leading-snug w-full">{bookmark.title}</h4>
+              </div>
+            </div>
+            
           ) : bookmark.type === 'video' ? (
             <div className="w-full flex flex-col min-w-0">
-              <div className="w-full relative overflow-hidden border-b border-[#E5E0D8] dark:border-[#4A5568] bg-[#1A202C]">
+              <div className="w-full relative overflow-hidden bg-[#1A202C]">
                 <video src={bookmark.url} className="w-full h-48 object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
               </div>
-              <div className="p-5 flex flex-col min-w-0 gap-1.5">
-                <h4 className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] truncate tracking-wide w-full">{bookmark.title}</h4>
-                <p className="text-[10px] text-[#2B6CB0] dark:text-[#90CDF4] uppercase tracking-widest truncate w-full">Local Media</p>
+              <div className="p-4 flex flex-col min-w-0 gap-1.5 border-t border-[#E5E0D8] dark:border-[#4A5568]">
+                <h4 className="text-sm font-sans font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate w-full">{bookmark.title}</h4>
               </div>
             </div>
+            
           ) : bookmark.type === 'pdf' ? (
             <div className="w-full flex flex-col min-w-0">
-              <div className="w-full h-48 relative overflow-hidden border-b border-[#E5E0D8] dark:border-[#4A5568] bg-[#F7FAFC] dark:bg-[#171923] flex items-center justify-center">
+              <div className="w-full h-40 relative overflow-hidden bg-[#F7FAFC] dark:bg-[#171923] flex items-center justify-center">
                 <PdfIcon />
               </div>
-              <div className="p-5 flex flex-col min-w-0 gap-1.5">
-                <h4 className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] truncate tracking-wide w-full">{bookmark.title}</h4>
-                <p className="text-[10px] text-[#2B6CB0] dark:text-[#90CDF4] uppercase tracking-widest truncate w-full">Portable Document Format</p>
+              <div className="p-4 flex flex-col min-w-0 gap-1.5 border-t border-[#E5E0D8] dark:border-[#4A5568]">
+                <h4 className="text-sm font-sans font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate w-full">{bookmark.title}</h4>
               </div>
             </div>
+            
           ) : (
             <div className="w-full flex flex-col min-w-0">
-              <div className="w-full relative overflow-hidden border-b border-[#E5E0D8] dark:border-[#4A5568] bg-[#F7FAFC] dark:bg-[#171923]">
+              <div className="w-full relative overflow-hidden bg-[#F7FAFC] dark:bg-[#171923]">
                 <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
               </div>
-              <div className="p-5 flex flex-col min-w-0 gap-1.5">
-                <h4 className="text-lg font-serif text-[#2D3748] dark:text-[#E2E8F0] truncate tracking-wide w-full">{bookmark.title}</h4>
-                <p className="text-[10px] text-[#2B6CB0] dark:text-[#90CDF4] uppercase tracking-widest truncate w-full">{getDomain(bookmark.url)}</p>
+              <div className="p-4 flex flex-col min-w-0 gap-1.5 border-t border-[#E5E0D8] dark:border-[#4A5568]">
+                <h4 className="text-sm font-sans font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate w-full">{bookmark.title}</h4>
+                <p className="text-[10px] text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest truncate w-full">{getDomain(bookmark.url)}</p>
               </div>
             </div>
           )}
@@ -226,7 +248,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             onMouseDown={(e) => e.stopPropagation()}
           >
             
-            {/* Dedicated Mobile Drag Handle (Top Zone) */}
             <div 
               className="absolute top-0 left-0 w-full h-12 z-[60] md:hidden flex items-start justify-center pt-3 touch-none"
               onTouchStart={handleTouchStart}
@@ -236,7 +257,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full pointer-events-none" />
             </div>
 
-            {/* Desktop Close Button (Hidden on Mobile) */}
             <button onClick={handleCloseWithSave} className="hidden md:flex absolute top-6 right-6 z-[100] p-2 bg-transparent text-[#718096] dark:text-[#A0AEC0] hover:text-[#2D3748] dark:hover:text-white transition-all cursor-pointer items-center justify-center">
               <CloseIcon />
             </button>
@@ -292,7 +312,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     onChange={(e) => setEditTitle(e.target.value)}
                     onBlur={handleAutoSave}
                     placeholder="Enter Title"
-                    className="w-full bg-transparent border-none outline-none text-xl md:text-4xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
+                    className="w-full bg-transparent border-none outline-none text-xl md:text-3xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
                   />
                   
                   {isRealWebLink && (

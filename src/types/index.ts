@@ -10,7 +10,8 @@ export type Bookmark = {
   content?: string | null; 
   image_url?: string | null;
   tags?: string[];
-  type?: string;
+  // Expanded types to support native social media cards
+  type?: 'link' | 'note' | 'image' | 'video' | 'pdf' | 'file' | 'twitter' | 'instagram' | 'youtube' | 'github' | 'linkedin' | string;
   file_path?: string | null; 
   file_type?: string | null;
 };

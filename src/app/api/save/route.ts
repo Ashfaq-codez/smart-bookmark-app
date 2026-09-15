@@ -83,15 +83,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Default to cookie-based client for web app requests
     let supabase = await createClient();
-    
-    // --- MULTI-TENANT AUTHENTICATION ROUTING ---
     const apiKey = request.headers.get('x-api-key') || request.headers.get('x-shortcut-token');
     let userId = null;
 
     if (apiKey) {
-      // 1. Authenticate via SaaS API Key using Admin Client to bypass RLS
       const adminSupabase = createAdminClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -104,15 +100,12 @@ export async function POST(request: Request) {
         .single();
 
       if (keyError || !keyData) {
-        return NextResponse.json({ error: 'Invalid or revoked API Key' }, { status: 401, headers: corsHeaders(origin) });
+        return NextResponse.json({ error: 'Invalid API Key' }, { status: 401, headers: corsHeaders(origin) });
       }
       
       userId = keyData.user_id;
-      
-      // Override the database client for the rest of this execution so inserts succeed
       supabase = adminSupabase;
     } else {
-      // 2. Authenticate via Web Browser Session
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders(origin) });
@@ -121,25 +114,35 @@ export async function POST(request: Request) {
     }
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
+    
+    // --- NEW: Social Domain Detection ---
+    let detectedType = itemType;
+    if (cleanUrl && isLink) {
+      try {
+        const parsedUrl = new URL(cleanUrl);
+        const host = parsedUrl.hostname.toLowerCase();
+        if (host.includes('twitter.com') || host.includes('x.com')) detectedType = 'twitter';
+        else if (host.includes('instagram.com')) detectedType = 'instagram';
+        else if (host.includes('youtube.com') || host.includes('youtu.be')) detectedType = 'youtube';
+        else if (host.includes('github.com')) detectedType = 'github';
+        else if (host.includes('linkedin.com')) detectedType = 'linkedin';
+      } catch (e) {}
+    }
 
     if (cleanUrl) {
       let existingRecord = null;
 
       if (isLink) {
-        const flexiblePath = cleanUrl
-          .replace(/^https?:\/\/(www\.)?/, '')
-          .replace(/\/$/, '')
-          .split('#')[0];
-
+        const flexiblePath = cleanUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('#')[0];
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')
           .eq('user_id', userId)
-          .eq('type', 'link')
+          // Look across all link and social types for deduplication
+          .in('type', ['link', 'twitter', 'instagram', 'youtube', 'github', 'linkedin'])
           .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
           .limit(1)
           .maybeSingle();
-
         existingRecord = data;
       } else if (itemType === 'note' && finalContent) {
         const { data } = await supabase
@@ -150,7 +153,6 @@ export async function POST(request: Request) {
           .eq('content', finalContent)
           .limit(1)
           .maybeSingle();
-          
         existingRecord = data;
       } else {
         const { data } = await supabase
@@ -161,15 +163,11 @@ export async function POST(request: Request) {
           .eq('url', cleanUrl)
           .limit(1)
           .maybeSingle();
-          
         existingRecord = data;
       }
 
       if (existingRecord) {
-        return NextResponse.json(
-          { error: 'Duplicate entry', message: 'Already saved', existing: existingRecord }, 
-          { status: 409, headers: corsHeaders(origin) }
-        );
+        return NextResponse.json({ error: 'Duplicate entry', message: 'Already saved', existing: existingRecord }, { status: 409, headers: corsHeaders(origin) });
       }
     }
 
@@ -181,45 +179,18 @@ export async function POST(request: Request) {
       try {
         const parsedUrl = new URL(cleanUrl);
         if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
-          const response = await fetch(cleanUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(3000), 
-          });
-
+          const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000) });
           if (response.ok) {
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-            let html = '';
-            let bytesReceived = 0;
-            const MAX_BYTES = 512 * 1024;
-
-            if (reader) {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                if (value) {
-                  bytesReceived += value.length;
-                  html += decoder.decode(value, { stream: true });
-                  if (bytesReceived > MAX_BYTES) break;
-                }
-              }
-            } else {
-              html = await response.text();
-              if (html.length > MAX_BYTES) html = html.substring(0, MAX_BYTES);
-            }
-
-            const $ = cheerio.load(html);
+            const html = await response.text();
+            const $ = cheerio.load(html.substring(0, 512 * 1024));
             const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
             finalTitle = customTitle || scrapedTitle || cleanUrl; 
             finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-            
             let scrapedImg = $('meta[property="og:image"]').attr('content');
             if (scrapedImg) {
               try {
                 scrapedImg = new URL(scrapedImg, cleanUrl).href;
-                if (scrapedImg.startsWith('http://')) {
-                  scrapedImg = scrapedImg.replace('http://', 'https://');
-                }
+                if (scrapedImg.startsWith('http://')) scrapedImg = scrapedImg.replace('http://', 'https://');
                 finalImage = finalImage || scrapedImg;
               } catch (e) {}
             }
@@ -230,8 +201,9 @@ export async function POST(request: Request) {
       }
     }
 
+    // --- FIX: Do not force "Text Snippet" for notes. Let them be empty string so the UI can hide the title.
     if (itemType === 'note') {
-      finalTitle = finalTitle || 'Text Snippet';
+      finalTitle = finalTitle || ''; 
     } else if (itemType === 'image') {
       finalTitle = finalTitle || 'Saved Image';
     } else {
@@ -249,16 +221,14 @@ export async function POST(request: Request) {
         image_url: finalImage,
         category: category || 'Inbox',
         sub_category: sub_category || null,
-        tags: ['auto-saved', itemType],
-        type: itemType,
+        tags: ['auto-saved', detectedType],
+        type: detectedType, // Save the detected social type
       }])
       .select()
       .single();
 
     if (insertError) {
-      if (insertError.code === '23505') {
-        return NextResponse.json({ error: 'Duplicate entry' }, { status: 409, headers: corsHeaders(origin) });
-      }
+      if (insertError.code === '23505') return NextResponse.json({ error: 'Duplicate entry' }, { status: 409, headers: corsHeaders(origin) });
       throw insertError;
     }
 
