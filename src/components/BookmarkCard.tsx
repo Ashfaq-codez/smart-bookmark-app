@@ -20,17 +20,6 @@ const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill
 const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
 const TikTokIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
 
-// Pure CSS SVG Document Icon for fallback
-const CleanPdfIcon = () => (
-  <svg width="48" height="64" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0 2C0 0.895431 0.89543 0 2 0H14L24 10V30C24 31.1046 23.1046 32 22 32H2C0.89543 32 0 31.1046 0 30V2Z" fill="#3B82F6"/>
-    <path d="M14 0V10H24L14 0Z" fill="#93C5FD"/>
-    <rect x="4" y="14" width="16" height="2" rx="1" fill="white"/>
-    <rect x="4" y="19" width="16" height="2" rx="1" fill="white"/>
-    <rect x="4" y="24" width="10" height="2" rx="1" fill="white"/>
-  </svg>
-)
-
 interface BookmarkCardProps {
   bookmark: Bookmark;
   theme: { card: string; btn: string; hover: string };
@@ -167,7 +156,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal(); 
   }
 
-  // Extractors for Native Embeds
+  // --- NATIVE ID EXTRACTORS ---
   const getYouTubeId = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
     return match ? match[1] : '';
@@ -193,8 +182,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   }
   
   const displayType = deriveDisplayType(bookmark);
-  const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
+  const ytVideoId = getYouTubeId(bookmark.url);
+  const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : null;
+
+  const previewImageUrl = bookmark.image_url || ytHighResThumbnail || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
+  
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
@@ -220,7 +213,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'twitter' ? (
-          // Twitter Native Look-Alike
           <div className="w-full bg-white dark:bg-[#15171A] rounded-2xl p-4 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
@@ -256,17 +248,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
 
         ) : displayType === 'youtube' ? (
-          // Exact YouTube unclickable player embed for the grid
           <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-sm bg-black border border-transparent dark:border-white/5">
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20 pointer-events-none" />
-            <iframe 
-              src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}?controls=0&modestbranding=1`} 
-              className="w-full h-full border-none pointer-events-none" 
-              title="YouTube Video"
-              tabIndex={-1}
-            />
-            {/* Invisible overlay intercepts all clicks to trigger the modal instead of playing in grid */}
-            <div className="absolute inset-0 z-10 bg-transparent cursor-pointer hover:bg-white/5 transition-colors" />
+            <img src={ytHighResThumbnail || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10">
+              <PlayCircleIcon className="w-12 h-12 text-white drop-shadow-lg" />
+            </div>
           </div>
 
         ) : displayType === 'video' ? (
@@ -275,20 +261,30 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'pdf' ? (
-          // Pure CSS Folded Paper layout showing actual cover image
-          <div className="w-full relative aspect-[3/4] bg-[#7A8E9F] dark:bg-[#1A202C] rounded-2xl overflow-hidden shadow-sm flex items-center justify-center p-3 md:p-5">
+          // EXACT DOM REPLICA FOR PDF COVER
+          <div className="w-full relative aspect-[3/4] bg-[#8CA3AE] dark:bg-[#334155] rounded-xl overflow-hidden flex items-center justify-center p-5 md:p-6 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] border border-transparent dark:border-white/5">
+            
             <div 
-              className="w-full h-full bg-white dark:bg-[#2D3748] shadow-md relative flex flex-col items-center justify-center overflow-hidden"
-              style={{ clipPath: 'polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%)' }}
+              className="w-full h-full bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] relative flex flex-col items-center justify-center overflow-hidden"
+              style={{ clipPath: 'polygon(0 0, calc(100% - 48px) 0, 100% 48px, 100% 100%, 0 100%)' }}
             >
-              <div className="absolute top-0 right-0 w-[32px] h-[32px] bg-gray-200 dark:bg-gray-600 shadow-[-2px_2px_4px_rgba(0,0,0,0.15)] rounded-bl z-20" />
-              <img src={previewImageUrl} className="w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display='none'; }} />
-              {!bookmark.image_url && (
-                <div className="absolute inset-0 flex items-center justify-center z-0">
-                  <CleanPdfIcon />
-                </div>
-              )}
+              {/* Folded Corner */}
+              <div className="absolute top-0 right-0 w-[48px] h-[48px] bg-[#E2E8F0] shadow-[-4px_4px_10px_rgba(0,0,0,0.1)] rounded-bl-xl z-30" />
+              
+              {/* Scaled Iframe to Render Actual PDF Page cleanly */}
+              <div className="w-full h-full relative z-10 bg-white">
+                 <iframe 
+                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
+                   className="absolute top-0 left-0 w-[200%] h-[200%] scale-[0.5] origin-top-left border-none bg-white" 
+                   title="PDF Preview"
+                   scrolling="no"
+                   tabIndex={-1}
+                 />
+                 {/* Invisible Overlay blocks all iframe clicks so card drags/clicks normally */}
+                 <div className="absolute inset-0 z-20 bg-transparent" />
+              </div>
             </div>
+
           </div>
           
         ) : (
@@ -364,10 +360,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'youtube' ? (
-                // NATIVE YOUTUBE IFRAME EMBED (Autoplay off for modal)
+                // NATIVE YOUTUBE IFRAME EMBED (Autoplay off)
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                   <iframe 
-                    src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}?autoplay=0`} 
+                    src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
                     className="w-full max-w-4xl aspect-video border-none" 
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                     allowFullScreen 
