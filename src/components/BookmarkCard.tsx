@@ -457,7 +457,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     
                     <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-white/10 shrink-0">
                       <div className="flex items-center gap-3">
-                        <img src={`https://ui-avatars.com/api/?name=${instaData.username}&background=random&color=fff`} alt={instaData.username} className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10" />
+                        {/* <img src={`https://ui-avatars.com/api/?name=${instaData.username}&background=random&color=fff`} alt={instaData.username} className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10" /> */}
                         <span className="text-[14px] font-semibold text-gray-900 dark:text-white leading-none">{instaData.username}</span>
                       </div>
                       <div className="text-gray-900 dark:text-white"><InstaDotsIcon /></div>
