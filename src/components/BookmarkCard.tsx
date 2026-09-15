@@ -155,56 +155,70 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal(); 
   }
 
+  // --- DYNAMIC TYPE DERIVATION ---
+  // Fixes older links saved before the backend social categorizer was built
+  const deriveDisplayType = (b: Bookmark) => {
+    if (['twitter', 'instagram', 'youtube', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
+    if (b.url) {
+      const url = b.url.toLowerCase();
+      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
+      if (url.includes('instagram.com')) return 'instagram';
+      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+      if (url.includes('github.com')) return 'github';
+      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
+    }
+    return b.type || 'link';
+  }
+  const displayType = deriveDisplayType(bookmark);
+
   const previewImageUrl = bookmark.image_url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
-  // Clean identification to hide default database strings
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
 
   return (
     <>
-      {/* ─── GRID CARD COMPONENT (Content-First Object-Oriented UI) ─── */}
-      {/* Outer wrapper is completely transparent. It simply stacks the Object Card and its floating Meta Data. */}
+      {/* ─── GRID CARD COMPONENT (Content-First Object UI) ─── */}
       <div 
         draggable 
         onDragStart={(e) => onDragStart(e, bookmark.id)} 
         onDragEnd={onDragEnd} 
         onClick={() => setIsModalOpen(true)} 
-        className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-2 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
+        className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
       >
         
-        {/* 1. CONTENT OBJECT (The visual shape of the save) */}
-        {bookmark.type === 'note' ? (
-          <div className="w-full bg-white dark:bg-[#1C1E23] rounded-2xl p-6 flex flex-col min-w-0 shadow-sm border border-transparent dark:border-white/5 relative">
-            <p className="text-[15px] font-sans text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full">
+        {/* 1. THE OBJECT SHAPE (No rigid borders, purely dictated by content) */}
+        {displayType === 'note' ? (
+          <div className="w-full bg-white dark:bg-[#1E2024] rounded-2xl p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5 relative">
+            <p className="text-[15px] font-serif text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full">
               {bookmark.content}
             </p>
           </div>
           
-        ) : bookmark.type === 'twitter' ? (
-          <div className="w-full bg-white dark:bg-[#15171A] rounded-2xl p-5 flex flex-col min-w-0 gap-3 shadow-sm border border-transparent dark:border-white/5 relative overflow-hidden">
+        ) : displayType === 'twitter' ? (
+          <div className="w-full bg-white dark:bg-[#15171A] rounded-2xl p-4 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
-            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1">
+            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
               <XIcon />
             </div>
-            <p className="text-[14px] font-sans text-gray-900 dark:text-gray-100 line-clamp-6 w-full leading-snug whitespace-pre-wrap">
+            <p className="text-[14px] font-sans text-gray-900 dark:text-gray-100 line-clamp-6 w-full leading-snug whitespace-pre-wrap px-1">
               {bookmark.content || bookmark.title}
             </p>
             {bookmark.image_url && (
-              <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-gray-100 dark:border-white/10">
+              <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                 <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/5 hover:bg-black/10 transition-colors">
-                   <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors">
+                   <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             )}
           </div>
 
-        ) : bookmark.type === 'instagram' ? (
-          <div className="w-full aspect-[4/5] relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 dark:bg-gray-800 border border-transparent dark:border-white/5">
+        ) : displayType === 'instagram' ? (
+          <div className="w-full aspect-[4/5] relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 dark:bg-gray-900 border border-transparent dark:border-white/5">
             <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" />
             <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
             <div className="absolute top-4 left-4 text-white drop-shadow-md z-10">
@@ -215,7 +229,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
           </div>
 
-        ) : bookmark.type === 'youtube' ? (
+        ) : displayType === 'youtube' ? (
           <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-sm bg-black border border-transparent dark:border-white/5">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
             <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
@@ -224,45 +238,42 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
           </div>
 
-        ) : bookmark.type === 'video' ? (
+        ) : displayType === 'video' ? (
           <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-sm bg-black border border-transparent dark:border-white/5">
             <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
-        ) : bookmark.type === 'pdf' ? (
-          // Exact Paper Fold CSS implementation for PDF cards
-          <div 
-            className="w-full relative aspect-[3/4] bg-white dark:bg-[#e9ecef] shadow-sm pointer-events-none"
-            style={{ clipPath: 'polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 0 100%)' }}
-          >
-            {/* The folded corner element */}
-            <div className="absolute top-0 right-0 w-[36px] h-[36px] bg-gray-200 shadow-[-4px_4px_10px_rgba(0,0,0,0.1)] rounded-bl-lg z-20" />
-            <div className="absolute inset-0 p-4 pt-8 flex items-center justify-center overflow-hidden">
-               {bookmark.url ? (
-                 <iframe src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0`} className="w-[150%] h-[150%] scale-[0.65] origin-top border-0 bg-transparent" />
-               ) : (
-                 <PdfIcon />
-               )}
+        ) : displayType === 'pdf' ? (
+          // Exact CSS Folded Paper layout (replaces the broken iframe)
+          <div className="w-full relative aspect-[3/4] p-1">
+            <div 
+              className="w-full h-full bg-[#f8f9fa] dark:bg-[#E2E8F0] shadow-sm relative flex flex-col"
+              style={{ clipPath: 'polygon(0 0, calc(100% - 40px) 0, 100% 40px, 100% 100%, 0 100%)' }}
+            >
+              <div className="absolute top-0 right-0 w-[40px] h-[40px] bg-[#e9ecef] shadow-[-4px_4px_8px_rgba(0,0,0,0.1)] rounded-bl-lg z-10" />
+              <div className="flex-1 p-4 flex items-center justify-center overflow-hidden">
+                <img src={previewImageUrl} className="w-full h-full object-cover shadow-sm border border-gray-200" onError={(e) => { e.currentTarget.style.display='none'; }} />
+              </div>
             </div>
           </div>
           
         ) : (
           // Default Web Link / Image fallback
-          <div className="w-full relative rounded-2xl overflow-hidden shadow-sm border border-transparent dark:border-white/5 bg-gray-50 dark:bg-gray-800">
+          <div className="w-full relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-white/5 bg-white dark:bg-[#1E2024]">
             <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
           </div>
         )}
 
-        {/* 2. FLOATING META DATA (Title & Domain below the card) */}
-        {bookmark.type !== 'note' && (
-          <div className="px-1 flex flex-col min-w-0 gap-0.5 w-full">
+        {/* 2. THE FLOATING METADATA (Title & Domain neatly stacked underneath) */}
+        {displayType !== 'note' && (
+          <div className="px-1 flex flex-col min-w-0 gap-1 w-full">
             {hasValidTitle && (
-              <h4 className="text-[13px] font-medium font-sans text-gray-800 dark:text-gray-300 line-clamp-2 leading-snug w-full">
+              <h4 className="text-[13px] font-semibold font-sans text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug w-full">
                 {bookmark.title}
               </h4>
             )}
-            <p className="text-[11px] text-gray-500 font-sans line-clamp-1 w-full">
-              {bookmark.type === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
+              {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
             </p>
           </div>
         )}
@@ -293,7 +304,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             {/* LEFT PANE (Preview) */}
             <div className={`w-full md:w-[60%] h-[35%] min-h-[200px] md:min-h-0 md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 ${bookmark.type === 'note' ? 'overflow-hidden' : 'items-center justify-center'}`}>
               
-              {bookmark.type === 'note' ? (
+              {displayType === 'note' ? (
                 <div className="w-full h-full flex flex-col overflow-hidden relative group">
                   <button onClick={() => setIsReaderMode(true)} className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 p-2.5 bg-white/90 dark:bg-[#171923]/90 hover:bg-white dark:hover:bg-black text-[#4A5568] dark:text-[#A0AEC0] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md border border-[#E5E0D8] dark:border-[#4A5568]" title="Fullscreen Reader">
                     <ExpandIcon />
@@ -308,7 +319,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   />
                 </div>
 
-              ) : ['instagram', 'twitter'].includes(bookmark.type || '') ? (
+              ) : ['instagram', 'twitter'].includes(displayType || '') ? (
                 // EXACT FROSTED GLASS UI "SORRY NOTE" FOR RESTRICTED PLATFORMS
                 <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-[#0f1419]">
                   <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover absolute inset-0 blur-2xl opacity-40 scale-110" />
@@ -321,7 +332,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                        This content plays at the original link, not within Space.
                      </p>
                      <p className="text-[12px] font-sans text-gray-500 dark:text-gray-400 leading-relaxed px-2">
-                       Platforms like {bookmark.type === 'instagram' ? 'Instagram' : 'X'} actively block us from saving videos outside their walls. This is out of our control, we hope you understand.
+                       Platforms like {displayType === 'instagram' ? 'Instagram' : 'X'} actively block us from saving videos outside their walls. This is out of our control, we hope you understand.
                      </p>
                      <a href={bookmark.url} target="_blank" rel="noreferrer" className="mt-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform shadow-md">
                        Watch Original
@@ -329,15 +340,15 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   </div>
                 </div>
 
-              ) : bookmark.type === 'video' ? (
+              ) : displayType === 'video' ? (
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                    <video src={bookmark.url} controls className="w-full h-full object-contain" />
                 </div>
-              ) : bookmark.type === 'pdf' ? (
+              ) : displayType === 'pdf' ? (
                 <div className="w-full h-full bg-[#FDFCF8] dark:bg-[#1A202C] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                    <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
                 </div>
-              ) : bookmark.type === 'image' ? (
+              ) : displayType === 'image' ? (
                 <div className="w-full h-full relative overflow-hidden bg-[#FDFCF8] dark:bg-[#1A202C] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
                   <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
                 </div>
