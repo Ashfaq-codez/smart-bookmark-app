@@ -12,8 +12,9 @@ const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" f
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PdfIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-500"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 
-// Social Brand Icons (Inline SVGs = 100% Reliability)
+// Social Brand Icons
 const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
 const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
 const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
@@ -164,13 +165,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
   const isSocial = ['twitter', 'instagram', 'youtube', 'github'].includes(bookmark.type || '')
-  
-  // Cleanly identify true user-assigned titles from auto-generated defaults
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
 
   return (
     <>
-      {/* ─── GRID CARD COMPONENT (Content-First Object-Oriented UI) ─── */}
+      {/* ─── GRID CARD COMPONENT (Native Content-First UI) ─── */}
       <div 
         draggable 
         onDragStart={(e) => onDragStart(e, bookmark.id)} 
@@ -178,49 +177,81 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         onClick={() => setIsModalOpen(true)} 
         className={`group relative flex flex-col w-full min-w-0 cursor-pointer select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
       >
-        <div className="w-full bg-white dark:bg-[#1E2024] border border-gray-100 dark:border-white/5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 rounded-2xl flex flex-col min-w-0 overflow-hidden">
+        <div className="w-full bg-white dark:bg-[#1A202C] border border-[#E5E0D8]/50 dark:border-white/5 shadow-sm hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] transition-all duration-300 rounded-2xl flex flex-col min-w-0 overflow-hidden relative">
           
+          {/* Social Platform Top Accent Lines */}
+          {bookmark.type === 'twitter' && <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2] z-10" />}
+          {bookmark.type === 'instagram' && <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-10" />}
+          {bookmark.type === 'youtube' && <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-10" />}
+
           {bookmark.type === 'note' ? (
-            <div className="p-5 md:p-6 flex flex-col min-w-0 gap-3 w-full">
+            <div className="p-6 flex flex-col min-w-0 gap-3 w-full bg-[#FDFCF8] dark:bg-[#171923] h-full">
               {hasValidTitle && (
-                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate w-full">{bookmark.title}</h3>
+                <h3 className="text-sm font-bold font-sans text-[#2D3748] dark:text-[#E2E8F0] truncate w-full">{bookmark.title}</h3>
               )}
-              <p className="text-sm font-sans text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-6 w-full">
+              <p className="text-[15px] font-serif text-[#4A5568] dark:text-[#CBD5E0] leading-relaxed whitespace-pre-wrap break-words line-clamp-8 w-full">
                 {bookmark.content}
               </p>
             </div>
             
-          ) : isSocial ? (
-            <div className="w-full flex flex-col min-w-0 p-5 gap-3">
-              <div className={`flex items-center
-                ${bookmark.type === 'twitter' ? 'text-[#0f1419] dark:text-[#e7e9ea]' : 
-                  bookmark.type === 'instagram' ? 'text-[#E1306C]' : 
-                  bookmark.type === 'youtube' ? 'text-[#FF0000]' : 
-                  'text-[#24292e] dark:text-[#E2E8F0]'}`}>
-                {bookmark.type === 'twitter' && <XIcon />}
-                {bookmark.type === 'instagram' && <InstagramIcon />}
-                {bookmark.type === 'youtube' && <YouTubeIcon />}
-                {bookmark.type === 'github' && <GitHubIcon />}
+          ) : bookmark.type === 'twitter' ? (
+            <div className="w-full flex flex-col min-w-0 p-5 pt-6 gap-3">
+              <div className="flex items-center text-[#0f1419] dark:text-[#e7e9ea]">
+                <XIcon />
               </div>
-              
-              <h4 className="text-sm font-sans text-gray-900 dark:text-gray-100 line-clamp-4 leading-snug w-full">
+              <h4 className="text-sm font-sans text-[#2D3748] dark:text-[#E2E8F0] line-clamp-5 leading-snug w-full whitespace-pre-wrap">
                 {bookmark.title}
               </h4>
-
               {bookmark.image_url && (
-                <div className="w-full mt-1">
-                  <img src={bookmark.image_url} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover rounded-xl border border-black/5 dark:border-white/5" loading="lazy" />
+                <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-[#E5E0D8] dark:border-white/10">
+                  <img src={bookmark.image_url} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block" loading="lazy" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors">
+                     <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md" />
+                  </div>
                 </div>
               )}
             </div>
-            
+
+          ) : bookmark.type === 'instagram' ? (
+            <div className="w-full flex flex-col min-w-0 pt-1 relative">
+              <div className="w-full aspect-[4/5] relative overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <img src={bookmark.image_url || previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
+                <div className="absolute top-4 right-4 text-white drop-shadow-md">
+                  <InstagramIcon />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
+                  <PlayCircleIcon className="w-14 h-14 text-white/90 drop-shadow-lg" />
+                </div>
+              </div>
+              <div className="p-4 flex flex-col min-w-0">
+                <h4 className="text-sm font-sans text-[#2D3748] dark:text-[#E2E8F0] line-clamp-2 leading-snug w-full">{bookmark.title}</h4>
+              </div>
+            </div>
+
+          ) : bookmark.type === 'youtube' ? (
+            <div className="w-full flex flex-col min-w-0">
+              <div className="w-full relative aspect-video overflow-hidden bg-black">
+                <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
+                  <PlayCircleIcon className="w-12 h-12 text-white drop-shadow-lg" />
+                </div>
+              </div>
+              <div className="p-4 flex flex-col min-w-0 gap-1.5">
+                <h4 className="text-sm font-sans font-medium text-[#2D3748] dark:text-[#E2E8F0] line-clamp-2 w-full leading-snug">{bookmark.title}</h4>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#718096] uppercase tracking-widest">
+                  <YouTubeIcon />
+                  <span>YouTube</span>
+                </div>
+              </div>
+            </div>
+
           ) : bookmark.type === 'video' ? (
             <div className="w-full flex flex-col min-w-0">
-              <div className="w-full relative overflow-hidden bg-black">
-                <video src={bookmark.url} className="w-full h-48 md:h-56 object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
+              <div className="w-full relative overflow-hidden bg-black aspect-video rounded-t-2xl">
+                <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
               </div>
               <div className="p-4 md:p-5 flex flex-col min-w-0">
-                <h4 className="text-sm font-semibold font-sans text-gray-900 dark:text-gray-100 truncate w-full">{bookmark.title}</h4>
+                <h4 className="text-sm font-semibold font-sans text-[#2D3748] dark:text-[#E2E8F0] truncate w-full">{bookmark.title}</h4>
               </div>
             </div>
             
@@ -229,9 +260,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="w-full h-40 relative overflow-hidden bg-red-50 dark:bg-[#2A1D20] flex items-center justify-center">
                 <PdfIcon />
               </div>
-              <div className="p-4 md:p-5 flex flex-col min-w-0 gap-1">
-                <h4 className="text-sm font-semibold font-sans text-gray-900 dark:text-gray-100 truncate w-full">{bookmark.title}</h4>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium tracking-wide truncate w-full">PDF Document</p>
+              <div className="p-4 flex flex-col min-w-0 gap-1">
+                <h4 className="text-sm font-semibold font-sans text-[#2D3748] dark:text-[#E2E8F0] truncate w-full">{bookmark.title}</h4>
+                <p className="text-[10px] text-[#718096] uppercase tracking-widest truncate w-full">PDF Document</p>
               </div>
             </div>
             
@@ -241,9 +272,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="w-full relative overflow-hidden bg-gray-100 dark:bg-gray-800">
                 <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-56 aspect-video object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
               </div>
-              <div className="p-4 md:p-5 flex flex-col min-w-0 gap-1">
-                <h4 className="text-sm font-semibold font-sans text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug w-full">{bookmark.title}</h4>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium tracking-wide truncate w-full">{getDomain(bookmark.url)}</p>
+              <div className="p-4 flex flex-col min-w-0 gap-1.5">
+                <h4 className="text-sm font-semibold font-sans text-[#2D3748] dark:text-[#E2E8F0] line-clamp-2 leading-snug w-full">{bookmark.title}</h4>
+                <p className="text-[10px] text-[#718096] uppercase tracking-widest truncate w-full">{getDomain(bookmark.url)}</p>
               </div>
             </div>
           )}
@@ -251,7 +282,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       </div>
 
       {/* ─── EDITORIAL MODAL (Mobile Drawer / Desktop Modal) ─── */}
-      {/* Keeping your existing modal logic intact */}
       {mounted && isModalOpen && createPortal(
         <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
           
@@ -290,6 +320,26 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     spellCheck={false}
                   />
                 </div>
+
+              ) : isSocial ? (
+                // THE "SORRY NOTE" OVERLAY FOR SOCIAL MEDIA BLOCKS
+                <div className="w-full h-full relative overflow-hidden bg-[#FDFCF8] dark:bg-[#1A202C] flex items-center justify-center group">
+                  <img src={bookmark.image_url || previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover absolute inset-0 blur-md opacity-40 scale-105" />
+                  
+                  <div className="relative z-10 p-8 max-w-sm w-[90%] bg-white/80 dark:bg-[#1A202C]/80 backdrop-blur-xl rounded-2xl shadow-xl text-center flex flex-col items-center gap-4 border border-[#E5E0D8] dark:border-white/10">
+                     <PlayCircleIcon className="w-16 h-16 text-[#2D3748] dark:text-[#E2E8F0]" />
+                     <p className="text-sm font-sans text-[#2D3748] dark:text-[#E2E8F0] font-medium leading-relaxed">
+                       This content will play at the original link, not within Space.
+                     </p>
+                     <p className="text-[11px] font-sans text-[#718096] dark:text-[#A0AEC0] leading-relaxed">
+                       Platforms like Instagram sadly block us from saving videos outside their platforms. This is out of our control.
+                     </p>
+                     <a href={bookmark.url} target="_blank" rel="noreferrer" className="mt-4 px-6 py-2.5 bg-[#2D3748] dark:bg-[#E2E8F0] text-white dark:text-[#1A202C] rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform">
+                       Watch Original
+                     </a>
+                  </div>
+                </div>
+
               ) : bookmark.type === 'video' ? (
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                    <video src={bookmark.url} controls className="w-full h-full object-contain" />
@@ -311,7 +361,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               )}
             </div>
 
-            {/* RIGHT PANE (Editor) */}
+            {/* RIGHT PANE (Editor) - Remains functionally unchanged */}
             <div className="w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] overflow-y-auto transition-colors duration-500 pb-16 md:pb-0">
               <div className="px-6 md:px-12 py-8 md:py-12 flex flex-col gap-10 md:gap-12">
                 
