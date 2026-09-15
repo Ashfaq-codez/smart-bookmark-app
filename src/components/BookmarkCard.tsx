@@ -274,12 +274,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               {/* Scaled Iframe to Render Actual PDF Page cleanly */}
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
-                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
-                   className="absolute top-0 left-0 w-[200%] h-[200%] scale-[0.5] origin-top-left border-none bg-white" 
-                   title="PDF Preview"
-                   scrolling="no"
-                   tabIndex={-1}
-                 />
+                    src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                    className="absolute top-[-16px] left-[-16px] w-[calc(200%+32px)] h-[calc(200%+32px)] scale-[0.5] origin-top-left border-none bg-white pointer-events-none" 
+                    title="PDF Preview"
+                    scrolling="no"
+                    tabIndex={-1}
+                  />
                  {/* Invisible Overlay blocks all iframe clicks so card drags/clicks normally */}
                  <div className="absolute inset-0 z-20 bg-transparent" />
               </div>
@@ -364,7 +364,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                   <iframe 
                     src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
-                    className="w-full max-w-4xl aspect-video border-none" 
+                    className="w-full h-full border-none" 
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                     allowFullScreen 
                     title="YouTube Video"
