@@ -37,12 +37,7 @@ function normalizeUrl(rawUrl: string): string {
   } catch { return trimmed.toLowerCase().replace(/\/+$/, '') }
 }
 
-// Generates high-visibility vibrant colors for the Typewriter and Orbital rings
-const getRandomVibrantColor = () => {
-  const hues = [0, 45, 180, 220, 280, 320]; // Red, Gold, Cyan, Blue, Purple, Pink
-  const randomHue = hues[Math.floor(Math.random() * hues.length)];
-  return `hsl(${randomHue}, 85%, 55%)`;
-};
+const getRandomVibrantColor = () => `hsl(${Math.floor(Math.random() * 360)}, 85%, 60%)`;
 
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
@@ -80,13 +75,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [orbitalColor, setOrbitalColor] = useState('#90CDF4')
   const fullTitle = "Space"
 
-  // 1. Initialize Orbital Color on Mount
   useEffect(() => {
     setOrbitalColor(getRandomVibrantColor());
-    setTitleColor(getRandomVibrantColor());
   }, [])
 
-  // 2. Typewriter Effect Logic (Randomizes color every new cycle)
+  // Typewriter Effect Logic (with color randomization per cycle)
   useEffect(() => {
     let timer: NodeJS.Timeout
     if (isDeleting) {
@@ -94,7 +87,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         setTitleText(prev => prev.slice(0, -1))
         if (titleText === '') {
           setIsDeleting(false)
-          setTitleColor(getRandomVibrantColor()) 
+          setTitleColor(getRandomVibrantColor()) // New color when typing starts again
         }
       }, 100)
     } else {
@@ -330,23 +323,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   // Generate data for the Single-Text Orbital Badge
   const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'GUEST'
   const firstLetter = userNameDisplay.charAt(0).toUpperCase()
+  const orbitalText = userNameDisplay
 
   const isInputVisible = !isSidebarOpen && isNavVisible;
 
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-[900ms]">
       
-      {/* CSS HACKS: Scrollbars, Blinking Cursor, and Profile Trigger Override */}
+      {/* CSS HACKS: Scrollbars, Blinking Cursor, and Phantom Dropdown Trigger */}
       <style dangerouslySetInnerHTML={{__html: `
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes custom-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         .animate-custom-blink { animation: custom-blink 1s step-end infinite; }
         
-        /* Strict targeting to make ONLY the initial Radix/Headless button invisible but functional */
-        .profile-hide-trigger > div > button:first-child,
-        .profile-hide-trigger > button:first-child {
+        /* Force ProfileDropdown's default button to be absolutely invisible but fully clickable */
+        .profile-hide-trigger button[aria-haspopup="menu"],
+        .profile-hide-trigger > button,
+        .profile-hide-trigger > div > button {
            opacity: 0 !important;
+           color: transparent !important;
+           background: transparent !important;
            position: absolute !important;
            inset: 0 !important;
            width: 100% !important;
@@ -376,7 +373,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             style={{ color: titleColor }}
           >
             {titleText}
-            {/* The cursor inherits color via bg-current */}
+            {/* Blinking cursor matching the random title color */}
             <span className="inline-block w-[3px] h-[24px] sm:h-[28px] bg-current ml-[2px] animate-custom-blink" />
           </h1>
         </div>
@@ -390,7 +387,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               <path id="textPath" d="M 50, 50 m -34, 0 a 34,34 0 1,1 68,0 a 34,34 0 1,1 -68,0" fill="none" />
               <text fontSize="14" fill="currentColor" fontWeight="bold" letterSpacing="1.5" className="uppercase font-sans">
                 <textPath href="#textPath" startOffset="50%" textAnchor="middle">
-                  {userNameDisplay}
+                  {orbitalText}
                 </textPath>
               </text>
             </svg>
@@ -402,12 +399,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               </span>
             </div>
 
-            {/* Profile Dropdown logic wrapper. Fully invisible trigger, but captures clicks. */}
+            {/* Profile Dropdown logic wrapper. Re-mounts to force-close if sidebar opens. */}
             <div 
-               className="profile-hide-trigger absolute inset-0 w-full h-full z-20" 
-               onClickCapture={() => setIsSidebarOpen(false)}
+              className="profile-hide-trigger absolute inset-0 w-full h-full z-20 cursor-pointer"
+              onClick={() => setIsSidebarOpen(false)}
             >
-               <ProfileDropdown email={userEmail ?? ""} />
+               <ProfileDropdown key={isSidebarOpen ? 'closed' : 'open'} email={userEmail ?? ""} />
             </div>
           </div>
         </div>
@@ -436,7 +433,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-10 text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-white transition-colors cursor-pointer"
+                className="absolute right-4 sm:right-6 z-10 text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-white transition-colors cursor-pointer"
                 title="Clear Search"
               >
                 <ClearIcon />
@@ -478,8 +475,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </main>
 
       {/* ─── HALF CARD DRAWER (INPUT SECTION) ─── */}
-      <div className={`fixed bottom-0 z-40 transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] w-full md:w-[700px] left-1/2 -translate-x-1/2 ${isInputVisible ? 'translate-y-0' : 'translate-y-[100%]'}`}>
-        <div className="w-full bg-white dark:bg-[#1A202C] rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-gray-200 dark:border-white/10 px-4 py-4 pb-8 md:pb-6 md:px-6 flex items-center gap-3 transition-colors duration-500">
+      <div className={`fixed bottom-0 z-40 transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex justify-center w-full md:w-[700px] left-1/2 -translate-x-1/2 ${isInputVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-[150%] opacity-0 pointer-events-none'}`}>
+        <div className="w-full flex items-center gap-3 bg-white dark:bg-[#1A202C] rounded-t-[32px] px-4 py-4 md:px-6 md:py-5 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-x border-gray-200 dark:border-white/10 pointer-events-auto transition-colors duration-500 pb-8 md:pb-6">
           
           {/* Upload Button */}
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
