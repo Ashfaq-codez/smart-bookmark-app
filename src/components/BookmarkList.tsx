@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { Bookmark } from '@/types'
@@ -13,6 +13,7 @@ import ProfileDropdown from './ProfileDropdown'
 const SendIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
 const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 const SpinnerIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+const ClearIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -308,10 +309,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(id, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
-  // Generate data for the new Orbital Badge
+  // Generate data for the new Single-Text Orbital Badge
   const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'GUEST'
   const firstLetter = userNameDisplay.charAt(0).toUpperCase()
-  const orbitalText = `${userNameDisplay} • `.repeat(8).substring(0, 60)
+  const orbitalText = userNameDisplay
 
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-[900ms]">
@@ -345,27 +346,31 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </h1>
         </div>
 
-        {/* RIGHT: Orbital Username Badge */}
+        {/* RIGHT: Single-Text Orbital Username Badge */}
         <div className="flex-[1] flex justify-end items-center z-20 pr-2 sm:pr-4">
           <div className="relative flex items-center justify-center w-[50px] h-[50px] group cursor-pointer">
-            {/* Spinning SVG Text Ring matching the blue theme */}
+            {/* Spinning SVG Text Ring (Single Name, Centered at top) */}
             <svg className="absolute inset-0 w-full h-full animate-[spin_10s_linear_infinite] text-[#2B6CB0] dark:text-[#90CDF4] transition-colors duration-700 pointer-events-none" viewBox="0 0 100 100">
               <path id="textPath" d="M 50, 50 m -34, 0 a 34,34 0 1,1 68,0 a 34,34 0 1,1 -68,0" fill="none" />
-              <text fontSize="13" fill="currentColor" fontWeight="bold" letterSpacing="1.5" className="uppercase font-sans">
-                <textPath href="#textPath" startOffset="0%">
+              <text fontSize="14" fill="currentColor" fontWeight="bold" letterSpacing="1.5" className="uppercase font-sans">
+                <textPath href="#textPath" startOffset="50%" textAnchor="middle">
                   {orbitalText}
                 </textPath>
               </text>
             </svg>
+            
             {/* Center Profile Anchor - First Letter */}
             <div className="absolute inset-0 flex items-center justify-center z-10">
-              <span className="text-xl font-serif font-bold text-[#2D3748] dark:text-[#E2E8F0] group-hover:scale-110 transition-transform">
+              <span className="text-xl font-serif font-bold text-[#2D3748] dark:text-[#E2E8F0] group-hover:scale-110 transition-transform pointer-events-none">
                 {firstLetter}
               </span>
-              {/* Invisible overlay of the actual dropdown component so functionality is retained */}
-              <div className="absolute inset-0 opacity-0 cursor-pointer">
+            </div>
+
+            {/* Profile Dropdown functionality overlay (Invisible until focused/hovered) */}
+            <div className="absolute inset-0 flex items-center justify-center z-20">
+               <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300 w-full h-full flex items-center justify-center">
                  <ProfileDropdown email={userEmail ?? ""} />
-              </div>
+               </div>
             </div>
           </div>
         </div>
@@ -381,15 +386,26 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── MAIN GRID AREA ─── */}
       <main className={`flex-1 flex flex-col transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] pb-32 pt-[90px] md:pt-[100px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
         
-        {/* ─── FLOATING SEARCH PILL ("Goofy" Invisible Dark Mode) ─── */}
+        {/* ─── FLOATING SEARCH PILL WITH CLEAR BUTTON ─── */}
         <div className="w-full px-4 sm:px-8 md:px-10 flex justify-center mb-6 z-20 relative">
-          <input
-            type="text"
-            placeholder="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full max-w-2xl bg-white dark:bg-[#1A202C] border border-gray-100 dark:border-transparent outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-[16px] sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#4A5568] transition-colors duration-500 text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)] focus:dark:shadow-none"
-          />
+          <div className="w-full max-w-2xl relative flex items-center">
+            <input
+              type="text"
+              placeholder="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white dark:bg-[#1A202C] border border-gray-100 dark:border-transparent outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-[16px] sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#4A5568] transition-colors duration-500 text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)] focus:dark:shadow-none pr-12"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-white transition-colors cursor-pointer"
+                title="Clear Search"
+              >
+                <ClearIcon />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ─── MASONRY GRID ─── */}
@@ -424,17 +440,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) ─── */}
-      <div className={`fixed bottom-6 z-40 transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex justify-center w-[95%] sm:w-[600px] md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'} ${isNavVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-[150%] opacity-0 pointer-events-none'}`}>
-        {/* Styled identically to the search pill above */}
-        <div className="w-full flex items-center bg-white dark:bg-[#1A202C] rounded-xl p-2 sm:p-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none border border-gray-100 dark:border-transparent pointer-events-auto transition-colors duration-500">
+      {/* ─── HALF CARD DRAWER (INPUT SECTION) ─── */}
+      <div className={`fixed bottom-0 z-40 transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex justify-center w-full md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'} ${isNavVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-[100%] opacity-0 pointer-events-none'}`}>
+        <div className="w-full flex items-center gap-3 bg-white dark:bg-[#1A202C] rounded-t-[32px] px-4 py-4 md:px-6 md:py-5 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-x border-gray-200 dark:border-white/10 pointer-events-auto transition-colors duration-500 pb-8 md:pb-6">
           
           {/* Upload Button */}
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isUploading}
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#FDFCF8] dark:bg-[#2D3748] text-[#4A5568] dark:text-[#A0AEC0] rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-black transition-colors disabled:opacity-50 cursor-pointer border border-[#E5E0D8] dark:border-[#4A5568]"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#FDFCF8] dark:bg-[#2D3748] text-[#4A5568] dark:text-[#A0AEC0] rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-black transition-colors disabled:opacity-50 cursor-pointer border border-[#E5E0D8] dark:border-[#4A5568]"
           >
             {isUploading ? <SpinnerIcon /> : <PlusIcon />}
           </button>
@@ -447,7 +462,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
             placeholder="input text links image video pdfs docs"
-            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-serif text-[16px] sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#4A5568] text-center"
+            className="flex-1 bg-transparent border-none outline-none px-2 font-serif text-[16px] sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#4A5568] text-center"
           />
 
           {/* Send Button */}
