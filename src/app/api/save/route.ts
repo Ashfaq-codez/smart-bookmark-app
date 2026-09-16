@@ -115,7 +115,7 @@ export async function POST(request: Request) {
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
     
-    // --- NEW: Social Domain Detection ---
+    // --- Social Domain Detection ---
     let detectedType = itemType;
     if (cleanUrl && isLink) {
       try {
@@ -138,7 +138,6 @@ export async function POST(request: Request) {
           .from('bookmarks')
           .select('id, title, url')
           .eq('user_id', userId)
-          // Look across all link and social types for deduplication
           .in('type', ['link', 'twitter', 'instagram', 'youtube', 'github', 'linkedin'])
           .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
           .limit(1)
@@ -179,20 +178,52 @@ export async function POST(request: Request) {
       try {
         const parsedUrl = new URL(cleanUrl);
         if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
-          const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000) });
-          if (response.ok) {
-            const html = await response.text();
-            const $ = cheerio.load(html.substring(0, 512 * 1024));
-            const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
-            finalTitle = customTitle || scrapedTitle || cleanUrl; 
-            finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-            let scrapedImg = $('meta[property="og:image"]').attr('content');
-            if (scrapedImg) {
-              try {
-                scrapedImg = new URL(scrapedImg, cleanUrl).href;
-                if (scrapedImg.startsWith('http://')) scrapedImg = scrapedImg.replace('http://', 'https://');
-                finalImage = finalImage || scrapedImg;
-              } catch (e) {}
+          
+          // --- NEW: Advanced Twitter API Extraction ---
+          if (detectedType === 'twitter') {
+            const vxUrl = cleanUrl.replace('twitter.com', 'api.vxtwitter.com').replace('x.com', 'api.vxtwitter.com');
+            const response = await fetch(vxUrl, { signal: AbortSignal.timeout(5000) });
+            
+            if (response.ok) {
+              const data = await response.json();
+              
+              let finalDesc = data.text || '';
+              // Append Quote Tweet URL to description so frontend parser catches it
+              if (data.qrtURL && !finalDesc.includes(data.qrtURL)) {
+                 finalDesc += `\n\n${data.qrtURL}`;
+              }
+              
+              // Prioritize media_extended to grab the true .mp4 CDN links
+              let mediaUrl = null;
+              if (data.media_extended && data.media_extended.length > 0) {
+                 mediaUrl = data.media_extended[0].url; 
+              }
+
+              finalTitle = customTitle || `Post by ${data.user_name} (@${data.user_screen_name}) on X`;
+              finalDescription = customDesc || finalDesc || null;
+              finalImage = customImg || mediaUrl || null;
+            } else {
+              // Graceful fallback if vx API limits us
+              finalTitle = customTitle || cleanUrl;
+            }
+          } 
+          // --- Standard Web Scraping Fallback ---
+          else {
+            const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000) });
+            if (response.ok) {
+              const html = await response.text();
+              const $ = cheerio.load(html.substring(0, 512 * 1024));
+              const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
+              finalTitle = customTitle || scrapedTitle || cleanUrl; 
+              finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
+              let scrapedImg = $('meta[property="og:image"]').attr('content');
+              if (scrapedImg) {
+                try {
+                  scrapedImg = new URL(scrapedImg, cleanUrl).href;
+                  if (scrapedImg.startsWith('http://')) scrapedImg = scrapedImg.replace('http://', 'https://');
+                  finalImage = finalImage || scrapedImg;
+                } catch (e) {}
+              }
             }
           }
         }
@@ -201,7 +232,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // --- FIX: Do not force "Text Snippet" for notes. Let them be empty string so the UI can hide the title.
     if (itemType === 'note') {
       finalTitle = finalTitle || ''; 
     } else if (itemType === 'image') {
@@ -222,7 +252,7 @@ export async function POST(request: Request) {
         category: category || 'Inbox',
         sub_category: sub_category || null,
         tags: ['auto-saved', detectedType],
-        type: detectedType, // Save the detected social type
+        type: detectedType, 
       }])
       .select()
       .single();
