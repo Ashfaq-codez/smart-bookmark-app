@@ -37,19 +37,55 @@ const CleanPdfIcon = () => (
   </svg>
 )
 
+// Bulletproof video detection (catches hidden .mp4s and Twitter's CDN links)
 const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
-  return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
+  const l = url.toLowerCase();
+  return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('video.twimg.com') || l.includes('.m3u8');
 };
 
-const renderTwitterText = (text: string) => {
+// Advanced Text Parser: Supports clickable links and Embedded Quote Tweets
+const renderTwitterText = (text: string, isExpanded: boolean = false) => {
   if (!text) return null;
-  const parts = text.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
+  
+  const parts = text.split(/(https?:\/\/(?:twitter\.com|x\.com)\/\w+\/status\/\d+(?:\?[^\s]*)?)/g);
+  
   return parts.map((part, i) => {
-    if (part.match(/^(https?:\/\/[^\s]+|@\w+|#\w+)$/)) {
-      return <span key={i} className="text-[#1DA1F2]">{part}</span>;
+    const quoteMatch = part.match(/https?:\/\/(?:twitter\.com|x\.com)\/(\w+)\/status\/(\d+)/);
+    
+    if (quoteMatch) {
+      return (
+        <div key={i} className="mt-3 mb-1 w-full rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#000000] pointer-events-auto relative z-20" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+           <iframe 
+             src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${quoteMatch[2]}`} 
+             className={`w-full border-none bg-transparent ${isExpanded ? 'h-[350px] overflow-y-auto custom-scrollbar' : 'h-[200px]'}`} 
+             title="Nested X Post"
+             scrolling={isExpanded ? "yes" : "no"}
+           />
+        </div>
+      );
     }
-    return <span key={i}>{part}</span>;
+
+    const subParts = part.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
+    return subParts.map((sub, j) => {
+      if (sub.match(/^(https?:\/\/[^\s]+|@\w+|#\w+)$/)) {
+        return (
+          <a 
+            key={`${i}-${j}`} 
+            href={sub.startsWith('http') ? sub : `https://x.com/${sub}`} 
+            target="_blank" 
+            rel="noreferrer" 
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()} 
+            onClick={(e) => e.stopPropagation()} 
+            className="text-[#1DA1F2] hover:underline relative z-20 pointer-events-auto"
+          >
+            {sub}
+          </a>
+        );
+      }
+      return <span key={`${i}-${j}`}>{sub}</span>;
+    });
   });
 };
 
@@ -333,14 +369,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <XIcon />
             </div>
             
-            <p className="text-[14px] font-sans text-gray-900 dark:text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1">
-              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
-            </p>
+            <div className="text-[14px] font-sans text-gray-900 dark:text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
+              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
+            </div>
             
             {bookmark.image_url && (
               <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                 {isVideoMedia(bookmark.image_url) ? (
-                  <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto max-h-56 object-cover block" />
+                  <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
                 ) : (
                   <>
                     <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
@@ -470,20 +506,19 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // EXACT CUSTOM TWITTER MODAL UI
-                <div className="w-full h-full flex bg-[#151618] overflow-y-auto p-4 md:p-8 custom-scrollbar">
-                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto">
+                <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative border border-white/5 m-auto relative z-20 pointer-events-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                     
-                    <div className="p-6 md:p-8 flex flex-col gap-5">
-                      <p className="text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
-                        {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
-                      </p>
+                    <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
+                      <div className="text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
+                        {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
+                      </div>
                       
                       {bookmark.image_url && (
                         <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
                           {isVideoMedia(bookmark.image_url) ? (
-                             <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain max-h-[50vh] block" />
+                             <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
                           ) : (
                              <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
                           )}
@@ -513,7 +548,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                     <div className="w-full bg-black relative shrink-0 flex items-center justify-center">
                       {isVideoMedia(bookmark.image_url) ? (
-                         <video src={bookmark.image_url!} autoPlay muted playsInline loop className="w-full h-auto max-h-[600px] object-contain block" />
+                         <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
                       ) : (
                          <img src={bookmark.image_url || previewImageUrl} className="w-full h-auto max-h-[600px] object-contain block" />
                       )}
@@ -575,7 +610,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
               ) : displayType === 'video' ? (
                 <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                   <video src={bookmark.url} controls autoPlay className="w-full h-full object-contain" />
+                   <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
                 </div>
               ) : displayType === 'pdf' ? (
                 <div className="w-full h-full bg-[#FDFCF8] dark:bg-[#1A202C] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
