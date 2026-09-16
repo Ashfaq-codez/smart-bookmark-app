@@ -365,7 +365,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isUploading}
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#F4B2B0] text-[#363638] rounded-[14px] flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#6892b0] text-[#363638] rounded-[14px] flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
           >
             {isUploading ? <SpinnerIcon /> : <PlusIcon />}
           </button>
@@ -385,7 +385,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <button 
             onClick={handleQuickCapture} 
             disabled={isSaving || !inputValue.trim()} 
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-[#F4B2B0] flex items-center justify-center hover:scale-110 disabled:opacity-30 transition-transform cursor-pointer"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-[#6892b0] flex items-center justify-center hover:scale-110 disabled:opacity-30 transition-transform cursor-pointer"
           >
             <SendIcon />
           </button>
