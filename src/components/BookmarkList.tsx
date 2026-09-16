@@ -285,20 +285,45 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(id, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
+  const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'GUEST'
+
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-500">
       
+      {/* GLOBAL UTILITY STYLES FOR SCROLLBAR HIDING & FADING MASKS */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-right-mask { mask-image: linear-gradient(to right, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%); }
+      `}} />
+
       {/* ─── FIXED HEADER ─── */}
-      <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
-        <div className="w-1/3 flex items-center">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 transition-opacity font-medium cursor-pointer">
-            <span>{isSidebarOpen ? 'Close Index' : 'Index'}</span>
+      <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center justify-between px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
+        
+        {/* LEFT: Button-ified Index */}
+        <div className="flex-[1] flex items-center justify-start">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className="px-5 py-2.5 bg-white dark:bg-[#2D3748] hover:bg-gray-50 dark:hover:bg-[#4A5568] border border-gray-200 dark:border-[#4A5568] rounded-full flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] transition-colors font-bold shadow-sm cursor-pointer"
+          >
+            <span>{isSidebarOpen ? 'Close' : 'Index'}</span>
           </button>
         </div>
-        <div className="w-1/3 flex justify-center">
+
+        {/* CENTER: Title (Hidden on small screens to give username room) */}
+        <div className="flex-[1] hidden md:flex justify-center">
           <h1 className="font-serif text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0]">Space</h1>
         </div>
-        <div className="w-1/3 flex justify-end">
+
+        {/* RIGHT: User Profile & Fading Swipeable Pill */}
+        <div className="flex-[1] flex justify-end items-center gap-2 sm:gap-3">
+          <div className="px-4 py-2 bg-white dark:bg-[#2D3748] border border-gray-200 dark:border-[#4A5568] rounded-full flex items-center max-w-[130px] sm:max-w-[200px] shadow-sm overflow-hidden">
+            <div className="overflow-x-auto hide-scrollbar fade-right-mask flex items-center pr-6">
+              <span className="text-[10px] sm:text-xs uppercase tracking-widest font-bold text-[#4A5568] dark:text-[#A0AEC0] whitespace-nowrap">
+                {userNameDisplay}
+              </span>
+            </div>
+          </div>
           <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
@@ -356,16 +381,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) ─── */}
+      {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) (Light/Dark Aware) ─── */}
       <div className={`fixed bottom-6 z-40 transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] pointer-events-none flex justify-center w-[95%] sm:w-[600px] md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'}`}>
-        <div className="w-full flex items-center bg-[#363638] backdrop-blur-xl rounded-[20px] p-2.5 shadow-[0_20px_40px_rgba(0,0,0,0.3)] border border-white/5 pointer-events-auto">
+        <div className="w-full flex items-center bg-white dark:bg-[#363638] backdrop-blur-xl rounded-[20px] p-2.5 shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-white/5 pointer-events-auto transition-colors duration-500">
           
           {/* Upload Button */}
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isUploading}
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#6892b0] text-[#363638] rounded-[14px] flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#6892b0] text-white dark:text-[#363638] rounded-[14px] flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
           >
             {isUploading ? <SpinnerIcon /> : <PlusIcon />}
           </button>
@@ -378,7 +403,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
             placeholder="input text links image video pdfs docs"
-            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-mono text-[10px] sm:text-xs text-[#E2E8F0] placeholder-[#8C8C8C] text-center"
+            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-mono text-[10px] sm:text-xs text-gray-900 dark:text-[#E2E8F0] placeholder-gray-400 dark:placeholder-[#8C8C8C] text-center"
           />
 
           {/* Send Button */}
