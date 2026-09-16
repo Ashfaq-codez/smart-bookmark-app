@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { Bookmark } from '@/types'
@@ -10,7 +10,6 @@ import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
-// Replaced Paperclip and outlined Send icon with exact UI matches
 const SendIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
 const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 const SpinnerIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
@@ -25,7 +24,6 @@ function normalizeUrl(rawUrl: string): string {
     const path = parsed.pathname.replace(/\/+$/, '') || '/'
     let search = parsed.search
 
-    // Clean YouTube URLs to ONLY keep the video ID
     if (host === 'youtube.com' && path === '/watch') {
       const videoId = parsed.searchParams.get('v')
       if (videoId) search = `?v=${videoId}`
@@ -42,6 +40,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isNavVisible, setIsNavVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const supabase = createClient()
   const [activeFilter, setActiveFilter] = useState('All')
@@ -66,7 +65,28 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // 1. Load persisted folders from local storage on initial client mount
+  // Typewriter State
+  const [titleText, setTitleText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const fullTitle = "Space"
+
+  // 1. Typewriter Effect Logic
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (isDeleting) {
+      timer = setTimeout(() => {
+        setTitleText(prev => prev.slice(0, -1))
+        if (titleText === '') setIsDeleting(false)
+      }, 100)
+    } else {
+      timer = setTimeout(() => {
+        setTitleText(fullTitle.slice(0, titleText.length + 1))
+        if (titleText === fullTitle) setTimeout(() => setIsDeleting(true), 4000)
+      }, 200)
+    }
+    return () => clearTimeout(timer)
+  }, [titleText, isDeleting])
+
   useEffect(() => {
     try {
       const savedCats = localStorage.getItem('space_custom_cats')
@@ -80,7 +100,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     }
   }, [])
 
-  // 2. Sync folders back to local storage whenever they change
   useEffect(() => {
     if (foldersLoaded) {
       localStorage.setItem('space_custom_cats', JSON.stringify(customCategories))
@@ -106,11 +125,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
 
+  // Smart Hide-on-Scroll Logic
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
         setIsSidebarOpen(false) 
+        setIsNavVisible(false)
+      } else {
+        setIsNavVisible(true)
       }
       setLastScrollY(currentScrollY)
     }
@@ -285,34 +308,55 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(id, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
+  // Pre-calculate the repeating text for the circular username badge
+  const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'GUEST'
+  const orbitalText = `${userNameDisplay} • `.repeat(8).substring(0, 60)
+
   return (
-    <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-500">
+    <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-[900ms]">
       
+      <style dangerouslySetInnerHTML={{__html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes custom-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .animate-custom-blink { animation: custom-blink 1s step-end infinite; }
+      `}} />
+
       {/* ─── FIXED HEADER ─── */}
-      <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
+      <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center justify-between px-2 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-[900ms]">
         
-        {/* LEFT: Button-ified Index */}
-        <div className="flex-1 flex items-center justify-start z-20">
+        {/* LEFT: Seamless Button-ified Index */}
+        <div className="flex-[1] flex items-center justify-start z-20">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="px-5 py-2.5 bg-white dark:bg-[#2D3748] hover:bg-gray-50 dark:hover:bg-[#4A5568] border border-gray-200 dark:border-[#4A5568] rounded-full flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] transition-colors font-bold shadow-sm cursor-pointer"
+            className="px-5 py-2.5 bg-transparent border-none outline-none flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] transition-opacity hover:opacity-70 font-bold cursor-pointer"
           >
             <span>{isSidebarOpen ? 'Close' : 'Index'}</span>
           </button>
         </div>
 
-        {/* CENTER: Title (Absolute centered to prevent squishing) */}
-        <div className="absolute left-1/2 -translate-x-1/2 z-10 flex justify-center pointer-events-none">
-          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0] pointer-events-auto">Space</h1>
+        {/* CENTER: Typewriter Title */}
+        <div className="absolute left-1/2 -translate-x-1/2 z-10 flex justify-center pointer-events-none w-[120px] text-center">
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0] pointer-events-auto flex items-center justify-center">
+            {titleText}
+            <span className="inline-block w-[3px] h-[24px] sm:h-[28px] bg-currentColor ml-[2px] animate-custom-blink" />
+          </h1>
         </div>
 
-        {/* RIGHT: User Profile with Mobile Phantom Gradient Fade */}
-        <div className="flex-1 flex justify-end items-center z-20">
-          <div className="relative flex justify-end items-center max-w-[35vw] sm:max-w-none">
-            {/* The Phantom Gradient: Fades left edge into background color smoothly on mobile */}
-            <div className="absolute left-[-20px] top-[-10px] bottom-[-10px] w-10 bg-gradient-to-r from-[#FDFCF8] dark:from-[#1A202C] to-transparent pointer-events-none z-10 md:hidden" />
-            
-            <div className="flex justify-end whitespace-nowrap overflow-visible">
+        {/* RIGHT: Orbital Username Badge */}
+        <div className="flex-[1] flex justify-end items-center z-20 pr-2 sm:pr-4">
+          <div className="relative flex items-center justify-center w-[54px] h-[54px] group">
+            {/* Spinning SVG Text Ring */}
+            <svg className="absolute inset-0 w-full h-full animate-[spin_12s_linear_infinite] text-[#A0AEC0] dark:text-[#4A5568] group-hover:text-[#2B6CB0] dark:group-hover:text-[#90CDF4] transition-colors duration-700 pointer-events-none" viewBox="0 0 100 100">
+              <path id="textPath" d="M 50, 50 m -34, 0 a 34,34 0 1,1 68,0 a 34,34 0 1,1 -68,0" fill="none" />
+              <text fontSize="11" fill="currentColor" fontWeight="bold" letterSpacing="1.5" className="uppercase font-sans">
+                <textPath href="#textPath" startOffset="0%">
+                  {orbitalText}
+                </textPath>
+              </text>
+            </svg>
+            {/* Center Profile Anchor */}
+            <div className="absolute inset-0 flex items-center justify-center z-10 scale-[0.8]">
               <ProfileDropdown email={userEmail ?? ""} />
             </div>
           </div>
@@ -320,23 +364,23 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       </header>
 
       {/* ─── SIDEBAR ─── */}
-      <div className={`fixed left-0 top-[0px] bottom-0 z-40 bg-[#FDFCF8] dark:bg-[#1A202C] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col w-[85vw] sm:w-[320px] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed left-0 top-[0px] bottom-0 z-40 bg-[#FDFCF8] dark:bg-[#1A202C] transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex flex-col w-[85vw] sm:w-[320px] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
-      <div onClick={() => setIsSidebarOpen(false)} className={`fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
+      <div onClick={() => setIsSidebarOpen(false)} className={`fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-[900ms] ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
         
       {/* ─── MAIN GRID AREA ─── */}
-      <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[90px] md:pt-[100px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
+      <main className={`flex-1 flex flex-col transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] pb-32 pt-[90px] md:pt-[100px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
         
-        {/* ─── FLOATING SEARCH PILL ─── */}
+        {/* ─── FLOATING SEARCH PILL ("Goofy" Invisible Dark Mode) ─── */}
         <div className="w-full px-4 sm:px-8 md:px-10 flex justify-center mb-6 z-20 relative">
           <input
             type="text"
             placeholder="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full max-w-2xl bg-white dark:bg-[#2D3748] border border-gray-100 dark:border-white/5 outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-lg sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)]"
+            className="w-full max-w-2xl bg-white dark:bg-[#1A202C] border border-gray-100 dark:border-transparent outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-lg sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#4A5568] transition-colors duration-500 text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)] focus:dark:shadow-none"
           />
         </div>
 
@@ -372,16 +416,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
-      {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) (Light/Dark Aware) ─── */}
-      <div className={`fixed bottom-6 z-40 transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] pointer-events-none flex justify-center w-[95%] sm:w-[600px] md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'}`}>
-        <div className="w-full flex items-center bg-white dark:bg-[#363638] backdrop-blur-xl rounded-[20px] p-2.5 shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-white/5 pointer-events-auto transition-colors duration-500">
+      {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) ─── */}
+      <div className={`fixed bottom-6 z-40 transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex justify-center w-[95%] sm:w-[600px] md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'} ${isNavVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-[150%] opacity-0 pointer-events-none'}`}>
+        <div className="w-full flex items-center bg-white dark:bg-[#2D3748] rounded-[24px] p-2 md:p-3 shadow-[0_10px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] border border-gray-100 dark:border-transparent transition-colors duration-500">
           
           {/* Upload Button */}
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isUploading}
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#6892b0] text-white dark:text-[#363638] rounded-[14px] flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gray-100 dark:bg-[#1A202C] text-[#4A5568] dark:text-[#A0AEC0] rounded-[14px] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-black transition-colors disabled:opacity-50 cursor-pointer"
           >
             {isUploading ? <SpinnerIcon /> : <PlusIcon />}
           </button>
@@ -394,14 +438,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
             placeholder="input text links image video pdfs docs"
-            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-mono text-[10px] sm:text-xs text-gray-900 dark:text-[#E2E8F0] placeholder-gray-400 dark:placeholder-[#8C8C8C] text-center"
+            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-mono text-[10px] sm:text-xs text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] text-center"
           />
 
           {/* Send Button */}
           <button 
             onClick={handleQuickCapture} 
             disabled={isSaving || !inputValue.trim()} 
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-[#6892b0] flex items-center justify-center hover:scale-110 disabled:opacity-30 transition-transform cursor-pointer"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-[#2B6CB0] dark:text-[#90CDF4] flex items-center justify-center hover:scale-110 disabled:opacity-30 transition-transform cursor-pointer"
           >
             <SendIcon />
           </button>
