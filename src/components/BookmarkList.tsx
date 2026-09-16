@@ -10,8 +10,9 @@ import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import { toast } from 'react-hot-toast'
 import ProfileDropdown from './ProfileDropdown'
 
-const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-const PaperclipIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+// Replaced Paperclip and outlined Send icon with exact UI matches
+const SendIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 const SpinnerIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
 
 function normalizeUrl(rawUrl: string): string {
@@ -108,14 +109,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      
       if (currentScrollY > lastScrollY && currentScrollY > 60) {
         setIsSidebarOpen(false) 
       }
-      
       setLastScrollY(currentScrollY)
     }
-    
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
@@ -172,7 +170,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
 
-    // Pre-check local state for exact matches
     if (isAllUrls && tokens.length === 1) {
       const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(tokens[0]))
       if (existing) { setDuplicateMatch(existing); return }
@@ -194,16 +191,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: rawInput, type: 'note' }
         
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        
-        // Parse the backend JSON payload BEFORE the 409 check
         const data = await res.json().catch(() => ({}))
 
         if (res.status === 409) {
-          // Force the modal open using the exact database entry returned by the backend
           if (data.existing) {
             setDuplicateMatch(data.existing)
           } else {
-            // Fallback to local state if the backend data payload drops
             const match = bookmarks.find(b => normalizeUrl(b.url) === normalizeUrl(finalUrl))
             if (match) setDuplicateMatch(match)
             else toast.error('Item exists.')
@@ -295,6 +288,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-500">
       
+      {/* ─── FIXED HEADER ─── */}
       <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
         <div className="w-1/3 flex items-center">
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 transition-opacity font-medium cursor-pointer">
@@ -309,67 +303,29 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </header>
 
-      <div className={`fixed top-[72px] right-0 z-40 flex flex-col sm:flex-row border-b border-[#E5E0D8] dark:border-[#4A5568] bg-white dark:bg-[#2D3748] transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${isSidebarOpen ? 'md:w-[calc(100%-320px)] left-0 md:left-[320px]' : 'w-full left-0'}`}>
-        
-        <div className="flex-[1.2] flex items-center border-b sm:border-b-0 sm:border-r border-[#E5E0D8] dark:border-[#4A5568]">
-          <input
-            type="text"
-            placeholder="Search your space..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none outline-none px-4 sm:px-6 py-3.5 sm:py-4 font-serif text-base sm:text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"
-          />
-        </div>
-
-        <div className="flex-[1.5] flex items-stretch w-full">
-          
-          <div className="flex shrink-0 items-center justify-center border-r border-[#E5E0D8] dark:border-[#4A5568] px-3 sm:px-5">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileUpload} 
-              className="hidden" 
-              accept="image/*,video/*,application/pdf" 
-            />
-            <button 
-              onClick={() => fileInputRef.current?.click()} 
-              disabled={isUploading}
-              title="Upload Image, Video, or PDF"
-              className="text-[#718096] dark:text-[#A0AEC0] hover:text-[#2B6CB0] dark:hover:text-[#90CDF4] disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center h-full"
-            >
-              {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
-            </button>
-          </div>
-
-          <div className="flex-1 flex items-stretch">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
-              disabled={isSaving}
-              placeholder="Add link or text snippet..."
-              className="w-full h-full bg-transparent border-none outline-none px-4 sm:px-6 py-3.5 sm:py-4 font-serif text-base sm:text-lg text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors"
-            />
-            <button 
-              onClick={handleQuickCapture} 
-              disabled={isSaving || !inputValue.trim()} 
-              className="px-4 sm:px-6 py-3.5 sm:py-4 text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 disabled:opacity-30 transition-opacity cursor-pointer flex items-center justify-center border-l border-[#E5E0D8] dark:border-[#4A5568]"
-            >
-              <SendIcon />
-            </button>
-          </div>
-        </div>
-      </div>
-
+      {/* ─── SIDEBAR ─── */}
       <div className={`fixed left-0 top-[0px] bottom-0 z-40 bg-[#FDFCF8] dark:bg-[#1A202C] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col w-[85vw] sm:w-[320px] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
       <div onClick={() => setIsSidebarOpen(false)} className={`fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
         
-      <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[175px] md:pt-[135px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
-        <div className="w-full p-4 sm:p-8 md:p-10 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
+      {/* ─── MAIN GRID AREA ─── */}
+      <main className={`flex-1 flex flex-col transition-all duration-500 pb-32 pt-[90px] md:pt-[100px] ${isSidebarOpen ? 'md:ml-[320px]' : 'md:ml-0'}`}>
+        
+        {/* ─── FLOATING SEARCH PILL ─── */}
+        <div className="w-full px-4 sm:px-8 md:px-10 flex justify-center mb-6 z-20 relative">
+          <input
+            type="text"
+            placeholder="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full max-w-2xl bg-white dark:bg-[#2D3748] border border-gray-100 dark:border-white/5 outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-lg sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#718096] transition-colors text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)]"
+          />
+        </div>
+
+        {/* ─── MASONRY GRID ─── */}
+        <div className="w-full px-4 sm:px-8 md:px-10 flex gap-4 sm:gap-6 md:gap-8 items-start" ref={gridRef}>
           {isLoading ? (
             Array.from({ length: columnsCount }).map((_, colIndex) => (
               <div key={colIndex} className="flex flex-col gap-4 sm:gap-6 md:gap-8 w-full flex-1 min-w-0">
@@ -400,6 +356,42 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </main>
 
+      {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) ─── */}
+      <div className={`fixed bottom-6 z-40 transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] pointer-events-none flex justify-center w-[95%] sm:w-[600px] md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'}`}>
+        <div className="w-full flex items-center bg-[#363638] backdrop-blur-xl rounded-[20px] p-2.5 shadow-[0_20px_40px_rgba(0,0,0,0.3)] border border-white/5 pointer-events-auto">
+          
+          {/* Upload Button */}
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isUploading}
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#F4B2B0] text-[#363638] rounded-[14px] flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+          >
+            {isUploading ? <SpinnerIcon /> : <PlusIcon />}
+          </button>
+          
+          {/* Input Area */}
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
+            disabled={isSaving}
+            placeholder="input text links image video pdfs docs"
+            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-mono text-[10px] sm:text-xs text-[#E2E8F0] placeholder-[#8C8C8C] text-center"
+          />
+
+          {/* Send Button */}
+          <button 
+            onClick={handleQuickCapture} 
+            disabled={isSaving || !inputValue.trim()} 
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-[#F4B2B0] flex items-center justify-center hover:scale-110 disabled:opacity-30 transition-transform cursor-pointer"
+          >
+            <SendIcon />
+          </button>
+        </div>
+      </div>
+
       {/* ─── EDITORIAL COLLISION MODAL ─── */}
       {duplicateMatch && (
         <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-colors duration-500" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
@@ -417,7 +409,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 This source currently exists in your Space.
               </p>
               
-              {/* Conflicting Data Box */}
               <div className="flex flex-col gap-1 p-4 border border-[#E5E0D8] dark:border-[#4A5568] bg-[#FDFCF8] dark:bg-[#1A202C] text-left rounded-sm">
                 <span className="text-sm font-serif font-medium text-[#2D3748] dark:text-[#E2E8F0] truncate">{duplicateMatch.title}</span>
                 <span className="text-[9px] font-sans uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] truncate mt-1">
