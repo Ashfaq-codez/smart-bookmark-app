@@ -285,8 +285,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(id, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
-  const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'GUEST'
-
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-500">
       
@@ -315,16 +313,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <h1 className="font-serif text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0]">Space</h1>
         </div>
 
-        {/* RIGHT: User Profile & Fading Swipeable Pill */}
-        <div className="flex-[1] flex justify-end items-center gap-2 sm:gap-3">
-          <div className="px-4 py-2 bg-white dark:bg-[#2D3748] border border-gray-200 dark:border-[#4A5568] rounded-full flex items-center max-w-[130px] sm:max-w-[200px] shadow-sm overflow-hidden">
-            <div className="overflow-x-auto hide-scrollbar fade-right-mask flex items-center pr-6">
-              <span className="text-[10px] sm:text-xs uppercase tracking-widest font-bold text-[#4A5568] dark:text-[#A0AEC0] whitespace-nowrap">
-                {userNameDisplay}
-              </span>
+        {/* RIGHT: User Profile Dropdown wrapped as a Pill */}
+        <div className="flex-[1] flex justify-end items-center">
+          <div className="bg-white dark:bg-[#2D3748] border border-gray-200 dark:border-[#4A5568] rounded-full shadow-sm max-w-[140px] sm:max-w-[200px] flex items-center px-4 py-2">
+            <div className="overflow-x-auto hide-scrollbar fade-right-mask w-full flex items-center justify-end pr-2">
+              {/* We wrap ProfileDropdown to inherit the pill's scrolling mask, eliminating the double text */}
+              <div className="text-[10px] md:text-xs uppercase tracking-widest font-bold text-[#4A5568] dark:text-[#A0AEC0] whitespace-nowrap">
+                <ProfileDropdown email={userEmail ?? ""} />
+              </div>
             </div>
           </div>
-          <ProfileDropdown email={userEmail ?? ""} />
         </div>
       </header>
 
