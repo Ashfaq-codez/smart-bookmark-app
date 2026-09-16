@@ -288,18 +288,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-500">
       
-      {/* GLOBAL UTILITY STYLES FOR SCROLLBAR HIDING & FADING MASKS */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .fade-right-mask { mask-image: linear-gradient(to right, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%); }
-      `}} />
-
       {/* ─── FIXED HEADER ─── */}
-      <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center justify-between px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
+      <header className="fixed top-0 left-0 w-full h-[72px] border-b border-[#E5E0D8] dark:border-[#4A5568] flex items-center px-4 md:px-8 bg-[#FDFCF8]/95 dark:bg-[#1A202C]/95 backdrop-blur-md z-50 transition-colors duration-500">
         
         {/* LEFT: Button-ified Index */}
-        <div className="flex-[1] flex items-center justify-start">
+        <div className="flex-1 flex items-center justify-start z-20">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
             className="px-5 py-2.5 bg-white dark:bg-[#2D3748] hover:bg-gray-50 dark:hover:bg-[#4A5568] border border-gray-200 dark:border-[#4A5568] rounded-full flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-widest text-[#2B6CB0] dark:text-[#90CDF4] transition-colors font-bold shadow-sm cursor-pointer"
@@ -308,19 +301,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </button>
         </div>
 
-        {/* CENTER: Title (Hidden on small screens to give username room) */}
-        <div className="flex-[1] hidden md:flex justify-center">
-          <h1 className="font-serif text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0]">Space</h1>
+        {/* CENTER: Title (Absolute centered to prevent squishing) */}
+        <div className="absolute left-1/2 -translate-x-1/2 z-10 flex justify-center pointer-events-none">
+          <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0] pointer-events-auto">Space</h1>
         </div>
 
-        {/* RIGHT: User Profile Dropdown wrapped as a Pill */}
-        <div className="flex-[1] flex justify-end items-center">
-          <div className="bg-white dark:bg-[#2D3748] border border-gray-200 dark:border-[#4A5568] rounded-full shadow-sm max-w-[140px] sm:max-w-[200px] flex items-center px-4 py-2">
-            <div className="overflow-x-auto hide-scrollbar fade-right-mask w-full flex items-center justify-end pr-2">
-              {/* We wrap ProfileDropdown to inherit the pill's scrolling mask, eliminating the double text */}
-              <div className="text-[10px] md:text-xs uppercase tracking-widest font-bold text-[#4A5568] dark:text-[#A0AEC0] whitespace-nowrap">
-                <ProfileDropdown email={userEmail ?? ""} />
-              </div>
+        {/* RIGHT: User Profile with Mobile Phantom Gradient Fade */}
+        <div className="flex-1 flex justify-end items-center z-20">
+          <div className="relative flex justify-end items-center max-w-[35vw] sm:max-w-none">
+            {/* The Phantom Gradient: Fades left edge into background color smoothly on mobile */}
+            <div className="absolute left-[-20px] top-[-10px] bottom-[-10px] w-10 bg-gradient-to-r from-[#FDFCF8] dark:from-[#1A202C] to-transparent pointer-events-none z-10 md:hidden" />
+            
+            <div className="flex justify-end whitespace-nowrap overflow-visible">
+              <ProfileDropdown email={userEmail ?? ""} />
             </div>
           </div>
         </div>
