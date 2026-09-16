@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -42,6 +42,17 @@ const isVideoMedia = (url?: string | null) => {
   return url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
 };
 
+const renderTwitterText = (text: string) => {
+  if (!text) return null;
+  const parts = text.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
+  return parts.map((part, i) => {
+    if (part.match(/^(https?:\/\/[^\s]+|@\w+|#\w+)$/)) {
+      return <span key={i} className="text-[#1DA1F2]">{part}</span>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 interface BookmarkCardProps {
   bookmark: Bookmark;
   theme: { card: string; btn: string; hover: string };
@@ -79,10 +90,41 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [editContent, setEditContent] = useState(bookmark.content || '')
 
   useEffect(() => { setMounted(true) }, [])
-  
+
+  // ─── URL SYNC LOGIC (Handles Page Refreshes & Back Button) ───
+  useEffect(() => {
+    if (!mounted) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('b') === String(bookmark.id)) {
+      setIsModalOpen(true);
+    }
+
+    const handlePopState = () => {
+      const currentParams = new URLSearchParams(window.location.search);
+      if (currentParams.get('b') === String(bookmark.id)) {
+        setIsModalOpen(true);
+      } else if (isModalOpen) {
+        setIsVisible(false);
+        setTimeout(() => setIsModalOpen(false), 300);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [mounted, bookmark.id, isModalOpen]);
+
+  const openModal = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('b') !== String(bookmark.id)) {
+      params.set('b', String(bookmark.id));
+      window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+    }
+    setIsModalOpen(true);
+  }, [bookmark.id]);
+
   useEffect(() => { 
-    if (forceOpenModal) setIsModalOpen(true) 
-  }, [forceOpenModal])
+    if (forceOpenModal) openModal(); 
+  }, [forceOpenModal, openModal]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -121,6 +163,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       setIsReaderMode(false)
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
+
+    // Clean up URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('b') === String(bookmark.id)) {
+      params.delete('b');
+      const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+      window.history.pushState({}, '', newUrl);
+    }
   }
   
   const handleCloseWithSave = async () => {
@@ -184,9 +234,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return match ? match[1] : '';
   }
 
-  const getTweetId = (url: string) => {
-    const match = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
-    return match ? match[1] : '';
+  const getTwitterAuthor = (url: string) => {
+    const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)/);
+    return match ? match[1] : 'unknown';
   }
 
   const getInstaMeta = (b: Bookmark) => {
@@ -264,7 +314,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         draggable 
         onDragStart={(e) => onDragStart(e, bookmark.id)} 
         onDragEnd={onDragEnd} 
-        onClick={() => setIsModalOpen(true)} 
+        onClick={openModal} 
         className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
       >
         
@@ -277,18 +327,34 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : displayType === 'twitter' ? (
-          // NATIVE EMBED FOR GRID VIEW: Securely captures Quote Tweets and Threads. 
-          // Uses fixed height with hidden overflow to act as a preview thumbnail without breaking grid.
-          <div className="w-full bg-white dark:bg-[#000000] rounded-2xl relative overflow-hidden shadow-sm border border-gray-100 dark:border-white/5 h-[350px]">
-            <iframe 
-              src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${getTweetId(bookmark.url)}`} 
-              className="absolute top-0 left-0 w-full h-[600px] border-none bg-transparent pointer-events-none scale-[0.98] origin-top" 
-              title="X Post"
-              scrolling="no"
-              tabIndex={-1}
-            />
-            {/* Click shield allows dragging/clicking the card without triggering iframe interactions */}
-            <div className="absolute inset-0 z-10 bg-transparent hover:bg-white/5 transition-colors" />
+          <div className="w-full bg-white dark:bg-[#1C1D21] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-transparent relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
+              <XIcon />
+            </div>
+            
+            <p className="text-[14px] font-sans text-gray-900 dark:text-[#D1D5DB] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1">
+              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
+            </p>
+            
+            {bookmark.image_url && (
+              <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
+                {isVideoMedia(bookmark.image_url) ? (
+                  <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto max-h-56 object-cover block" />
+                ) : (
+                  <>
+                    <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
+                       <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            
+            <p className="text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
+              by {getTwitterAuthor(bookmark.url)}
+            </p>
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
@@ -331,7 +397,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
                    src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                   className="absolute top-[-16px] left-[-16px] w-[calc(200%+32px)] h-[calc(200%+32px)] scale-[0.5] origin-top-left border-none pointer-events-none bg-white" 
+                   className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
                    title="PDF Preview"
                    scrolling="no"
                    tabIndex={-1}
@@ -404,15 +470,32 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                // NATIVE EMBED FOR MODAL VIEW: Shows exact full content (threads, videos, quotes). 
-                // Scaled specifically to prevent horizontal cutoff and scrollbar overflows.
-                <div className="w-full h-full flex bg-[#151618] dark:bg-[#000000] p-4 md:p-8 custom-scrollbar overflow-y-auto">
-                  <div className="w-full max-w-[550px] m-auto bg-transparent relative flex justify-center min-h-[85vh]">
-                    <iframe 
-                      src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${getTweetId(bookmark.url)}`} 
-                      className="w-full h-[85vh] border-none bg-transparent custom-scrollbar" 
-                      title="X Post"
-                    />
+                <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative border border-white/5 m-auto">
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+                    
+                    <div className="p-6 md:p-8 flex flex-col gap-5">
+                      <p className="text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
+                      </p>
+                      
+                      {bookmark.image_url && (
+                        <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
+                          {isVideoMedia(bookmark.image_url) ? (
+                             <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain max-h-[50vh] block" />
+                          ) : (
+                             <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-[#718096]">
+                      <span className="text-[12px] font-sans">
+                        Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
+                      </span>
+                      <XIcon />
+                    </div>
                   </div>
                 </div>
 
