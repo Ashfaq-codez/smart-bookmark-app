@@ -308,8 +308,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(id, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
-  // Pre-calculate the repeating text for the circular username badge
+  // Generate data for the new Orbital Badge
   const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'GUEST'
+  const firstLetter = userNameDisplay.charAt(0).toUpperCase()
   const orbitalText = `${userNameDisplay} • `.repeat(8).substring(0, 60)
 
   return (
@@ -339,25 +340,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         <div className="absolute left-1/2 -translate-x-1/2 z-10 flex justify-center pointer-events-none w-[120px] text-center">
           <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-wide text-[#2D3748] dark:text-[#E2E8F0] pointer-events-auto flex items-center justify-center">
             {titleText}
-            <span className="inline-block w-[3px] h-[24px] sm:h-[28px] bg-currentColor ml-[2px] animate-custom-blink" />
+            {/* The blinking cursor explicitly uses hex colors so it's always visible */}
+            <span className="inline-block w-[3px] h-[24px] sm:h-[28px] bg-[#2D3748] dark:bg-[#E2E8F0] ml-[2px] animate-custom-blink" />
           </h1>
         </div>
 
         {/* RIGHT: Orbital Username Badge */}
         <div className="flex-[1] flex justify-end items-center z-20 pr-2 sm:pr-4">
-          <div className="relative flex items-center justify-center w-[54px] h-[54px] group">
-            {/* Spinning SVG Text Ring */}
-            <svg className="absolute inset-0 w-full h-full animate-[spin_12s_linear_infinite] text-[#A0AEC0] dark:text-[#4A5568] group-hover:text-[#2B6CB0] dark:group-hover:text-[#90CDF4] transition-colors duration-700 pointer-events-none" viewBox="0 0 100 100">
+          <div className="relative flex items-center justify-center w-[50px] h-[50px] group cursor-pointer">
+            {/* Spinning SVG Text Ring matching the blue theme */}
+            <svg className="absolute inset-0 w-full h-full animate-[spin_10s_linear_infinite] text-[#2B6CB0] dark:text-[#90CDF4] transition-colors duration-700 pointer-events-none" viewBox="0 0 100 100">
               <path id="textPath" d="M 50, 50 m -34, 0 a 34,34 0 1,1 68,0 a 34,34 0 1,1 -68,0" fill="none" />
-              <text fontSize="11" fill="currentColor" fontWeight="bold" letterSpacing="1.5" className="uppercase font-sans">
+              <text fontSize="13" fill="currentColor" fontWeight="bold" letterSpacing="1.5" className="uppercase font-sans">
                 <textPath href="#textPath" startOffset="0%">
                   {orbitalText}
                 </textPath>
               </text>
             </svg>
-            {/* Center Profile Anchor */}
-            <div className="absolute inset-0 flex items-center justify-center z-10 scale-[0.8]">
-              <ProfileDropdown email={userEmail ?? ""} />
+            {/* Center Profile Anchor - First Letter */}
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <span className="text-xl font-serif font-bold text-[#2D3748] dark:text-[#E2E8F0] group-hover:scale-110 transition-transform">
+                {firstLetter}
+              </span>
+              {/* Invisible overlay of the actual dropdown component so functionality is retained */}
+              <div className="absolute inset-0 opacity-0 cursor-pointer">
+                 <ProfileDropdown email={userEmail ?? ""} />
+              </div>
             </div>
           </div>
         </div>
@@ -380,7 +388,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             placeholder="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full max-w-2xl bg-white dark:bg-[#1A202C] border border-gray-100 dark:border-transparent outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-lg sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#4A5568] transition-colors duration-500 text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)] focus:dark:shadow-none"
+            className="w-full max-w-2xl bg-white dark:bg-[#1A202C] border border-gray-100 dark:border-transparent outline-none px-6 py-3.5 sm:py-4 rounded-xl font-serif text-[16px] sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none placeholder-[#A0AEC0] dark:placeholder-[#4A5568] transition-colors duration-500 text-center focus:shadow-[0_8px_30px_rgba(0,0,0,0.1)] focus:dark:shadow-none"
           />
         </div>
 
@@ -418,19 +426,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {/* ─── FLOATING QUICK CAPTURE DOCK (BOTTOM) ─── */}
       <div className={`fixed bottom-6 z-40 transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex justify-center w-[95%] sm:w-[600px] md:w-[700px] ${isSidebarOpen ? 'md:left-[calc(50%+160px)] md:-translate-x-1/2 left-1/2 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'} ${isNavVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-[150%] opacity-0 pointer-events-none'}`}>
-        <div className="w-full flex items-center bg-white dark:bg-[#2D3748] rounded-[24px] p-2 md:p-3 shadow-[0_10px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] border border-gray-100 dark:border-transparent transition-colors duration-500">
+        {/* Styled identically to the search pill above */}
+        <div className="w-full flex items-center bg-white dark:bg-[#1A202C] rounded-xl p-2 sm:p-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-none border border-gray-100 dark:border-transparent pointer-events-auto transition-colors duration-500">
           
           {/* Upload Button */}
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isUploading}
-            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gray-100 dark:bg-[#1A202C] text-[#4A5568] dark:text-[#A0AEC0] rounded-[14px] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-black transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#FDFCF8] dark:bg-[#2D3748] text-[#4A5568] dark:text-[#A0AEC0] rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-black transition-colors disabled:opacity-50 cursor-pointer border border-[#E5E0D8] dark:border-[#4A5568]"
           >
             {isUploading ? <SpinnerIcon /> : <PlusIcon />}
           </button>
           
-          {/* Input Area */}
+          {/* Input Area (text-[16px] specifically prevents iOS Mobile Zoom) */}
           <input
             type="text"
             value={inputValue}
@@ -438,7 +447,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
             disabled={isSaving}
             placeholder="input text links image video pdfs docs"
-            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-mono text-[10px] sm:text-xs text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#718096] text-center"
+            className="flex-1 bg-transparent border-none outline-none px-3 sm:px-4 font-serif text-[16px] sm:text-xl text-[#2D3748] dark:text-[#E2E8F0] placeholder-[#A0AEC0] dark:placeholder-[#4A5568] text-center"
           />
 
           {/* Send Button */}
