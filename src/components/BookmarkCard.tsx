@@ -431,8 +431,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'twitter' ? (
-                <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative border border-white/5 m-auto">
+                // EXACT CUSTOM TWITTER MODAL UI
+                <div className="w-full h-full flex bg-[#151618] overflow-y-auto p-4 md:p-8">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                     
                     <div className="p-6 md:p-8 flex flex-col gap-5">
@@ -459,6 +460,35 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     </div>
                   </div>
                 </div>
+              // displayType === 'twitter' ? (
+              //   <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
+              //     <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative border border-white/5 m-auto">
+              //       <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+                    
+              //       <div className="p-6 md:p-8 flex flex-col gap-5">
+              //         <p className="text-[15px] font-sans text-gray-200 leading-relaxed whitespace-pre-wrap">
+              //           {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '')}
+              //         </p>
+                      
+              //         {bookmark.image_url && (
+              //           <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
+              //             {isVideoMedia(bookmark.image_url) ? (
+              //                <video src={bookmark.image_url} autoPlay muted playsInline loop className="w-full h-auto object-contain max-h-[50vh] block" />
+              //             ) : (
+              //                <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
+              //             )}
+              //           </div>
+              //         )}
+              //       </div>
+                    
+              //       <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-[#718096]">
+              //         <span className="text-[12px] font-sans">
+              //           Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
+              //         </span>
+              //         <XIcon />
+              //       </div>
+              //     </div>
+              //   </div>
 
               ) : displayType === 'instagram' && instaData ? (
                 <div className="w-full min-h-full flex bg-gray-50 dark:bg-[#000000] p-0 md:p-4 py-12 md:py-8 overflow-y-auto custom-scrollbar">
