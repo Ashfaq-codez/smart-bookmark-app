@@ -507,7 +507,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
               ) : displayType === 'twitter' ? (
                 <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative border border-white/5 m-auto relative z-20 pointer-events-auto">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto relative z-20 pointer-events-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                     
                     <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
@@ -534,6 +534,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     </div>
                   </div>
                 </div>
+
+              
 
               ) : displayType === 'instagram' && instaData ? (
                 <div className="w-full min-h-full flex bg-gray-50 dark:bg-[#000000] p-0 md:p-4 py-12 md:py-8 overflow-y-auto custom-scrollbar">
