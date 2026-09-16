@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { Bookmark } from '@/types'
@@ -87,7 +87,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         setTitleText(prev => prev.slice(0, -1))
         if (titleText === '') {
           setIsDeleting(false)
-          setTitleColor(getRandomVibrantColor()) // New color when typing starts again
+          setTitleColor(getRandomVibrantColor()) 
         }
       }, 100)
     } else {
@@ -330,26 +330,22 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FDFCF8] dark:bg-[#1A202C] min-h-screen font-sans text-[#2D3748] dark:text-[#E2E8F0] flex flex-col overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4] transition-colors duration-[900ms]">
       
-      {/* CSS HACKS: Scrollbars, Blinking Cursor, and Phantom Dropdown Trigger */}
+      {/* CSS HACKS: Scrollbars, Blinking Cursor, and Profile Trigger Override */}
       <style dangerouslySetInnerHTML={{__html: `
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes custom-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         .animate-custom-blink { animation: custom-blink 1s step-end infinite; }
         
-        /* Force ProfileDropdown's default button to be absolutely invisible but fully clickable */
-        .profile-hide-trigger button[aria-haspopup="menu"],
-        .profile-hide-trigger > button,
-        .profile-hide-trigger > div > button {
+        /* Ensure the invisible button spans the full circle so clicking works */
+        .profile-hide-trigger button {
            opacity: 0 !important;
-           color: transparent !important;
-           background: transparent !important;
            position: absolute !important;
            inset: 0 !important;
            width: 100% !important;
            height: 100% !important;
-           cursor: pointer !important;
            z-index: 50 !important;
+           cursor: pointer !important;
         }
       `}} />
 
@@ -373,7 +369,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             style={{ color: titleColor }}
           >
             {titleText}
-            {/* Blinking cursor matching the random title color */}
             <span className="inline-block w-[3px] h-[24px] sm:h-[28px] bg-current ml-[2px] animate-custom-blink" />
           </h1>
         </div>
@@ -399,12 +394,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               </span>
             </div>
 
-            {/* Profile Dropdown logic wrapper. Re-mounts to force-close if sidebar opens. */}
-            <div 
-              className="profile-hide-trigger absolute inset-0 w-full h-full z-20 cursor-pointer"
-              onClick={() => setIsSidebarOpen(false)}
-            >
-               <ProfileDropdown key={isSidebarOpen ? 'closed' : 'open'} email={userEmail ?? ""} />
+            {/* Profile Dropdown logic wrapper. Fully invisible but captures clicks to open the menu. */}
+            <div className="profile-hide-trigger absolute inset-0 w-full h-full z-20" onClick={() => setIsSidebarOpen(false)}>
+               <ProfileDropdown email={userEmail ?? ""} />
             </div>
           </div>
         </div>
