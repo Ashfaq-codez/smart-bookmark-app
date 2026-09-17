@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
+import crypto from 'crypto';
 
 const ALLOWED_ORIGINS = new Set([
   'https://smart-bookmark-app-lime.vercel.app',
@@ -23,12 +24,9 @@ function isPrivateIP(hostname: string): boolean {
   return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.)/.test(hostname);
 }
 
-// Utility to generate a SHA-256 hash
-async function sha256(message: string) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// BULLETPROOF NODE.JS HASHING
+function sha256(message: string) {
+  return crypto.createHash('sha256').update(message).digest('hex');
 }
 
 export async function OPTIONS(request: Request) {
@@ -101,8 +99,8 @@ export async function POST(request: Request) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
 
-      // Hash the incoming plaintext key to compare it against the secure database hash
-      const hashedApiKey = await sha256(apiKey);
+      // Hash the incoming key to compare it against the database
+      const hashedApiKey = sha256(apiKey);
 
       const { data: keyData, error: keyError } = await adminSupabase
         .from('api_keys')
@@ -126,7 +124,6 @@ export async function POST(request: Request) {
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
     
-    // --- Social Domain Detection ---
     let detectedType = itemType;
     if (cleanUrl && isLink) {
       try {
@@ -145,7 +142,6 @@ export async function POST(request: Request) {
 
       if (isLink) {
         const rawFlexiblePath = cleanUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('#')[0];
-        // Strip PostgREST operators and structural delimiters to prevent query injection
         const flexiblePath = rawFlexiblePath.replace(/[,()]/g, '').replace(/\.(eq|neq|gt|lt|in|is|fts|plfts)/gi, '');
 
         const { data } = await supabase
@@ -193,7 +189,6 @@ export async function POST(request: Request) {
         const parsedUrl = new URL(cleanUrl);
         if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
           
-          // --- Advanced Twitter API Extraction ---
           if (detectedType === 'twitter') {
             const vxUrl = cleanUrl.replace('twitter.com', 'api.vxtwitter.com').replace('x.com', 'api.vxtwitter.com');
             const response = await fetch(vxUrl, { signal: AbortSignal.timeout(5000), redirect: 'manual' });
@@ -218,7 +213,6 @@ export async function POST(request: Request) {
               finalTitle = customTitle || cleanUrl;
             }
           } 
-          // --- Standard Web Scraping Fallback ---
           else {
             const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000), redirect: 'manual' });
             if (response.ok) {
