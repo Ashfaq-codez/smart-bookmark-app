@@ -3,50 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useTheme } from '@/context/ThemeContext'
-import { createClient } from '@/utils/supabase/client'
 
 export default function HomePage() {
   const { isDarkMode, toggleDarkMode } = useTheme()
-
-  const [authLoading, setAuthLoading] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  const handleAuth = async () => {
-    if (authLoading) return
-
-    setAuthLoading(true)
-
-    try {
-      const supabase = createClient()
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (session?.user) {
-        window.location.href = '/dashboard'
-        return
-      }
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            prompt: 'select_account',
-          },
-        },
-      })
-
-      if (error) {
-        console.error('Google sign-in failed:', error)
-        setAuthLoading(false)
-      }
-    } catch (error) {
-      console.error('Authentication error:', error)
-      setAuthLoading(false)
-    }
-  }
 
   const navLinks = [
     { label: 'Features', href: '#features' },
@@ -199,34 +159,9 @@ export default function HomePage() {
               )}
             </button>
 
-            {/* DESKTOP ACTIONS */}
+            {/* DESKTOP ACTIONS - Consolidated into a single login route */}
             <Link
               href="/login"
-              className="
-                hidden
-                items-center justify-center
-                rounded-xl
-                border border-[#D7D0C4]
-                bg-white
-                px-4 py-2.5
-                text-sm font-medium
-                text-[#171A17]
-                transition-all duration-300
-                hover:-translate-y-0.5
-                hover:shadow-md
-                dark:border-[#343A34]
-                dark:bg-[#191D19]
-                dark:text-[#F1EEE8]
-                dark:hover:bg-[#202520]
-                sm:inline-flex
-              "
-            >
-              Sign in
-            </Link>
-
-            <button
-              onClick={handleAuth}
-              disabled={authLoading}
               className="
                 hidden
                 rounded-xl
@@ -236,14 +171,12 @@ export default function HomePage() {
                 transition-all duration-300
                 hover:-translate-y-0.5
                 hover:shadow-lg
-                disabled:cursor-wait
-                disabled:opacity-60
                 dark:bg-[#69866E]
                 sm:inline-flex
               "
             >
-              {authLoading ? 'Checking...' : 'Start collecting'}
-            </button>
+              Start collecting
+            </Link>
 
             {/* MOBILE MENU BUTTON */}
             <button
@@ -319,39 +252,17 @@ export default function HomePage() {
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="
-                  block w-full
-                  rounded-xl
-                  border border-[#D7D0C4]
-                  bg-white
-                  px-4 py-3
-                  text-center
-                  text-sm font-medium
-                  text-[#171A17]
-                  transition-all
-                  dark:border-[#343A34]
-                  dark:bg-[#191D19]
-                  dark:text-[#F1EEE8]
-                "
-              >
-                Sign in
-              </Link>
-
-              <button
-                onClick={handleAuth}
-                disabled={authLoading}
-                className="
-                  w-full
+                  w-full block text-center
                   rounded-xl
                   bg-[#4D6A51]
                   px-4 py-3
                   text-sm font-medium text-white
                   transition-all
-                  disabled:opacity-60
                   dark:bg-[#69866E]
                 "
               >
-                {authLoading ? 'Checking...' : 'Start collecting'}
-              </button>
+                Start collecting
+              </Link>
             </div>
           </div>
         )}
@@ -418,9 +329,8 @@ export default function HomePage() {
             </p>
 
             <div className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:mt-9 sm:max-w-none sm:flex-row sm:justify-center">
-              <button
-                onClick={handleAuth}
-                disabled={authLoading}
+              <Link
+                href="/login"
                 className="
                   group inline-flex w-full items-center justify-center gap-3
                   rounded-2xl
@@ -431,20 +341,15 @@ export default function HomePage() {
                   transition-all duration-300
                   hover:-translate-y-1
                   hover:shadow-[0_14px_28px_rgba(77,106,81,0.25)]
-                  disabled:cursor-wait
-                  disabled:opacity-60
                   dark:bg-[#69866E]
                   sm:w-auto
                 "
               >
-                {authLoading ? 'Checking...' : 'Start collecting'}
-
-                {!authLoading && (
-                  <span className="transition-transform duration-300 group-hover:translate-x-1">
-                    →
-                  </span>
-                )}
-              </button>
+                Start collecting
+                <span className="transition-transform duration-300 group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
 
               <a
                 href="#how"
@@ -1069,9 +974,8 @@ export default function HomePage() {
             Save what catches your attention. Come back when you’re ready.
           </p>
 
-          <button
-            onClick={handleAuth}
-            disabled={authLoading}
+          <Link
+            href="/login"
             className="
               group mt-7
               inline-flex w-full items-center justify-center gap-3
@@ -1082,20 +986,15 @@ export default function HomePage() {
               transition-all duration-300
               hover:-translate-y-1
               hover:shadow-xl
-              disabled:cursor-wait
-              disabled:opacity-60
               sm:mt-8
               sm:w-auto
             "
           >
-            {authLoading ? 'Checking...' : 'Start collecting'}
-
-            {!authLoading && (
-              <span className="transition-transform duration-300 group-hover:translate-x-1">
-                →
-              </span>
-            )}
-          </button>
+            Start collecting
+            <span className="transition-transform duration-300 group-hover:translate-x-1">
+              →
+            </span>
+          </Link>
         </div>
       </section>
 
