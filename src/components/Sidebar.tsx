@@ -1,19 +1,25 @@
 'use client'
 
 import React from 'react'
+import { useTheme } from '@/context/ThemeContext'
+import ProfileDropdown from './ProfileDropdown'
 
 const PlusIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12h14"/></svg>
 const SmallXIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
 const FolderIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
 const HomeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+const MoonIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+const SunIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
 
 interface SidebarProps {
   userEmail: string | null; handleSignOut: () => void; isMobileMenuOpen: boolean; setIsMobileMenuOpen: (isOpen: boolean) => void; activeFilter: string; setActiveFilter: (filter: string) => void; activeSubFilter: string | null; setActiveSubFilter: (subFilter: string | null) => void; getCounts: Record<string, number>; folderHierarchy: Record<string, string[]>; expandedFolders: Record<string, boolean>; toggleFolderExpand: (folder: string) => void; customCategories: string[]; handleDeleteCategory: (catToDelete: string) => void; handleDragOver: (e: React.DragEvent) => void; handleDrop: (e: React.DragEvent, targetCategory: string, targetSubCategory?: string) => void; creatingSubFor: string | null; setCreatingSubFor: (folder: string | null) => void; newSubfolderName: string; setNewSubfolderName: (name: string) => void; handleAddSubfolder: (parentFolder: string) => void; isAddingCategory: boolean; setIsAddingCategory: (isAdding: boolean) => void; newCategoryName: string; setNewCategoryName: (name: string) => void; handleAddCategory: () => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
+  const { isDarkMode, toggleDarkMode } = useTheme();
+
   return (
-    <aside className="w-full h-full flex flex-col text-[#566056] dark:text-[#A8B0A8] overflow-y-auto [&::-webkit-scrollbar]:w-0 font-sans">
+    <aside className="w-full h-full flex flex-col bg-[#F5F1E8] dark:bg-[#0F120F] text-[#566056] dark:text-[#A8B0A8] overflow-y-auto [&::-webkit-scrollbar]:w-0 font-sans border-r border-[#E3DDD2] dark:border-[#292E29]">
       
       {/* Sidebar Header */}
       <div className="px-6 pt-6 pb-2">
@@ -24,24 +30,22 @@ export default function Sidebar(props: SidebarProps) {
       {/* Main Folders Header */}
       <div className="px-6 py-2 flex items-center justify-between group">
         <span className="text-lg text-[#3A3F3A] dark:text-white">Folders</span>
-        <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="text-[#A0A6A0] hover:text-[#3A3F3A] transition-colors" title="New Category">
+        <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="text-[#A0A6A0] hover:text-[#3A3F3A] dark:hover:text-white transition-colors" title="New Category">
           <PlusIcon />
         </button>
       </div>
 
       {props.isAddingCategory && (
         <div className="px-6 py-2">
-          <input autoFocus type="text" placeholder="Folder Name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-3 py-2 text-sm bg-white dark:bg-[#202520] border border-[#E8E1D7] dark:border-[#292E29] rounded-lg outline-none text-[#3A3F3A] dark:text-[#E2E8F0]" />
+          <input autoFocus type="text" placeholder="Folder Name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1A1D1A] border border-[#E3DDD2] dark:border-[#292E29] rounded-lg outline-none text-[#3A3F3A] dark:text-[#E2E8F0]" />
         </div>
       )}
 
       {/* Folder List */}
       <div className="flex flex-col flex-1 mt-2">
-        
-        {/* 'All' View */}
         <div
           onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
-          className={`flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${props.activeFilter === 'All' ? 'text-[#1B221B] dark:text-white font-medium bg-[#E8E1D7]/30 dark:bg-[#292E29]/50' : 'hover:bg-[#E8E1D7]/20 dark:hover:bg-[#292E29]/30'}`}
+          className={`flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${props.activeFilter === 'All' ? 'text-[#1B221B] dark:text-white font-medium bg-[#E8E1D7]/40 dark:bg-[#292E29]/50' : 'hover:bg-[#E8E1D7]/20 dark:hover:bg-[#292E29]/30'}`}
         >
           <div className="flex items-center gap-3">
              <HomeIcon />
@@ -60,7 +64,7 @@ export default function Sidebar(props: SidebarProps) {
               <div
                 onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder)}
                 onClick={() => { props.setActiveFilter(parentFolder); props.setActiveSubFilter(null); props.toggleFolderExpand(parentFolder); }}
-                className={`group flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${isParentActive && !props.activeSubFilter ? 'text-[#1B221B] dark:text-white font-medium bg-[#E8E1D7]/30 dark:bg-[#292E29]/50' : 'hover:bg-[#E8E1D7]/20 dark:hover:bg-[#292E29]/30'}`}
+                className={`group flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${isParentActive && !props.activeSubFilter ? 'text-[#1B221B] dark:text-white font-medium bg-[#E8E1D7]/40 dark:bg-[#292E29]/50' : 'hover:bg-[#E8E1D7]/20 dark:hover:bg-[#292E29]/30'}`}
               >
                 <div className="flex items-center gap-3 overflow-hidden flex-1">
                   <FolderIcon />
@@ -102,6 +106,19 @@ export default function Sidebar(props: SidebarProps) {
             </div>
           )
         })}
+      </div>
+
+      {/* FOOTER: Theme Toggle & Profile */}
+      <div className="p-6 mt-auto border-t border-[#E3DDD2] dark:border-[#292E29] flex flex-col gap-4">
+         <div className="flex items-center gap-4">
+            <button onClick={toggleDarkMode} className="text-[#566056] dark:text-[#A8B0A8] hover:text-[#171A17] dark:hover:text-white transition-colors">
+               {isDarkMode ? <SunIcon /> : <MoonIcon />}
+            </button>
+            <ProfileDropdown email={props.userEmail || ""} />
+         </div>
+         <div className="text-[10px] text-[#A0A6A0] leading-[1.6] font-serif">
+            Collect quietly.<br/>Find it when you need it.
+         </div>
       </div>
     </aside>
   )
