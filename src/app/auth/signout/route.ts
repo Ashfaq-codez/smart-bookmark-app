@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   await supabase.auth.signOut()
 
   // 303 "See Other" prevents the browser from caching this redirect
-  return NextResponse.redirect(`${requestUrl.origin}/login`, {
+  return NextResponse.redirect(`${requestUrl.origin}/`, {
     status: 303,
   })
 }

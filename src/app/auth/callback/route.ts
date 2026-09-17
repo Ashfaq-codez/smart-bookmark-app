@@ -3,55 +3,62 @@ import { createClient } from '@/utils/supabase/server'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
+
   const code = searchParams.get('code')
-  
-  const next = searchParams.get('next') ?? '/'
+
+  // After successful authentication, send the user to the main app
+  const next = searchParams.get('next') ?? '/app'
 
   if (code) {
     const supabase = await createClient()
-    
-    // This swaps the "Code" for a "Session" and extracts the user data
-    const { data: authData, error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
+    // Exchange the OAuth code for a Supabase session
+    const { data: authData, error } =
+      await supabase.auth.exchangeCodeForSession(code)
+
     if (!error && authData?.user) {
-      
-      // --- NEW: Zero-Friction Onboarding for First-Time Users ---
+      // Check whether this is a brand-new user
       const { count } = await supabase
         .from('bookmarks')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', authData.user.id)
 
+      // Create a welcome bookmark only for first-time users
       if (count === 0) {
         await supabase.from('bookmarks').insert([
           {
             user_id: authData.user.id,
-            url: 'https://smart-bookmark.internal/welcome',
-            title: 'Welcome to Space',
-            description: 'Your personal, real-time curation engine. Drop links, highlight text, or save images from anywhere.',
+            url: 'https://inntoit.app/welcome',
+            title: 'Welcome to inntoit',
+            description:
+              'Your calm space to save links, notes, ideas, images, videos and everything worth coming back to.',
             category: 'Inbox',
             type: 'note',
-            tags: ['onboarding']
-          }
+            tags: ['onboarding'],
+          },
         ])
       }
-      // ---------------------------------------------------------
 
-      const forwardedHost = request.headers.get('x-forwarded-host') 
+      const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
-      
+
+      // Local development
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
       }
-    } else {
-      // Log the exact error to your terminal so you can see why it failed
-      console.error("Auth Exchange Error:", error?.message)
+
+      // Vercel / production
+      if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+      }
+
+      // Fallback
+      return NextResponse.redirect(`${origin}${next}`)
     }
+
+    console.error('Auth Exchange Error:', error?.message)
   }
 
-  // FIX: Redirect back to the home/login page with an error query instead of a dead 404 page
+  // Authentication failed
   return NextResponse.redirect(`${origin}/?error=auth-code-error`)
 }
