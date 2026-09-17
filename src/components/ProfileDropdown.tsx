@@ -3,9 +3,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
-interface ProfileDropdownProps { email: string; }
+interface ProfileDropdownProps { email: string; isCollapsed?: boolean; }
 
-// Utility to generate a SHA-256 hash using the Web Crypto API
 async function sha256(message: string) {
   const msgBuffer = new TextEncoder().encode(message);
   const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
@@ -13,7 +12,7 @@ async function sha256(message: string) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export default function ProfileDropdown({ email }: ProfileDropdownProps) {
+export default function ProfileDropdown({ email, isCollapsed }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -92,9 +91,8 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
         {firstLetter}
       </button>
 
-      {/* Pop-up positioned upwards to clear the footer bounds entirely */}
       {isOpen && (
-        <div className="absolute left-0 bottom-full mb-4 w-60 bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col z-50 transition-colors duration-500 rounded-2xl overflow-hidden">
+        <div className={`absolute ${isCollapsed ? 'left-full bottom-0 ml-4' : 'left-0 bottom-full mb-4'} w-64 bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col z-50 transition-colors duration-500 rounded-2xl overflow-hidden`}>
           
           <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04]">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold mb-1">Account</p>
