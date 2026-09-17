@@ -7,13 +7,13 @@
   "theme_color": "#4D6A51",
   "icons": [
     {
-      "src": "/inntoit.png",
+      "src": "/intoit.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/inntoit.png",
+      "src": "/intoit.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
