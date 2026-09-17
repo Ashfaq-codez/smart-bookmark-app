@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
 
   // After successful authentication, send the user to the main app
-  const next = searchParams.get('next') ?? '/app'
+  const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
     const supabase = await createClient()

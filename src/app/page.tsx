@@ -24,7 +24,7 @@ export default function HomePage() {
       } = await supabase.auth.getSession()
 
       if (session?.user) {
-        window.location.href = '/app'
+        window.location.href = '/dashboard'
         return
       }
 

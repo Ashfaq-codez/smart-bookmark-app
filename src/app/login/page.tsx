@@ -11,7 +11,7 @@ export default function LoginPage() {
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        window.location.href = '/app'
+        window.location.href = '/dashboard'
       }
     })
   }, [])
