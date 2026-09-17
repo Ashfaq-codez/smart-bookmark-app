@@ -92,7 +92,7 @@ export default function ProfileDropdown({ email, isCollapsed }: ProfileDropdownP
       </button>
 
       {isOpen && (
-        <div className={`absolute ${isCollapsed ? 'left-full bottom-0 ml-4' : 'left-0 bottom-full mb-4'} w-64 bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col z-50 transition-colors duration-500 rounded-2xl overflow-hidden`}>
+        <div className={`absolute ${isCollapsed ? 'left-full bottom-0 ml-4' : 'left-0 bottom-full mb-4'} w-64 bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col z-[100] transition-colors duration-500 rounded-2xl overflow-hidden`}>
           
           <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04]">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold mb-1">Account</p>
