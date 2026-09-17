@@ -133,7 +133,10 @@ export async function POST(request: Request) {
       let existingRecord = null;
 
       if (isLink) {
-        const flexiblePath = cleanUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('#')[0];
+        const rawFlexiblePath = cleanUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('#')[0];
+        // Strip PostgREST operators and structural delimiters to prevent query injection
+        const flexiblePath = rawFlexiblePath.replace(/[,()]/g, '').replace(/\.(eq|neq|gt|lt|in|is|fts|plfts)/gi, '');
+
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')
@@ -179,10 +182,10 @@ export async function POST(request: Request) {
         const parsedUrl = new URL(cleanUrl);
         if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
           
-          // --- NEW: Advanced Twitter API Extraction ---
+          // --- Advanced Twitter API Extraction ---
           if (detectedType === 'twitter') {
             const vxUrl = cleanUrl.replace('twitter.com', 'api.vxtwitter.com').replace('x.com', 'api.vxtwitter.com');
-            const response = await fetch(vxUrl, { signal: AbortSignal.timeout(5000) });
+            const response = await fetch(vxUrl, { signal: AbortSignal.timeout(5000), redirect: 'manual' });
             
             if (response.ok) {
               const data = await response.json();
@@ -209,7 +212,7 @@ export async function POST(request: Request) {
           } 
           // --- Standard Web Scraping Fallback ---
           else {
-            const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000) });
+            const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000), redirect: 'manual' });
             if (response.ok) {
               const html = await response.text();
               const $ = cheerio.load(html.substring(0, 512 * 1024));

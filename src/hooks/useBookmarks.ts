@@ -8,49 +8,63 @@ import toast from 'react-hot-toast';
 export const useBookmarks = (initialBookmarks: Bookmark[]) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
   
-  // FIX: Memoize the client to prevent infinite WebSocket reconnects on every render
+  // Memoize the client to prevent infinite WebSocket reconnects on every render
   const supabase = useMemo(() => createClient(), []);
 
   // ---> BACKGROUND SYNC ENGINE (Realtime + Focus Revalidation) <---
   useEffect(() => {
-    // 1. The Realtime Subscription (Syncs insertions, deletes, updates across tabs/devices)
-    const channel = supabase
-      .channel('realtime_bookmarks')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookmarks' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newItem = payload.new as Bookmark;
-            setBookmarks((prev) => {
-              // Deduplicate by ID
-              const idExists = prev.some((b) => b.id === newItem.id);
-              if (idExists) return prev;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-              // Deduplicate by normalized URL if it's a link
-              if (newItem.type === 'link' || !newItem.type) {
-                const targetUrl = normalizeUrl(newItem.url);
-                const urlExists = prev.some(
-                  (b) => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetUrl
-                );
-                if (urlExists) return prev;
-              }
+    const setupRealtime = async () => {
+      // 1. Fetch the authenticated user to scope the realtime channel
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-              return [newItem, ...prev];
-            });
-            // Removed redundant toast.success('Saved to Hub!') to fix double-notification bug
-          } else if (payload.eventType === 'DELETE') {
-            setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id));
-          } else if (payload.eventType === 'UPDATE') {
-            setBookmarks((prev) =>
-              prev.map((b) => (b.id === payload.new.id ? { ...b, ...(payload.new as Bookmark) } : b))
-            );
+      // 2. The Realtime Subscription (Syncs insertions, deletes, updates securely)
+      channel = supabase
+        .channel(`realtime_bookmarks_${user.id}`)
+        .on(
+          'postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'bookmarks',
+            filter: `user_id=eq.${user.id}` 
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              const newItem = payload.new as Bookmark;
+              setBookmarks((prev) => {
+                // Deduplicate by ID
+                const idExists = prev.some((b) => b.id === newItem.id);
+                if (idExists) return prev;
+
+                // Deduplicate by normalized URL if it's a link
+                if (newItem.type === 'link' || !newItem.type) {
+                  const targetUrl = normalizeUrl(newItem.url);
+                  const urlExists = prev.some(
+                    (b) => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === targetUrl
+                  );
+                  if (urlExists) return prev;
+                }
+
+                return [newItem, ...prev];
+              });
+            } else if (payload.eventType === 'DELETE') {
+              setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id));
+            } else if (payload.eventType === 'UPDATE') {
+              setBookmarks((prev) =>
+                prev.map((b) => (b.id === payload.new.id ? { ...b, ...(payload.new as Bookmark) } : b))
+              );
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    };
 
-    // 2. FOCUS REVALIDATION: Silently fetches fresh data when coming back to a sleeping tab
+    setupRealtime();
+
+    // FOCUS REVALIDATION: Silently fetches fresh data when coming back to a sleeping tab
     const revalidateOnFocus = async () => {
       const { data, error } = await supabase
         .from('bookmarks')
@@ -72,7 +86,7 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
     window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
       window.removeEventListener('focus', revalidateOnFocus);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
