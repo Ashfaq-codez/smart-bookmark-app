@@ -30,6 +30,14 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => { 
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false) 
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const handleSignOut = async () => { 
     await supabase.auth.signOut(); 
     window.location.href = '/' 
@@ -76,41 +84,36 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
   }, [isOpen])
 
   return (
-    <div 
-      className="relative flex flex-col font-sans group z-50" 
-      ref={dropdownRef}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-    >
+    <div className="relative flex flex-col font-sans z-50" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#E8EFE5] dark:bg-[#202820] text-[#4D6A51] dark:text-[#8FAA91] text-sm font-serif font-medium transition-colors hover:scale-105"
+        className="flex items-center justify-center w-10 h-10 rounded-full bg-[#E8EFE5] dark:bg-[#202820] text-[#4D6A51] dark:text-[#8FAA91] text-sm font-serif font-medium transition-colors hover:bg-[#DDE6DB] dark:hover:bg-[#2A342A]"
       >
         {firstLetter}
       </button>
 
-      {/* Hover Dropdown popping to the right of the button */}
+      {/* Pop-up positioned upwards to prevent clipping */}
       {isOpen && (
-        <div className="absolute left-full bottom-0 ml-3 w-64 bg-[#FBF9F4] dark:bg-[#151815] border border-[#D7D0C4] dark:border-[#343A34] shadow-[0_20px_60px_rgba(0,0,0,0.08)] flex flex-col z-50 transition-colors duration-500 rounded-2xl overflow-hidden">
+        <div className="absolute left-0 bottom-[120%] mb-2 w-60 bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col z-50 transition-colors duration-500 rounded-2xl overflow-hidden">
           
-          <div className="p-5 border-b border-[#D7D0C4] dark:border-[#292E29]">
+          <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04]">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold mb-1">Account</p>
             <p className="text-sm font-serif truncate text-[#171A17] dark:text-[#F3F0E9]">{email}</p>
           </div>
 
-          <div className="p-5 border-b border-[#D7D0C4] dark:border-[#292E29]">
+          <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04]">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold mb-3">Integrations</p>
             {!apiKey ? (
               <button 
                 onClick={generateApiKey}
                 disabled={isGenerating}
-                className="w-full py-2 px-3 border border-[#D7D0C4] dark:border-[#343A34] bg-white dark:bg-[#191D19] text-[#171A17] dark:text-[#F3F0E9] text-[10px] uppercase tracking-widest hover:bg-[#F5F1E8] dark:hover:bg-[#202820] transition-colors cursor-pointer rounded-lg"
+                className="w-full py-2 px-3 border border-black/[0.04] dark:border-white/[0.04] bg-[#FBF9F4] dark:bg-[#151815] text-[#171A17] dark:text-[#F3F0E9] text-[10px] uppercase tracking-widest hover:bg-[#F5F1E8] dark:hover:bg-[#202520] transition-colors cursor-pointer rounded-lg"
               >
                 {isGenerating ? 'Generating...' : 'New iOS Shortcut Key'}
               </button>
             ) : (
               <div className="flex flex-col gap-2">
-                <div className="p-3 bg-[#F5F1E8] dark:bg-[#191D19] border border-[#D7D0C4] dark:border-[#343A34] text-[11px] font-mono break-all text-[#171A17] dark:text-[#F3F0E9] rounded-lg">
+                <div className="p-3 bg-[#FBF9F4] dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] text-[11px] font-mono break-all text-[#171A17] dark:text-[#F3F0E9] rounded-lg">
                   {apiKey}
                 </div>
                 <button 
@@ -123,7 +126,7 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
             )}
           </div>
 
-          <button onClick={handleSignOut} className="w-full p-5 text-left text-[10px] uppercase tracking-widest text-[#E53E3E] hover:bg-[#F5F1E8] dark:hover:bg-[#202820] transition-colors cursor-pointer font-bold">
+          <button onClick={handleSignOut} className="w-full p-5 text-left text-[10px] uppercase tracking-widest text-[#E53E3E] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer font-bold">
             Sign Out
           </button>
           
