@@ -69,13 +69,32 @@ export default function HomePage() {
     <main
       className="
         min-h-screen
-        bg-[#F5F1E8]
         text-[#171A17]
-        transition-colors duration-500
-        dark:bg-[#0F120F]
         dark:text-[#F3F0E9]
+        transition-colors duration-500
+        animate-smooth-gradient
       "
     >
+      {/* 
+        This embedded style handles the smooth moving gradient background 
+        using the exact brand colors for both Light and Dark themes.
+      */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes smooth-gradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-smooth-gradient {
+          background-size: 200% 200%;
+          animation: smooth-gradient 12s ease infinite;
+          background-image: linear-gradient(-45deg, #F5F1E8, #E2E8DE, #F8F5EE, #DDE6DB);
+        }
+        .dark .animate-smooth-gradient {
+          background-image: linear-gradient(-45deg, #0F120F, #1A221A, #0A0C0A, #141A14);
+        }
+      `}} />
+
       {/* NAVBAR */}
       <header className="relative z-50">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 sm:py-6">
@@ -134,32 +153,18 @@ export default function HomePage() {
               "
             >
               {isDarkMode ? (
-                <svg
-                  width="17"
-                  height="17"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
                   <circle cx="12" cy="12" r="4" />
                   <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
                 </svg>
               ) : (
-                <svg
-                  width="17"
-                  height="17"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
                   <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
                 </svg>
               )}
             </button>
 
-            {/* DESKTOP ACTIONS - Consolidated into a single login route */}
+            {/* DESKTOP ACTIONS: Single Login Call-to-Action */}
             <Link
               href="/login"
               className="
@@ -196,27 +201,9 @@ export default function HomePage() {
               "
             >
               {mobileMenuOpen ? (
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg>
               ) : (
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <path d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
               )}
             </button>
           </div>
