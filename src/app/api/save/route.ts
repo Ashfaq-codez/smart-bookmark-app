@@ -23,6 +23,14 @@ function isPrivateIP(hostname: string): boolean {
   return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.)/.test(hostname);
 }
 
+// Utility to generate a SHA-256 hash
+async function sha256(message: string) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get('origin');
   return new NextResponse(null, {
@@ -93,10 +101,13 @@ export async function POST(request: Request) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
 
+      // Hash the incoming plaintext key to compare it against the secure database hash
+      const hashedApiKey = await sha256(apiKey);
+
       const { data: keyData, error: keyError } = await adminSupabase
         .from('api_keys')
         .select('user_id')
-        .eq('token', apiKey)
+        .eq('token', hashedApiKey)
         .single();
 
       if (keyError || !keyData) {
@@ -191,12 +202,10 @@ export async function POST(request: Request) {
               const data = await response.json();
               
               let finalDesc = data.text || '';
-              // Append Quote Tweet URL to description so frontend parser catches it
               if (data.qrtURL && !finalDesc.includes(data.qrtURL)) {
                  finalDesc += `\n\n${data.qrtURL}`;
               }
               
-              // Prioritize media_extended to grab the true .mp4 CDN links
               let mediaUrl = null;
               if (data.media_extended && data.media_extended.length > 0) {
                  mediaUrl = data.media_extended[0].url; 
@@ -206,7 +215,6 @@ export async function POST(request: Request) {
               finalDescription = customDesc || finalDesc || null;
               finalImage = customImg || mediaUrl || null;
             } else {
-              // Graceful fallback if vx API limits us
               finalTitle = customTitle || cleanUrl;
             }
           } 
