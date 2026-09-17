@@ -6,6 +6,14 @@ import { useTheme } from '@/context/ThemeContext'
 
 interface ProfileDropdownProps { email: string; }
 
+// Utility to generate a SHA-256 hash using the Web Crypto API
+async function sha256(message: string) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default function ProfileDropdown({ email }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [apiKey, setApiKey] = useState<string | null>(null)
@@ -48,13 +56,20 @@ export default function ProfileDropdown({ email }: ProfileDropdownProps) {
 
       await supabase.from('api_keys').delete().eq('user_id', user.id)
 
+      // 1. Generate the raw token
       const newToken = crypto.randomUUID().replace(/-/g, '')
       
+      // 2. Hash the token securely
+      const hashedToken = await sha256(newToken)
+      
+      // 3. Store the hash in the database, NOT the raw token
       const { error } = await supabase
         .from('api_keys')
-        .insert([{ user_id: user.id, token: newToken }])
+        .insert([{ user_id: user.id, token: hashedToken }])
 
       if (error) throw error
+      
+      // 4. Show the raw token to the user exactly once so they can copy it
       setApiKey(newToken)
       setHasCopied(false)
     } catch (error) {

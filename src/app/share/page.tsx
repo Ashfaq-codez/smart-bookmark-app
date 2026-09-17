@@ -13,7 +13,8 @@ function ShareHandler() {
       const sharedUrl = searchParams.get('url') || searchParams.get('text')
       const title = searchParams.get('title')
 
-      if (!sharedUrl) return router.push('/')
+      // Redirect to the dashboard if no URL is found
+      if (!sharedUrl) return router.push('/dashboard')
 
       try {
         const res = await fetch('/api/save', {
@@ -27,7 +28,8 @@ function ShareHandler() {
       } catch {
         toast.error('Network error')
       } finally {
-        router.push('/')
+        // Successfully land the user back inside the app
+        router.push('/dashboard')
       }
     }
     handleShare()
