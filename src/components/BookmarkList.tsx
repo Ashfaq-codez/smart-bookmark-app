@@ -191,7 +191,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       const matchCat = activeFilter === 'All' || (b.category || 'Uncategorized') === activeFilter
       const matchSub = activeFilter === 'All' || !activeSubFilter ? true : b.sub_category === activeSubFilter
       const s = searchQuery.toLowerCase()
-      const matchSearch = s === '' || b.title.toLowerCase().includes(s) || b.url.toLowerCase().includes(s) || (b.content && b.content.toLowerCase().includes(s)) || (b.description && b.description.toLowerCase().includes(s))
+      
+      // SEARCH ALGORITHM UPGRADE: Now checks Category and Sub-Category text
+      const matchSearch = s === '' || 
+        b.title.toLowerCase().includes(s) || 
+        b.url.toLowerCase().includes(s) || 
+        (b.content && b.content.toLowerCase().includes(s)) || 
+        (b.description && b.description.toLowerCase().includes(s)) ||
+        (b.category && b.category.toLowerCase().includes(s)) ||
+        (b.sub_category && b.sub_category.toLowerCase().includes(s))
+        
       return matchCat && matchSub && matchSearch
     })
   }, [bookmarks, activeFilter, activeSubFilter, searchQuery])
@@ -400,14 +409,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
             <div className="flex gap-2">
                <button onClick={() => { 
-                  // Clear filters to ensure the card can actually be found and rendered
                   setActiveFilter('All');
                   setActiveSubFilter(null);
                   setSearchQuery('');
-                  
-                  // Slight delay to allow DOM to render before triggering modal open
                   setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
-                  
                   setDuplicateMatch(null); 
                   setInputValue(''); 
                }} className="flex-1 py-2 bg-[#4D6A51] text-white text-sm rounded-xl hover:opacity-90 transition-opacity">
