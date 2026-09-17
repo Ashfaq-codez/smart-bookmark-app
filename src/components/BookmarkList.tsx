@@ -8,7 +8,6 @@ import Sidebar from '@/components/Sidebar'
 import BookmarkCard from '@/components/BookmarkCard'
 import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import { toast } from 'react-hot-toast'
-import ProfileDropdown from './ProfileDropdown'
 
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 const PaperclipIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -89,13 +88,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       if (width >= 1600) setColumnsCount(4)
       else if (width >= 1024) setColumnsCount(3)
       else if (width >= 640) setColumnsCount(2)
-      else setColumnsCount(1) // Better mobile masonry
+      else setColumnsCount(1)
     }
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
     updateColumns()
     const timer = setTimeout(() => setIsLoading(false), 300)
-    if (window.innerWidth >= 1024) setIsSidebarOpen(true)
     return () => { observer.disconnect(); clearTimeout(timer) }
   }, [])
 
@@ -248,66 +246,45 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   return (
-    <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#3A3F3A] dark:text-[#E2E8F0] flex overflow-x-hidden selection:bg-[#EBF8FF] selection:text-[#2B6CB0] transition-colors duration-300">
+    <div className="bg-[#F5F1E8] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex overflow-x-hidden selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* ─── SIDEBAR ─── */}
-      <div className={`fixed lg:sticky top-0 left-0 h-screen z-40 bg-[#F4F1EB] dark:bg-[#151815] transition-transform duration-300 flex flex-col w-[80vw] sm:w-[280px] border-r border-[#E8E1D7] dark:border-[#292E29] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      {/* ─── SIDEBAR DRAWER ─── */}
+      <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-transform duration-300 flex flex-col w-[80vw] sm:w-[280px] border-r border-[#D7D0C4] dark:border-[#292E29] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
-      {/* Mobile Overlay */}
+      {/* Mobile & Desktop Overlay */}
       {isSidebarOpen && (
-        <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 lg:hidden" />
+        <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40 transition-opacity" />
       )}
         
       {/* ─── MAIN CONTENT ─── */}
-      <div className="flex-1 flex flex-col min-h-screen relative w-full lg:w-[calc(100%-280px)]">
+      <div className="flex-1 flex flex-col min-h-screen relative w-full">
         
         {/* HEADER AREA */}
-        <header className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-md border-b border-[#E8E1D7] dark:border-[#292E29]">
+        <header className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-8 py-4 bg-[#F5F1E8]/90 dark:bg-[#0F120F]/90 backdrop-blur-md border-b border-[#D7D0C4] dark:border-[#292E29]">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#7A827A] dark:text-[#A0AEC0]">
+            <button onClick={() => setIsSidebarOpen(true)} className="text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
               <MenuIcon />
             </button>
-            <div className="font-serif text-xl sm:text-2xl text-[#1B221B] dark:text-white lg:hidden">
+            <div className="font-serif text-xl sm:text-2xl text-[#171A17] dark:text-[#F4F1EA]">
               inntoit
             </div>
           </div>
           
           <div className="flex items-center gap-4 flex-1 justify-end">
-            <div className="relative w-full max-w-[200px] sm:max-w-xs hidden sm:block">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A6A0]" />
+            <div className="relative w-full max-w-full sm:max-w-xs">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737B73] dark:text-[#8F998F]" />
               <input
                 type="text"
                 placeholder="Search your mind..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-[#1A202C] border border-[#E8E1D7] dark:border-[#292E29] outline-none pl-9 pr-4 py-1.5 rounded-full text-sm text-[#3A3F3A] dark:text-[#E2E8F0] placeholder-[#A0A6A0] focus:border-[#4D6A51] transition-colors"
+                className="w-full bg-[#FBF9F4] dark:bg-[#151815] border border-[#D7D0C4] dark:border-[#292E29] outline-none pl-9 pr-4 py-2 rounded-xl text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F] focus:border-[#4D6A51] transition-colors"
               />
-            </div>
-            
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-[#1B221B] dark:bg-[#2D3748] text-white">
-               <span className="text-sm font-serif">{userEmail ? userEmail.charAt(0).toUpperCase() : 'A'}</span>
-               <div className="absolute inset-0 opacity-0 cursor-pointer">
-                  <ProfileDropdown email={userEmail ?? ""} />
-               </div>
             </div>
           </div>
         </header>
-
-        {/* MOBILE SEARCH BAR */}
-        <div className="px-4 py-3 sm:hidden border-b border-[#E8E1D7] dark:border-[#292E29] bg-[#FAF9F5] dark:bg-[#0F120F]">
-           <div className="relative w-full">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A6A0]" />
-              <input
-                type="text"
-                placeholder="Search your mind..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-[#1A202C] border border-[#E8E1D7] dark:border-[#292E29] outline-none pl-9 pr-4 py-2 rounded-xl text-sm text-[#3A3F3A] dark:text-[#E2E8F0] placeholder-[#A0A6A0]"
-              />
-            </div>
-        </div>
 
         {/* MASONRY GRID */}
         <main className="flex-1 p-4 sm:p-8 pb-32">
@@ -325,7 +302,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                     <BookmarkCard 
                       key={bookmark.id} 
                       bookmark={bookmark} 
-                      theme={{ card: 'border-[#E8E1D7] bg-white dark:border-[#292E29] dark:bg-[#151815]', btn: '', hover: '' }} 
+                      theme={{ card: 'border-[#D7D0C4] bg-[#FBF9F4] dark:border-[#343A34] dark:bg-[#191D19]', btn: '', hover: '' }} 
                       isDragged={draggedId === bookmark.id} 
                       onDragStart={handleDragStart} 
                       onDragEnd={handleDragEnd} 
@@ -343,14 +320,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </main>
 
         {/* CAPTURE BAR (Input Drawer) */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-white dark:bg-[#151815] rounded-2xl px-3 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-2xl border border-[#E8E1D7] dark:border-[#292E29]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-[92%] sm:w-[500px]">
+          <div className="w-full flex items-center gap-2 bg-[#FBF9F4] dark:bg-[#151815] rounded-2xl px-3 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-[#D7D0C4] dark:border-[#292E29]">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
             
             <button 
               onClick={() => fileInputRef.current?.click()} 
               disabled={isUploading}
-              className="w-8 h-8 shrink-0 text-[#A0A6A0] hover:text-[#3A3F3A] dark:hover:text-white flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-8 h-8 shrink-0 text-[#737B73] dark:text-[#8F998F] hover:text-[#171A17] dark:hover:text-white flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
@@ -362,13 +339,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
               disabled={isSaving}
               placeholder="Paste a link or write a note..."
-              className="flex-1 bg-transparent border-none outline-none px-2 text-sm text-[#3A3F3A] dark:text-[#E2E8F0] placeholder-[#A0A6A0]"
+              className="flex-1 bg-transparent border-none outline-none px-2 text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F]"
             />
 
             <button 
               onClick={handleQuickCapture} 
               disabled={isSaving || !inputValue.trim()} 
-              className="w-8 h-8 shrink-0 text-[#A0A6A0] hover:text-[#4D6A51] dark:hover:text-[#8FAA91] flex items-center justify-center transition-colors disabled:opacity-30"
+              className="w-8 h-8 shrink-0 text-[#737B73] dark:text-[#8F998F] hover:text-[#4D6A51] dark:hover:text-[#8FAA91] flex items-center justify-center transition-colors disabled:opacity-30"
             >
               <SendIcon />
             </button>
@@ -379,16 +356,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {/* DUPLICATE MODAL */}
       {duplicateMatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
-          <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-[#E8E1D7] dark:border-[#292E29] p-6 rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-serif text-[#1B221B] dark:text-white mb-2">Already Cataloged</h3>
-            <p className="text-sm text-[#7A827A] mb-4">This source currently exists in your Space.</p>
-            <div className="p-3 bg-[#FAF9F5] dark:bg-[#202520] rounded-xl mb-4 border border-[#E8E1D7] dark:border-[#292E29]">
-               <p className="text-sm font-medium truncate">{duplicateMatch.title}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
+          <div className="w-full max-w-sm bg-[#FBF9F4] dark:bg-[#151815] border border-[#D7D0C4] dark:border-[#292E29] p-6 rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-serif text-[#171A17] dark:text-white mb-2">Already Cataloged</h3>
+            <p className="text-sm text-[#636A63] dark:text-[#9DA59D] mb-4">This source currently exists in your Space.</p>
+            <div className="p-3 bg-[#F5F1E8] dark:bg-[#202520] rounded-xl mb-4 border border-[#D7D0C4] dark:border-[#292E29]">
+               <p className="text-sm font-medium truncate text-[#171A17] dark:text-[#F3F0E9]">{duplicateMatch.title}</p>
             </div>
             <div className="flex gap-2">
-               <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 bg-[#4D6A51] text-white text-sm rounded-xl">View</button>
-               <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 border border-[#E8E1D7] dark:border-[#292E29] text-sm rounded-xl">Dismiss</button>
+               <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 bg-[#4D6A51] text-white text-sm rounded-xl hover:opacity-90">View</button>
+               <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 border border-[#D7D0C4] dark:border-[#292E29] text-sm rounded-xl text-[#171A17] dark:text-[#F3F0E9] hover:bg-black/5">Dismiss</button>
             </div>
           </div>
         </div>
