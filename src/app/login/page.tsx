@@ -1,11 +1,21 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        window.location.href = '/app'
+      }
+    })
+  }, [])
+
   const handleLogin = async () => {
     setLoading(true)
     const supabase = createClient()
@@ -15,6 +25,9 @@ export default function LoginPage() {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     })
 
@@ -63,6 +76,15 @@ export default function LoginPage() {
           </svg>
           {loading ? 'CONNECTING...' : 'SIGN IN WITH GOOGLE'}
         </button>
+
+        <div className="pt-2 text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 transition-colors hover:text-gray-900"
+          >
+            ← Back to home
+          </Link>
+        </div>
       </div>
     </div>
   )

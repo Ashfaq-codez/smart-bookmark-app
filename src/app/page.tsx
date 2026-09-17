@@ -200,21 +200,20 @@ export default function HomePage() {
             </button>
 
             {/* DESKTOP ACTIONS */}
-            <button
-              onClick={handleAuth}
-              disabled={authLoading}
+            <Link
+              href="/login"
               className="
                 hidden
+                items-center justify-center
                 rounded-xl
                 border border-[#D7D0C4]
                 bg-white
                 px-4 py-2.5
                 text-sm font-medium
+                text-[#171A17]
                 transition-all duration-300
                 hover:-translate-y-0.5
                 hover:shadow-md
-                disabled:cursor-wait
-                disabled:opacity-60
                 dark:border-[#343A34]
                 dark:bg-[#191D19]
                 dark:text-[#F1EEE8]
@@ -222,8 +221,8 @@ export default function HomePage() {
                 sm:inline-flex
               "
             >
-              {authLoading ? 'Checking...' : 'Sign in'}
-            </button>
+              Sign in
+            </Link>
 
             <button
               onClick={handleAuth}
@@ -316,25 +315,26 @@ export default function HomePage() {
             </div>
 
             <div className="mt-4 grid gap-3 border-t border-[#E6DED4] pt-4 dark:border-[#292E29]">
-              <button
-                onClick={handleAuth}
-                disabled={authLoading}
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
                 className="
-                  w-full
+                  block w-full
                   rounded-xl
                   border border-[#D7D0C4]
                   bg-white
                   px-4 py-3
+                  text-center
                   text-sm font-medium
+                  text-[#171A17]
                   transition-all
-                  disabled:opacity-60
                   dark:border-[#343A34]
                   dark:bg-[#191D19]
                   dark:text-[#F1EEE8]
                 "
               >
-                {authLoading ? 'Checking...' : 'Sign in'}
-              </button>
+                Sign in
+              </Link>
 
               <button
                 onClick={handleAuth}
