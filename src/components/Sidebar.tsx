@@ -19,99 +19,105 @@ export default function Sidebar(props: SidebarProps) {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
   return (
-    <aside className="w-full h-full flex flex-col bg-[#FBF9F4] dark:bg-[#151815] text-[#636A63] dark:text-[#9DA59D] overflow-y-auto [&::-webkit-scrollbar]:w-0 font-sans">
+    <aside className="w-full h-full flex flex-col bg-[#FBF9F4] dark:bg-[#151815] text-[#636A63] dark:text-[#9DA59D] font-sans">
       
-      {/* Sidebar Header */}
-      <div className="px-6 pt-6 pb-2 flex justify-between items-center">
-        <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold">Library</h2>
-        <button onClick={() => props.setIsMobileMenuOpen(false)} className="text-[#737B73] hover:bg-black/5 dark:hover:bg-white/5 rounded-md p-1 transition-colors">
-           <SmallXIcon />
-        </button>
-      </div>
-
-      {/* Main Folders Header */}
-      <div className="px-6 py-2 flex items-center justify-between group mt-4">
-        <span className="text-lg text-[#171A17] dark:text-white">Folders</span>
-        <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="text-[#737B73] hover:bg-black/5 dark:hover:bg-white/5 rounded-md p-1 transition-colors" title="New Category">
-          <PlusIcon />
-        </button>
-      </div>
-
-      {props.isAddingCategory && (
-        <div className="px-6 py-2">
-          <input autoFocus type="text" placeholder="Folder Name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] rounded-lg shadow-sm outline-none text-[#171A17] dark:text-[#E2E8F0]" />
+      {/* Scrollable Main Area - Separated to prevent Pop-up Clipping */}
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-0 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="px-6 pt-6 pb-2 flex justify-between items-center">
+          <h1 className="font-serif text-2xl text-[#1B221B] dark:text-white hidden lg:block mb-1">inntoit</h1>
+          <button onClick={() => props.setIsMobileMenuOpen(false)} className="text-[#737B73] hover:text-[#171A17] dark:hover:text-white transition-colors lg:hidden">
+             <SmallXIcon />
+          </button>
         </div>
-      )}
+        <div className="px-6 pb-2">
+          <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold">Library</h2>
+        </div>
 
-      {/* Folder List */}
-      <div className="flex flex-col flex-1 mt-2">
-        <div
-          onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
-          className={`flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${props.activeFilter === 'All' ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
-        >
-          <div className="flex items-center gap-3">
-             <HomeIcon />
-             <span className="text-sm">All</span>
+        {/* Main Folders Header */}
+        <div className="px-6 py-2 flex items-center justify-between group mt-2">
+          <span className="text-lg text-[#171A17] dark:text-white">Folders</span>
+          <button onClick={() => props.setIsAddingCategory(!props.isAddingCategory)} className="text-[#737B73] hover:bg-black/5 dark:hover:bg-white/5 rounded-md p-1 transition-colors" title="New Category">
+            <PlusIcon />
+          </button>
+        </div>
+
+        {props.isAddingCategory && (
+          <div className="px-6 py-2">
+            <input autoFocus type="text" placeholder="Folder Name..." value={props.newCategoryName} onChange={(e) => props.setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddCategory()} className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04] rounded-lg shadow-sm outline-none text-[#171A17] dark:text-[#E2E8F0]" />
           </div>
-          <span className="text-[10px] text-[#A0A6A0]">{props.getCounts['All'] || 0}</span>
-        </div>
+        )}
 
-        {Object.keys(props.folderHierarchy).map(parentFolder => {
-          const isParentActive = props.activeFilter === parentFolder;
-          const isExpanded = props.expandedFolders[parentFolder];
-          const subfolders = props.folderHierarchy[parentFolder];
-
-          return (
-            <div key={parentFolder} className="flex flex-col">
-              <div
-                onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder)}
-                onClick={() => { props.setActiveFilter(parentFolder); props.setActiveSubFilter(null); props.toggleFolderExpand(parentFolder); }}
-                className={`group flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${isParentActive && !props.activeSubFilter ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
-              >
-                <div className="flex items-center gap-3 overflow-hidden flex-1">
-                  <FolderIcon />
-                  <span className="text-sm truncate">{parentFolder}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {props.customCategories.includes(parentFolder) && (
-                    <button onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="opacity-0 group-hover:opacity-100 text-[#E53E3E] transition-opacity">
-                      <SmallXIcon />
-                    </button>
-                  )}
-                  <span className="text-[10px] text-[#A0A6A0]">{props.getCounts[parentFolder] || 0}</span>
-                </div>
-              </div>
-
-              {isExpanded && (
-                <div className="flex flex-col">
-                  {subfolders.map(sub => {
-                    const isSubActive = isParentActive && props.activeSubFilter === sub;
-                    return (
-                      <div key={sub} onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder, sub)} onClick={(e) => { e.stopPropagation(); props.setActiveFilter(parentFolder); props.setActiveSubFilter(sub); props.setIsMobileMenuOpen(false); }} className={`flex items-center justify-between pl-12 pr-6 py-1.5 cursor-pointer transition-colors ${isSubActive ? 'text-[#4D6A51] dark:text-[#8FAA91] font-medium' : 'text-[#737B73] hover:text-[#171A17] dark:hover:text-white'}`}>
-                        <span className="text-xs truncate text-[#737B73]">- {sub}</span>
-                        <span className="text-[9px] text-[#A0A6A0]">{props.getCounts[`${parentFolder}::${sub}`] || 0}</span>
-                      </div>
-                    )
-                  })}
-                  {props.creatingSubFor === parentFolder ? (
-                    <div className="flex items-center pl-12 pr-6 py-1">
-                      <input autoFocus type="text" placeholder="New sub-folder" value={props.newSubfolderName} onChange={(e) => props.setNewSubfolderName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddSubfolder(parentFolder)} className="w-full text-xs bg-transparent outline-none text-[#171A17] dark:text-white" />
-                      <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(null); }} className="text-[#A0A6A0] hover:text-[#E53E3E]"><SmallXIcon /></button>
-                    </div>
-                  ) : (
-                    <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(parentFolder); }} className="pl-12 py-1.5 text-left text-xs text-[#A0A6A0] hover:text-[#4D6A51] transition-colors">
-                      + Add folder
-                    </button>
-                  )}
-                </div>
-              )}
+        {/* Folder List */}
+        <div className="flex flex-col flex-1 mt-2">
+          <div
+            onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
+            className={`flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${props.activeFilter === 'All' ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
+          >
+            <div className="flex items-center gap-3">
+               <HomeIcon />
+               <span className="text-sm">All</span>
             </div>
-          )
-        })}
+            <span className="text-[10px] text-[#A0A6A0]">{props.getCounts['All'] || 0}</span>
+          </div>
+
+          {Object.keys(props.folderHierarchy).map(parentFolder => {
+            const isParentActive = props.activeFilter === parentFolder;
+            const isExpanded = props.expandedFolders[parentFolder];
+            const subfolders = props.folderHierarchy[parentFolder];
+
+            return (
+              <div key={parentFolder} className="flex flex-col">
+                <div
+                  onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder)}
+                  onClick={() => { props.setActiveFilter(parentFolder); props.setActiveSubFilter(null); props.toggleFolderExpand(parentFolder); }}
+                  className={`group flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${isParentActive && !props.activeSubFilter ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden flex-1">
+                    <FolderIcon />
+                    <span className="text-sm truncate">{parentFolder}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {props.customCategories.includes(parentFolder) && (
+                      <button onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="opacity-0 group-hover:opacity-100 text-[#E53E3E] transition-opacity">
+                        <SmallXIcon />
+                      </button>
+                    )}
+                    <span className="text-[10px] text-[#A0A6A0]">{props.getCounts[parentFolder] || 0}</span>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="flex flex-col">
+                    {subfolders.map(sub => {
+                      const isSubActive = isParentActive && props.activeSubFilter === sub;
+                      return (
+                        <div key={sub} onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder, sub)} onClick={(e) => { e.stopPropagation(); props.setActiveFilter(parentFolder); props.setActiveSubFilter(sub); props.setIsMobileMenuOpen(false); }} className={`flex items-center justify-between pl-12 pr-6 py-1.5 cursor-pointer transition-colors ${isSubActive ? 'text-[#4D6A51] dark:text-[#8FAA91] font-medium' : 'text-[#737B73] hover:text-[#171A17] dark:hover:text-white'}`}>
+                          <span className="text-xs truncate text-[#737B73]">- {sub}</span>
+                          <span className="text-[9px] text-[#A0A6A0]">{props.getCounts[`${parentFolder}::${sub}`] || 0}</span>
+                        </div>
+                      )
+                    })}
+                    {props.creatingSubFor === parentFolder ? (
+                      <div className="flex items-center pl-12 pr-6 py-1">
+                        <input autoFocus type="text" placeholder="New sub-folder" value={props.newSubfolderName} onChange={(e) => props.setNewSubfolderName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && props.handleAddSubfolder(parentFolder)} className="w-full text-xs bg-transparent outline-none text-[#171A17] dark:text-white" />
+                        <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(null); }} className="text-[#A0A6A0] hover:text-[#E53E3E]"><SmallXIcon /></button>
+                      </div>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); props.setCreatingSubFor(parentFolder); }} className="pl-12 py-1.5 text-left text-xs text-[#A0A6A0] hover:text-[#4D6A51] transition-colors">
+                        + Add folder
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* FOOTER: Theme Toggle & Profile */}
-      <div className="p-6 mt-auto border-t border-black/[0.04] dark:border-white/[0.04] flex flex-col gap-4">
+      {/* FOOTER: Excluded from scrolling to allow Profile pop-up freedom */}
+      <div className="p-6 border-t border-black/[0.04] dark:border-white/[0.04] flex flex-col gap-4 bg-[#FBF9F4] dark:bg-[#151815] relative z-20">
          <div className="flex items-center gap-3">
             <button onClick={toggleDarkMode} className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-[#1A1D1A] shadow-sm border border-black/[0.04] dark:border-white/[0.04] text-[#303630] dark:text-[#EDE9E0] transition-colors hover:bg-black/5 dark:hover:bg-white/5">
                {isDarkMode ? <SunIcon /> : <MoonIcon />}

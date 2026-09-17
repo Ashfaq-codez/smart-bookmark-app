@@ -14,6 +14,7 @@ const PaperclipIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill
 const SpinnerIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
 const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -64,10 +65,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Close sidebar on scroll
+  // Close sidebar on scroll (Mobile only)
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50 && isSidebarOpen) {
+      if (window.scrollY > 50 && isSidebarOpen && window.innerWidth < 1024) {
         setIsSidebarOpen(false);
       }
     };
@@ -256,44 +257,68 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex overflow-x-hidden selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* ─── SIDEBAR DRAWER ─── */}
-      <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-transform duration-300 flex flex-col w-[80vw] sm:w-[280px] border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {/* ─── SIDEBAR DRAWER (Docked on Desktop) ─── */}
+      <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-transform duration-300 flex flex-col w-[80vw] sm:w-[280px] border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
-      {/* Mobile & Desktop Overlay */}
+      {/* Mobile Overlay */}
       {isSidebarOpen && (
-        <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity" />
+        <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity lg:hidden" />
       )}
         
       {/* ─── MAIN CONTENT ─── */}
-      <div className="flex-1 flex flex-col min-h-screen relative w-full">
+      <div className="flex-1 flex flex-col min-h-screen relative w-full lg:ml-[280px] lg:w-[calc(100%-280px)]">
         
         {/* HEADER AREA */}
         <header className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5]/80 dark:bg-[#0F120F]/80 backdrop-blur-xl border-b border-black/[0.04] dark:border-white/[0.04]">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
               <MenuIcon />
             </button>
-            <div className="font-serif text-xl sm:text-2xl text-[#171A17] dark:text-[#F4F1EA]">
+            <div className="font-serif text-xl sm:text-2xl text-[#171A17] dark:text-[#F4F1EA] lg:hidden">
               inntoit
             </div>
           </div>
           
           <div className="flex items-center gap-4 flex-1 justify-end">
-            <div className="relative w-full max-w-full sm:max-w-xs">
+            {/* DESKTOP SEARCH BAR */}
+            <div className="relative w-full max-w-sm hidden sm:block">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737B73] dark:text-[#8F998F]" />
-              {/* text-[16px] forces iOS Safari NOT to zoom in */}
               <input
                 type="text"
                 placeholder="Search your mind..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/[0.06] shadow-sm outline-none pl-9 pr-4 py-2 rounded-xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F] focus:border-[#4D6A51]/30 transition-colors"
+                className="w-full bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/[0.06] shadow-sm outline-none pl-9 pr-8 py-2 rounded-xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F] focus:border-[#4D6A51]/30 transition-colors"
               />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A0A6A0] hover:text-[#171A17] dark:hover:text-white transition-colors">
+                  <ClearIcon />
+                </button>
+              )}
             </div>
           </div>
         </header>
+
+        {/* MOBILE SEARCH BAR */}
+        <div className="px-4 py-3 sm:hidden border-b border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-md sticky top-[65px] z-10">
+           <div className="relative w-full">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737B73] dark:text-[#8F998F]" />
+              <input
+                type="text"
+                placeholder="Search your mind..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/[0.06] shadow-sm outline-none pl-9 pr-8 py-2.5 rounded-xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F]"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A0A6A0]">
+                  <ClearIcon />
+                </button>
+              )}
+            </div>
+        </div>
 
         {/* MASONRY GRID */}
         <main className="flex-1 p-4 sm:p-8 pb-32">
@@ -328,7 +353,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* CAPTURE BAR (Premium Minimalist Drawer) */}
+        {/* CAPTURE BAR */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-[92%] sm:w-[500px]">
           <div className="w-full flex items-center gap-2 bg-white/90 dark:bg-[#181C18]/90 backdrop-blur-xl rounded-2xl px-3 py-2 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.6)] border border-black/[0.04] dark:border-white/[0.04]">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
@@ -370,11 +395,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             <h3 className="text-xl font-serif text-[#171A17] dark:text-white mb-2">Already Cataloged</h3>
             <p className="text-sm text-[#636A63] dark:text-[#9DA59D] mb-4">This source currently exists in your Space.</p>
             <div className="p-3 bg-[#F5F1E8]/50 dark:bg-[#202520] rounded-xl mb-4 border border-black/[0.04] dark:border-white/[0.04]">
-               <p className="text-sm font-medium truncate text-[#171A17] dark:text-[#F3F0E9]">{duplicateMatch.title}</p>
+               <p className="text-sm font-medium truncate text-[#171A17] dark:text-[#F3F0E9]">{duplicateMatch.title || 'Untitled Save'}</p>
+               <p className="text-xs truncate text-[#737B73] dark:text-[#8F998F] mt-1">{duplicateMatch.url ? duplicateMatch.url.replace(/^https?:\/\/(www\.)?/, '') : ''}</p>
             </div>
             <div className="flex gap-2">
-               <button onClick={() => { setForcedInspectId(duplicateMatch.id); setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 bg-[#4D6A51] text-white text-sm rounded-xl hover:opacity-90 transition-opacity">View</button>
-               <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 bg-black/5 dark:bg-white/5 text-sm rounded-xl text-[#171A17] dark:text-[#F3F0E9] hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Dismiss</button>
+               <button onClick={() => { 
+                  // Clear filters to ensure the card can actually be found and rendered
+                  setActiveFilter('All');
+                  setActiveSubFilter(null);
+                  setSearchQuery('');
+                  
+                  // Slight delay to allow DOM to render before triggering modal open
+                  setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
+                  
+                  setDuplicateMatch(null); 
+                  setInputValue(''); 
+               }} className="flex-1 py-2 bg-[#4D6A51] text-white text-sm rounded-xl hover:opacity-90 transition-opacity">
+                  View
+               </button>
+               <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 bg-black/5 dark:bg-white/5 text-sm rounded-xl text-[#171A17] dark:text-[#F3F0E9] hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                  Dismiss
+               </button>
             </div>
           </div>
         </div>
