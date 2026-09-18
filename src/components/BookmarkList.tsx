@@ -45,6 +45,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
+  
+  // Media Type Filter State
+  const [activeMediaType, setActiveMediaType] = useState<string | null>(null)
+  
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [inputValue, setInputValue] = useState('')
@@ -66,7 +70,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // MOBILE: Lock body scroll when sidebar is open so background doesn't move
   useEffect(() => {
     if (isSidebarOpen && window.innerWidth < 1024) {
       document.body.style.overflow = 'hidden';
@@ -76,7 +79,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => { document.body.style.overflow = ''; }
   }, [isSidebarOpen]);
 
-  // Auto-close sidebar if user attempts to scroll the main page behind it
   useEffect(() => {
     let initialScroll = window.scrollY;
     const handleSidebarCloseOnScroll = () => {
@@ -110,7 +112,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       const width = gridRef.current.offsetWidth
       if (width >= 1600) setColumnsCount(4)
       else if (width >= 1024) setColumnsCount(3)
-      else setColumnsCount(2) // Forced 2 columns on mobile
+      else setColumnsCount(2)
     }
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
@@ -199,20 +201,43 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const filteredBookmarks = useMemo(() => {
-    return bookmarks.filter((b) => {
-      const matchCat = activeFilter === 'All' || (b.category || 'Uncategorized') === activeFilter
-      const matchSub = activeFilter === 'All' || !activeSubFilter ? true : b.sub_category === activeSubFilter
-      const s = searchQuery.toLowerCase()
-      const matchSearch = s === '' || 
-        b.title.toLowerCase().includes(s) || 
-        b.url.toLowerCase().includes(s) || 
-        (b.content && b.content.toLowerCase().includes(s)) || 
-        (b.description && b.description.toLowerCase().includes(s)) ||
-        (b.category && b.category.toLowerCase().includes(s)) ||
-        (b.sub_category && b.sub_category.toLowerCase().includes(s))
-      return matchCat && matchSub && matchSearch
-    })
-  }, [bookmarks, activeFilter, activeSubFilter, searchQuery])
+    return bookmarks.filter((bookmark) => {
+      // 1. Check folder category match
+      const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
+      
+      // 2. Check sub-folder match
+      const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
+      
+      // 3. Check media type match
+      let isMediaTypeMatch = true;
+      if (activeMediaType !== null) {
+        const bookmarkType = bookmark.type || 'link'; 
+        
+        if (activeMediaType === 'socials') {
+          isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'linkedin' || bookmarkType === 'github';
+        } else if (activeMediaType === 'videos') {
+          isMediaTypeMatch = bookmarkType === 'video' || bookmarkType === 'youtube';
+        } else if (activeMediaType === 'documents') {
+          isMediaTypeMatch = bookmarkType === 'pdf' || bookmarkType === 'file';
+        } else {
+          isMediaTypeMatch = bookmarkType === activeMediaType;
+        }
+      }
+
+      // 4. Check search query match
+      const searchTarget = searchQuery.toLowerCase();
+      const isSearchMatch = searchTarget === '' || 
+        bookmark.title.toLowerCase().includes(searchTarget) || 
+        bookmark.url.toLowerCase().includes(searchTarget) || 
+        (bookmark.content !== null && bookmark.content !== undefined && bookmark.content.toLowerCase().includes(searchTarget)) || 
+        (bookmark.description !== null && bookmark.description !== undefined && bookmark.description.toLowerCase().includes(searchTarget)) ||
+        (bookmark.category !== null && bookmark.category !== undefined && bookmark.category.toLowerCase().includes(searchTarget)) ||
+        (bookmark.sub_category !== null && bookmark.sub_category !== undefined && bookmark.sub_category.toLowerCase().includes(searchTarget));
+
+      // 5. Final evaluation
+      return isCategoryMatch && isSubCategoryMatch && isMediaTypeMatch && isSearchMatch;
+    });
+  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery]);
 
   const masonryColumns = useMemo(() => {
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
@@ -277,7 +302,39 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       
       {/* ─── SIDEBAR DRAWER (Docked on Desktop) ─── */}
       <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-all duration-300 flex flex-col border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-[80vw] sm:w-[280px]' : '-translate-x-full lg:w-[72px]'}`}>
-        <Sidebar isCollapsed={!isSidebarOpen} userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
+        <Sidebar 
+          isCollapsed={!isSidebarOpen} 
+          userEmail={userEmail || null} 
+          handleSignOut={handleSignOut} 
+          isMobileMenuOpen={isSidebarOpen} 
+          setIsMobileMenuOpen={setIsSidebarOpen} 
+          activeFilter={activeFilter} 
+          setActiveFilter={setActiveFilter} 
+          activeSubFilter={activeSubFilter} 
+          setActiveSubFilter={setActiveSubFilter} 
+          
+          activeMediaType={activeMediaType}
+          setActiveMediaType={setActiveMediaType}
+
+          getCounts={getCounts} 
+          folderHierarchy={folderHierarchy} 
+          expandedFolders={expandedFolders} 
+          toggleFolderExpand={toggleFolderExpand} 
+          customCategories={customCategories} 
+          handleDeleteCategory={handleDeleteCategory} 
+          handleDragOver={handleDragOver} 
+          handleDrop={handleDrop} 
+          creatingSubFor={creatingSubFor} 
+          setCreatingSubFor={setCreatingSubFor} 
+          newSubfolderName={newSubfolderName} 
+          setNewSubfolderName={setNewSubfolderName} 
+          handleAddSubfolder={handleAddSubfolder} 
+          isAddingCategory={isAddingCategory} 
+          setIsAddingCategory={setIsAddingCategory} 
+          newCategoryName={newCategoryName} 
+          setNewCategoryName={setNewCategoryName} 
+          handleAddCategory={handleAddCategory} 
+        />
       </div>
 
       {/* Mobile Overlay */}
@@ -293,16 +350,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── MAIN CONTENT ─── */}
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
         
-        {/* PERMANENTLY FIXED HEADER AREA */}
-        <div className="sticky top-0 z-40 w-full shadow-sm">
-          {/* Note: I removed /90 and backdrop-blur-xl to make the header completely solid. 
-              If you want the glass effect back, add `bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-xl` */}
-          <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5] dark:bg-[#0F120F] border-b border-black/[0.04] dark:border-white/[0.04]">
+        {/* PERMANENTLY FIXED HEADER AREA (iOS Glass & Title Displayed) */}
+        <div className="sticky top-0 z-40 w-full">
+          <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150 border-b border-white/40 dark:border-white/10 shadow-sm transition-colors">
             <div className="flex items-center gap-4">
-              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
+              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#171A17]/70 dark:text-white/70 hover:text-[#171A17] dark:hover:text-white transition-colors">
                 <MenuIcon />
               </button>
-              <div className="font-serif text-xl sm:text-2xl text-[#171A17] dark:text-[#F4F1EA] lg:hidden">
+              <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
                 inntoit
               </div>
             </div>
@@ -310,16 +365,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             <div className="flex items-center gap-4 flex-1 justify-end">
               {/* DESKTOP SEARCH BAR */}
               <div className="relative w-full max-w-sm hidden sm:block">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737B73] dark:text-[#8F998F]" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
                 <input
                   type="text"
                   placeholder="Search your mind..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/[0.06] shadow-sm outline-none pl-9 pr-8 py-2 rounded-xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F] focus:border-[#4D6A51]/30 transition-colors"
+                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A0A6A0] hover:text-[#171A17] dark:hover:text-white transition-colors">
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
                     <ClearIcon />
                   </button>
                 )}
@@ -328,18 +383,18 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </header>
 
           {/* MOBILE SEARCH BAR */}
-          <div className="px-4 py-3 sm:hidden border-b border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#0F120F]">
+          <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
              <div className="relative w-full">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737B73] dark:text-[#8F998F]" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
                 <input
                   type="text"
                   placeholder="Search your mind..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/[0.06] shadow-sm outline-none pl-9 pr-8 py-2.5 rounded-xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F]"
+                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A0A6A0]">
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
                     <ClearIcon />
                   </button>
                 )}
@@ -380,15 +435,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* PREMIUM SIGNATURE CAPTURE BAR */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-[#4D6A51]/95 dark:bg-[#FAF9F5]/85 backdrop-blur-2xl rounded-2xl px-3 py-2 shadow-[0_12px_30px_-4px_rgba(77,106,81,0.4)] dark:shadow-[0_16px_40px_-4px_rgba(0,0,0,0.8)] border border-[#3A503D] dark:border-white/40">
+        {/* PREMIUM SIGNATURE CAPTURE BAR (iOS Glass) */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
+          <div className="w-full flex items-center gap-2 bg-white/60 dark:bg-[#151815]/60 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/60 dark:border-white/10">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
             
             <button 
               onClick={() => fileInputRef.current?.click()} 
               disabled={isUploading}
-              className="w-8 h-8 shrink-0 text-white/70 dark:text-[#737B73] hover:text-white dark:hover:text-[#171A17] hover:bg-white/10 dark:hover:bg-black/5 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
@@ -400,13 +455,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
               disabled={isSaving}
               placeholder="Paste a link or write a note..."
-              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-white dark:text-[#171A17] placeholder-white/60 dark:placeholder-[#A0A6A0]"
+              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-[#171A17] dark:text-white placeholder-black/40 dark:placeholder-white/40"
             />
 
             <button 
               onClick={handleQuickCapture} 
               disabled={isSaving || !inputValue.trim()} 
-              className="w-8 h-8 shrink-0 text-white/70 dark:text-[#737B73] hover:text-white dark:hover:text-[#4D6A51] hover:bg-white/10 dark:hover:bg-[#4D6A51]/10 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
+              className="w-9 h-9 shrink-0 text-white bg-black dark:bg-white dark:text-black hover:opacity-80 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 disabled:bg-black/20 dark:disabled:bg-white/20 disabled:text-black/40 dark:disabled:text-white/40"
             >
               <SendIcon />
             </button>
