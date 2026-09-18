@@ -40,6 +40,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
+  
   const supabase = createClient()
   
   const [activeFilter, setActiveFilter] = useState('All')
@@ -49,11 +51,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  
-  // High-performance scroll tracking variables
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
-  const headerVisibleRef = useRef(true) // Gatekeeper to prevent React state flooding
-  const lastScrollY = useRef(0)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [columnsCount, setColumnsCount] = useState(2) 
@@ -80,34 +77,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => { document.body.style.overflow = ''; }
   }, [isSidebarOpen]);
 
-  // MOBILE: Ultra-optimized Header Scroll Logic
+  // MOBILE: Smart Header Scroll Logic (Fixed)
   useEffect(() => {
+    let previousScrollY = window.scrollY;
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      // Top of page: Always show
-      if (currentScrollY < 50) {
-        if (!headerVisibleRef.current) {
-          headerVisibleRef.current = true;
-          setIsHeaderVisible(true);
-        }
+      // Always show at the absolute top (handles iOS rubber banding)
+      if (currentScrollY <= 50) {
+        setIsHeaderVisible(true);
       } 
-      // Scrolling Down: Hide (with a tiny 5px buffer to prevent jitter)
-      else if (currentScrollY > lastScrollY.current + 5) {
-        if (headerVisibleRef.current) {
-          headerVisibleRef.current = false;
-          setIsHeaderVisible(false);
-        }
+      // Scrolling down -> hide header
+      else if (currentScrollY > previousScrollY) {
+        setIsHeaderVisible(false);
       } 
-      // Scrolling Up: Instantly show
-      else if (currentScrollY < lastScrollY.current - 5) {
-        if (!headerVisibleRef.current) {
-          headerVisibleRef.current = true;
-          setIsHeaderVisible(true);
-        }
+      // Scrolling up -> instantly show header
+      else if (currentScrollY < previousScrollY) {
+        setIsHeaderVisible(true);
       }
       
-      lastScrollY.current = currentScrollY;
+      previousScrollY = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
