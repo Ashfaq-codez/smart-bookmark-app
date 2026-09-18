@@ -294,8 +294,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
         
         {/* PERMANENTLY FIXED HEADER AREA */}
-        <div className="sticky top-0 z-20 w-full shadow-sm">
-          <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-xl border-b border-black/[0.04] dark:border-white/[0.04]">
+        <div className="sticky top-0 z-40 w-full shadow-sm">
+          {/* Note: I removed /90 and backdrop-blur-xl to make the header completely solid. 
+              If you want the glass effect back, add `bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-xl` */}
+          <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5] dark:bg-[#0F120F] border-b border-black/[0.04] dark:border-white/[0.04]">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
                 <MenuIcon />
@@ -326,7 +328,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </header>
 
           {/* MOBILE SEARCH BAR */}
-          <div className="px-4 py-3 sm:hidden border-b border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5]/95 dark:bg-[#0F120F]/95 backdrop-blur-xl">
+          <div className="px-4 py-3 sm:hidden border-b border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#0F120F]">
              <div className="relative w-full">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737B73] dark:text-[#8F998F]" />
                 <input
