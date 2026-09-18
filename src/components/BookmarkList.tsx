@@ -42,6 +42,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isHeaderVisible, setIsHeaderVisible] = useState(true)
   
+  const lastScrollY = useRef(0)
+  
   const supabase = createClient()
   
   const [activeFilter, setActiveFilter] = useState('All')
@@ -77,14 +79,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => { document.body.style.overflow = ''; }
   }, [isSidebarOpen]);
 
-  // MOBILE: Smart Header Scroll Logic (Fixed)
+  // MOBILE: Smart Header Scroll Logic
   useEffect(() => {
     let previousScrollY = window.scrollY;
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      // Always show at the absolute top (handles iOS rubber banding)
+      // Always show at the absolute top
       if (currentScrollY <= 50) {
         setIsHeaderVisible(true);
       } 
@@ -308,7 +310,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         <Sidebar isCollapsed={!isSidebarOpen} userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
-      {/* Mobile Overlay: Touching or attempting to scroll this overlay instantly closes the sidebar */}
+      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)} 
@@ -406,15 +408,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* CAPTURE BAR */}
+        {/* PREMIUM SIGNATURE CAPTURE BAR */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-white/90 dark:bg-[#181C18]/90 backdrop-blur-xl rounded-2xl px-3 py-2 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.6)] border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full flex items-center gap-2 bg-[#4D6A51]/95 dark:bg-[#262B26]/95 backdrop-blur-xl rounded-2xl px-3 py-2 shadow-[0_12px_30px_-4px_rgba(77,106,81,0.4)] dark:shadow-[0_12px_30px_-4px_rgba(0,0,0,0.8)] border border-[#3A503D] dark:border-white/10">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
             
             <button 
               onClick={() => fileInputRef.current?.click()} 
               disabled={isUploading}
-              className="w-8 h-8 shrink-0 text-[#737B73] dark:text-[#8F998F] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-8 h-8 shrink-0 text-white/70 dark:text-[#A0A6A0] hover:text-white dark:hover:text-[#F3F0E9] hover:bg-white/10 dark:hover:bg-white/5 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
@@ -426,13 +428,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
               disabled={isSaving}
               placeholder="Paste a link or write a note..."
-              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-[#737B73] dark:placeholder-[#8F998F]"
+              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-white dark:text-[#F3F0E9] placeholder-white/60 dark:placeholder-[#8F998F]"
             />
 
             <button 
               onClick={handleQuickCapture} 
               disabled={isSaving || !inputValue.trim()} 
-              className="w-8 h-8 shrink-0 text-[#737B73] dark:text-[#8F998F] hover:text-[#4D6A51] dark:hover:text-[#8FAA91] hover:bg-[#4D6A51]/10 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
+              className="w-8 h-8 shrink-0 text-white/70 dark:text-[#8FAA91] hover:text-white dark:hover:text-[#8FAA91] hover:bg-white/10 dark:hover:bg-[#4D6A51]/20 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
             >
               <SendIcon />
             </button>
