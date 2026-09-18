@@ -67,22 +67,43 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Smart Header Scroll Logic
+  // MOBILE: Lock body scroll when sidebar is open so background doesn't move
+  useEffect(() => {
+    if (isSidebarOpen && window.innerWidth < 1024) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; }
+  }, [isSidebarOpen]);
+
+  // MOBILE: Smart Header Scroll Logic
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
       if (currentScrollY < 10) {
         setIsHeaderVisible(true)
-      } else if (currentScrollY > lastScrollY + 10) {
-        setIsHeaderVisible(false) // Scrolling down
-      } else if (currentScrollY < lastScrollY - 10) {
-        setIsHeaderVisible(true) // Scrolling up
+      } else if (currentScrollY > lastScrollY + 10) { // Slight buffer to prevent jitter when scrolling down
+        setIsHeaderVisible(false) 
+      } else if (currentScrollY < lastScrollY) { // INSTANT reveal when scrolling up
+        setIsHeaderVisible(true) 
       }
       setLastScrollY(currentScrollY)
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
+
+  // Close sidebar on scroll (Mobile only)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50 && isSidebarOpen && window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isSidebarOpen]);
 
   useEffect(() => {
     try {
@@ -411,7 +432,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             <h3 className="text-xl font-serif text-[#171A17] dark:text-white mb-2">Already Cataloged</h3>
             <p className="text-sm text-[#636A63] dark:text-[#9DA59D] mb-4">This source currently exists in your Space.</p>
             <div className="p-3 bg-[#F5F1E8]/50 dark:bg-[#202520] rounded-xl mb-4 border border-black/[0.04] dark:border-white/[0.04]">
-               {/* Fixed: Aggressive fallback to URL if title is missing */}
                <p className="text-sm font-medium truncate text-[#171A17] dark:text-[#F3F0E9]">{duplicateMatch.title || duplicateMatch.url || 'Untitled Save'}</p>
                <p className="text-xs truncate text-[#737B73] dark:text-[#8F998F] mt-1">{duplicateMatch.url ? duplicateMatch.url.replace(/^https?:\/\/(www\.)?/, '') : ''}</p>
             </div>
