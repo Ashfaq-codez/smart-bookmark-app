@@ -16,6 +16,15 @@ const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 
+const mediaTypeLabels: Record<string, string> = {
+  'link': 'Links',
+  'note': 'Notes',
+  'image': 'Images',
+  'videos': 'Videos',
+  'documents': 'Documents',
+  'socials': 'Socials'
+};
+
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
   if (!trimmed) return ''
@@ -45,8 +54,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
-  
-  // Media Type Filter State
   const [activeMediaType, setActiveMediaType] = useState<string | null>(null)
   
   const [draggedId, setDraggedId] = useState<number | null>(null)
@@ -202,17 +209,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const filteredBookmarks = useMemo(() => {
     return bookmarks.filter((bookmark) => {
-      // 1. Check folder category match
       const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-      
-      // 2. Check sub-folder match
       const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
       
-      // 3. Check media type match
       let isMediaTypeMatch = true;
       if (activeMediaType !== null) {
         const bookmarkType = bookmark.type || 'link'; 
-        
         if (activeMediaType === 'socials') {
           isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'linkedin' || bookmarkType === 'github';
         } else if (activeMediaType === 'videos') {
@@ -224,7 +226,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         }
       }
 
-      // 4. Check search query match
       const searchTarget = searchQuery.toLowerCase();
       const isSearchMatch = searchTarget === '' || 
         bookmark.title.toLowerCase().includes(searchTarget) || 
@@ -234,7 +235,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         (bookmark.category !== null && bookmark.category !== undefined && bookmark.category.toLowerCase().includes(searchTarget)) ||
         (bookmark.sub_category !== null && bookmark.sub_category !== undefined && bookmark.sub_category.toLowerCase().includes(searchTarget));
 
-      // 5. Final evaluation
       return isCategoryMatch && isSubCategoryMatch && isMediaTypeMatch && isSearchMatch;
     });
   }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery]);
@@ -300,7 +300,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* ─── SIDEBAR DRAWER (Docked on Desktop) ─── */}
+      {/* ─── SIDEBAR DRAWER ─── */}
       <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-all duration-300 flex flex-col border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-[80vw] sm:w-[280px]' : '-translate-x-full lg:w-[72px]'}`}>
         <Sidebar 
           isCollapsed={!isSidebarOpen} 
@@ -350,20 +350,28 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── MAIN CONTENT ─── */}
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
         
-        {/* PERMANENTLY FIXED HEADER AREA (iOS Glass & Title Displayed) */}
+        {/* PERMANENTLY FIXED HEADER AREA */}
         <div className="sticky top-0 z-40 w-full">
           <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150 border-b border-white/40 dark:border-white/10 shadow-sm transition-colors">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#171A17]/70 dark:text-white/70 hover:text-[#171A17] dark:hover:text-white transition-colors">
                 <MenuIcon />
               </button>
-              <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
-                inntoit
+              
+              {/* Dynamic Title with Badge */}
+              <div className="flex items-center gap-3">
+                <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
+                  inntoit
+                </div>
+                {activeMediaType && (
+                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider bg-[#4D6A51]/10 text-[#4D6A51] dark:bg-[#8FAA91]/20 dark:text-[#8FAA91]">
+                     {mediaTypeLabels[activeMediaType]}
+                   </span>
+                )}
               </div>
             </div>
             
             <div className="flex items-center gap-4 flex-1 justify-end">
-              {/* DESKTOP SEARCH BAR */}
               <div className="relative w-full max-w-sm hidden sm:block">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
                 <input
@@ -382,7 +390,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
           </header>
 
-          {/* MOBILE SEARCH BAR */}
           <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
              <div className="relative w-full">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
@@ -435,15 +442,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* PREMIUM SIGNATURE CAPTURE BAR (iOS Glass) */}
+        {/* PREMIUM SIGNATURE CAPTURE BAR (Themed Glass) */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-white/60 dark:bg-[#151815]/60 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/60 dark:border-white/10">
+          <div className="w-full flex items-center gap-2 bg-[#4D6A51]/85 dark:bg-[#8FAA91]/20 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(77,106,81,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-[#4D6A51]/20 dark:border-[#8FAA91]/20 transition-colors duration-500">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
             
             <button 
               onClick={() => fileInputRef.current?.click()} 
               disabled={isUploading}
-              className="w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-9 h-9 shrink-0 text-white/70 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
@@ -455,13 +462,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
               disabled={isSaving}
               placeholder="Paste a link or write a note..."
-              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-[#171A17] dark:text-white placeholder-black/40 dark:placeholder-white/40"
+              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-white placeholder-white/60"
             />
 
             <button 
               onClick={handleQuickCapture} 
               disabled={isSaving || !inputValue.trim()} 
-              className="w-9 h-9 shrink-0 text-white bg-black dark:bg-white dark:text-black hover:opacity-80 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 disabled:bg-black/20 dark:disabled:bg-white/20 disabled:text-black/40 dark:disabled:text-white/40"
+              className="w-9 h-9 shrink-0 text-[#4D6A51] dark:text-[#151815] bg-white hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 disabled:bg-white/30 disabled:text-white/50"
             >
               <SendIcon />
             </button>
@@ -484,6 +491,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                <button onClick={() => { 
                   setActiveFilter('All');
                   setActiveSubFilter(null);
+                  setActiveMediaType(null); // Reset media type on forced view
                   setSearchQuery('');
                   setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
                   setDuplicateMatch(null); 
