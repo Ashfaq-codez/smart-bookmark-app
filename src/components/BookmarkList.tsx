@@ -40,9 +40,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
-  
-  const lastScrollY = useRef(0)
   
   const supabase = createClient()
   
@@ -78,33 +75,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     }
     return () => { document.body.style.overflow = ''; }
   }, [isSidebarOpen]);
-
-  // MOBILE: Smart Header Scroll Logic
-  useEffect(() => {
-    let previousScrollY = window.scrollY;
-
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      // Always show at the absolute top
-      if (currentScrollY <= 50) {
-        setIsHeaderVisible(true);
-      } 
-      // Scrolling down -> hide header
-      else if (currentScrollY > previousScrollY) {
-        setIsHeaderVisible(false);
-      } 
-      // Scrolling up -> instantly show header
-      else if (currentScrollY < previousScrollY) {
-        setIsHeaderVisible(true);
-      }
-      
-      previousScrollY = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Auto-close sidebar if user attempts to scroll the main page behind it
   useEffect(() => {
@@ -323,8 +293,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── MAIN CONTENT ─── */}
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
         
-        {/* HEADER AREA (Smart Scrolling) */}
-        <div className={`sticky top-0 z-20 transition-transform duration-300 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+        {/* HEADER AREA (Permanently Sticky) */}
+        <div className="sticky top-0 z-20 w-full">
           <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5]/80 dark:bg-[#0F120F]/80 backdrop-blur-xl border-b border-black/[0.04] dark:border-white/[0.04]">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
