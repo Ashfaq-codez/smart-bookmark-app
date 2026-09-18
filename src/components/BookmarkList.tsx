@@ -41,7 +41,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isHeaderVisible, setIsHeaderVisible] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
+  
+  const lastScrollY = useRef(0)
+  
   const supabase = createClient()
   
   const [activeFilter, setActiveFilter] = useState('All')
@@ -81,23 +83,28 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      if (currentScrollY < 10) {
-        setIsHeaderVisible(true)
-      } else if (currentScrollY > lastScrollY + 10) { // Slight buffer to prevent jitter when scrolling down
-        setIsHeaderVisible(false) 
-      } else if (currentScrollY < lastScrollY) { // INSTANT reveal when scrolling up
-        setIsHeaderVisible(true) 
+      
+      if (currentScrollY < 50) {
+        setIsHeaderVisible(true) // Always visible at the very top
+      } else if (currentScrollY > lastScrollY.current + 8) {
+        setIsHeaderVisible(false) // Hide when scrolling down
+      } else if (currentScrollY < lastScrollY.current - 8) {
+        setIsHeaderVisible(true) // Instant reveal when scrolling up
       }
-      setLastScrollY(currentScrollY)
+      
+      lastScrollY.current = currentScrollY
     }
+    
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
+  }, [])
 
-  // Close sidebar on scroll (Mobile only)
+  // Auto-close sidebar if user scrolls main content
   useEffect(() => {
+    let initialScroll = window.scrollY;
     const handleScroll = () => {
-      if (window.scrollY > 50 && isSidebarOpen && window.innerWidth < 1024) {
+      // If sidebar is open and the user scrolls the page significantly, close it.
+      if (isSidebarOpen && Math.abs(window.scrollY - initialScroll) > 10) {
         setIsSidebarOpen(false);
       }
     };
@@ -297,9 +304,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         <Sidebar isCollapsed={!isSidebarOpen} userEmail={userEmail || null} handleSignOut={handleSignOut} isMobileMenuOpen={isSidebarOpen} setIsMobileMenuOpen={setIsSidebarOpen} activeFilter={activeFilter} setActiveFilter={setActiveFilter} activeSubFilter={activeSubFilter} setActiveSubFilter={setActiveSubFilter} getCounts={getCounts} folderHierarchy={folderHierarchy} expandedFolders={expandedFolders} toggleFolderExpand={toggleFolderExpand} customCategories={customCategories} handleDeleteCategory={handleDeleteCategory} handleDragOver={handleDragOver} handleDrop={handleDrop} creatingSubFor={creatingSubFor} setCreatingSubFor={setCreatingSubFor} newSubfolderName={newSubfolderName} setNewSubfolderName={setNewSubfolderName} handleAddSubfolder={handleAddSubfolder} isAddingCategory={isAddingCategory} setIsAddingCategory={setIsAddingCategory} newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName} handleAddCategory={handleAddCategory} />
       </div>
 
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay: Touching or attempting to scroll this overlay instantly closes the sidebar */}
       {isSidebarOpen && (
-        <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity lg:hidden" />
+        <div 
+          onClick={() => setIsSidebarOpen(false)} 
+          onTouchMove={() => setIsSidebarOpen(false)}
+          onWheel={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity lg:hidden" 
+        />
       )}
         
       {/* ─── MAIN CONTENT ─── */}
