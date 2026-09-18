@@ -40,10 +40,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
-  
-  const lastScrollY = useRef(0)
-  
   const supabase = createClient()
   
   const [activeFilter, setActiveFilter] = useState('All')
@@ -53,6 +49,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  
+  // High-performance scroll tracking variables
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
+  const headerVisibleRef = useRef(true) // Gatekeeper to prevent React state flooding
+  const lastScrollY = useRef(0)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [columnsCount, setColumnsCount] = useState(2) 
@@ -79,37 +80,50 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     return () => { document.body.style.overflow = ''; }
   }, [isSidebarOpen]);
 
-  // MOBILE: Smart Header Scroll Logic
+  // MOBILE: Ultra-optimized Header Scroll Logic
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY
+      const currentScrollY = window.scrollY;
       
+      // Top of page: Always show
       if (currentScrollY < 50) {
-        setIsHeaderVisible(true) // Always visible at the very top
-      } else if (currentScrollY > lastScrollY.current + 8) {
-        setIsHeaderVisible(false) // Hide when scrolling down
-      } else if (currentScrollY < lastScrollY.current - 8) {
-        setIsHeaderVisible(true) // Instant reveal when scrolling up
+        if (!headerVisibleRef.current) {
+          headerVisibleRef.current = true;
+          setIsHeaderVisible(true);
+        }
+      } 
+      // Scrolling Down: Hide (with a tiny 5px buffer to prevent jitter)
+      else if (currentScrollY > lastScrollY.current + 5) {
+        if (headerVisibleRef.current) {
+          headerVisibleRef.current = false;
+          setIsHeaderVisible(false);
+        }
+      } 
+      // Scrolling Up: Instantly show
+      else if (currentScrollY < lastScrollY.current - 5) {
+        if (!headerVisibleRef.current) {
+          headerVisibleRef.current = true;
+          setIsHeaderVisible(true);
+        }
       }
       
-      lastScrollY.current = currentScrollY
-    }
-    
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+      lastScrollY.current = currentScrollY;
+    };
 
-  // Auto-close sidebar if user scrolls main content
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Auto-close sidebar if user attempts to scroll the main page behind it
   useEffect(() => {
     let initialScroll = window.scrollY;
-    const handleScroll = () => {
-      // If sidebar is open and the user scrolls the page significantly, close it.
+    const handleSidebarCloseOnScroll = () => {
       if (isSidebarOpen && Math.abs(window.scrollY - initialScroll) > 10) {
         setIsSidebarOpen(false);
       }
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleSidebarCloseOnScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleSidebarCloseOnScroll);
   }, [isSidebarOpen]);
 
   useEffect(() => {
@@ -318,7 +332,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
         
         {/* HEADER AREA (Smart Scrolling) */}
-        <div className={`sticky top-0 z-20 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className={`sticky top-0 z-20 transition-transform duration-300 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
           <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-[#FAF9F5]/80 dark:bg-[#0F120F]/80 backdrop-blur-xl border-b border-black/[0.04] dark:border-white/[0.04]">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#636A63] dark:text-[#9DA59D] hover:text-[#171A17] dark:hover:text-white transition-colors">
