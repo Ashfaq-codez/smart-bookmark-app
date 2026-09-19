@@ -16,6 +16,10 @@ const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 
+// Sort Icons
+const SortDescIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M4 14v7"></path><path d="M7 18l-3 3-3-3"></path></svg>
+const SortAscIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 19h10"></path><path d="M11 15h7"></path><path d="M11 11h4"></path><path d="M4 10V3"></path><path d="M7 6l-3-3-3 3"></path></svg>
+
 const mediaTypeLabels: Record<string, string> = {
   'link': 'Links',
   'note': 'Notes',
@@ -55,6 +59,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
   const [activeMediaType, setActiveMediaType] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -208,7 +213,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const filteredBookmarks = useMemo(() => {
-    return bookmarks.filter((bookmark) => {
+    const filtered = bookmarks.filter((bookmark) => {
       const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
       const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
       
@@ -237,7 +242,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       return isCategoryMatch && isSubCategoryMatch && isMediaTypeMatch && isSearchMatch;
     });
-  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery]);
+
+    // Apply sorting logic based on the selected order
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]);
 
   const masonryColumns = useMemo(() => {
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
@@ -372,40 +384,64 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
             
             <div className="flex items-center gap-4 flex-1 justify-end">
-              <div className="relative w-full max-w-sm hidden sm:block">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                <input
-                  type="text"
-                  placeholder="Search your mind..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                    <ClearIcon />
-                  </button>
-                )}
+              {/* DESKTOP SEARCH BAR & SORT */}
+              <div className="hidden sm:flex items-center gap-2 w-full max-w-md justify-end">
+                <div className="relative flex-1 max-w-sm">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
+                  <input
+                    type="text"
+                    placeholder="Search your mind..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
+                      <ClearIcon />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Desktop Sort Button */}
+                <button 
+                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
+                  className="shrink-0 p-2 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all hover:bg-white/60 dark:hover:bg-white/10"
+                >
+                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
+                </button>
               </div>
             </div>
           </header>
 
+          {/* MOBILE SEARCH BAR & SORT */}
           <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
-             <div className="relative w-full">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                <input
-                  type="text"
-                  placeholder="Search your mind..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                    <ClearIcon />
-                  </button>
-                )}
-              </div>
+             <div className="flex items-center gap-2 w-full">
+                <div className="relative flex-1">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
+                  <input
+                    type="text"
+                    placeholder="Search your mind..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
+                      <ClearIcon />
+                    </button>
+                  )}
+                </div>
+
+                {/* Mobile Sort Button */}
+                <button 
+                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
+                  className="shrink-0 p-2.5 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all"
+                >
+                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
+                </button>
+             </div>
           </div>
         </div>
 
@@ -491,7 +527,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                <button onClick={() => { 
                   setActiveFilter('All');
                   setActiveSubFilter(null);
-                  setActiveMediaType(null); // Reset media type on forced view
+                  setActiveMediaType(null);
                   setSearchQuery('');
                   setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
                   setDuplicateMatch(null); 
