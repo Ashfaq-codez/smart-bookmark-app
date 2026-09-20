@@ -4,6 +4,8 @@ const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: "save-page", title: "Save Page to Hub", contexts: ["page"] });
+    // NEW: Added link context to capture specific social posts/videos
+    chrome.contextMenus.create({ id: "save-link", title: "Save Post / Video", contexts: ["link"] }); 
     chrome.contextMenus.create({ id: "save-image", title: "Save Image", contexts: ["image"] });
     chrome.contextMenus.create({ id: "save-text", title: "Save as Note", contexts: ["selection"] });
   });
@@ -12,7 +14,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   chrome.action.setBadgeText({ text: "..." });
 
-  let payload = { url: tab.url || info.pageUrl, title: tab.title };
+  // Prioritize linkUrl if they right-clicked a specific post/video link, otherwise fallback to the page URL
+  const targetUrl = info.linkUrl || info.pageUrl || tab.url;
+  let payload = { url: targetUrl, title: tab.title };
 
   if (info.menuItemId === "save-image") {
     payload = { ...payload, image_url: info.srcUrl, type: 'image' };
@@ -35,7 +39,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const cleanText = capturedText.trim().replace(/\s+/g, ' ');
     const words = cleanText.split(' ');
     
-    let scrollUrl = (tab.url || info.pageUrl).split('#')[0];
+    let scrollUrl = targetUrl.split('#')[0];
     
     if (words.length > 8) {
       const startStr = encodeURIComponent(words.slice(0, 4).join(' '));
