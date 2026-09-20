@@ -1,9 +1,8 @@
-/* Force a high-contrast highlight for text fragments globally */
+/* Keep text-fragment highlight clean and unobtrusive */
 ::target-text {
-  background-color: #ffbf71 !important; /* High-visibility orange */
-  color: #1A202C !important; /* Dark text for strict contrast */
+  background-color: #E8EFE5 !important;
+  color: #171A17 !important;
   text-decoration: underline !important;
-  text-decoration-color: #DD6B20 !important;
+  text-decoration-color: #4D6A51 !important;
   text-decoration-thickness: 2px !important;
-  text-shadow: none !important;
 }
