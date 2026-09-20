@@ -37,14 +37,12 @@ const CleanPdfIcon = () => (
   </svg>
 )
 
-// Bulletproof video detection (catches hidden .mp4s and Twitter's CDN links)
 const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   const l = url.toLowerCase();
   return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('video.twimg.com') || l.includes('.m3u8');
 };
 
-// Advanced Text Parser: Supports clickable links and Embedded Quote Tweets
 const renderTwitterText = (text: string, isExpanded: boolean = false) => {
   if (!text) return null;
   
@@ -127,7 +125,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
   useEffect(() => { setMounted(true) }, [])
 
-  // ─── URL SYNC LOGIC (Handles Page Refreshes & Back Button) ───
   useEffect(() => {
     if (!mounted) return;
     const params = new URLSearchParams(window.location.search);
@@ -200,7 +197,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
 
-    // Clean up URL
     const params = new URLSearchParams(window.location.search);
     if (params.get('b') === String(bookmark.id)) {
       params.delete('b');
@@ -252,7 +248,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
@@ -264,7 +259,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal(); 
   }
 
-  // --- NATIVE ID & DATA EXTRACTORS ---
   const getYouTubeId = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
     return match ? match[1] : '';
@@ -333,9 +327,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
+  // Calculate word count for the journal view
+  const wordCount = editContent ? editContent.trim().split(/\s+/).filter(word => word.length > 0).length : 0;
+
   return (
     <>
-      {/* ─── GLOBAL CUSTOM SCROLLBARS ─── */}
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -345,7 +341,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(75, 85, 99, 0.8); }
       `}} />
 
-      {/* ─── GRID CARD COMPONENT (Content-First Object UI) ─── */}
       <div 
         draggable 
         onDragStart={(e) => onDragStart(e, bookmark.id)} 
@@ -354,7 +349,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
       >
         
-        {/* 1. THE OBJECT SHAPE */}
         {displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#1E2024] rounded-2xl p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5 relative">
             <p className="text-[16px] font-serif text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full">
@@ -444,13 +438,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : (
-          // Default Web Link / Image fallback
           <div className="w-full relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-white/5 bg-white dark:bg-[#1E2024]">
             <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
           </div>
         )}
 
-        {/* 2. THE FLOATING METADATA */}
         {displayType !== 'note' && displayType !== 'twitter' && (
           <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1">
             {hasValidTitle && displayType !== 'instagram' && (
@@ -465,7 +457,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         )}
       </div>
 
-      {/* ─── EDITORIAL MODAL (Mobile Drawer / Desktop Modal) ─── */}
       {mounted && isModalOpen && createPortal(
         <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FDFCF8]/90 dark:bg-[#1A202C]/90 backdrop-blur-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
           
@@ -487,27 +478,48 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <CloseIcon />
             </button>
 
-            {/* LEFT PANE (Preview) */}
-            <div className={`w-full md:w-[60%] h-[35%] min-h-[200px] md:min-h-0 md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 custom-scrollbar overflow-y-auto ${displayType === 'note' ? 'overflow-hidden' : 'items-center justify-center'}`}>
+            {/* LEFT PANE (Preview / Journal) */}
+            <div className={`w-full md:w-[60%] h-[35%] min-h-[200px] md:min-h-0 md:h-full bg-white dark:bg-[#2D3748] relative flex flex-col border-b md:border-b-0 md:border-r border-[#E5E0D8] dark:border-[#4A5568] transition-colors duration-500 custom-scrollbar overflow-y-auto ${displayType === 'note' ? 'overflow-hidden bg-[#FAFAFA] dark:bg-[#121212]' : 'items-center justify-center'}`}>
               
               {displayType === 'note' ? (
-                <div className="w-full h-full flex flex-col overflow-hidden relative group">
+                <div className="w-full h-full flex flex-col relative group">
                   <button onClick={() => setIsReaderMode(true)} className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 p-2.5 bg-white/90 dark:bg-[#171923]/90 hover:bg-white dark:hover:bg-black text-[#4A5568] dark:text-[#A0AEC0] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md border border-[#E5E0D8] dark:border-[#4A5568]" title="Fullscreen Reader">
                     <ExpandIcon />
                   </button>
-                  <textarea
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    onBlur={handleAutoSave}
-                    placeholder="Enter text..."
-                    className="w-full h-full bg-transparent p-6 pt-14 md:p-20 font-serif text-lg sm:text-xl md:text-2xl leading-loose text-[#2D3748] dark:text-[#E2E8F0] outline-none resize-none whitespace-pre-wrap break-words custom-scrollbar overflow-y-auto selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
-                    spellCheck={false}
-                  />
+                  
+                  <div className="flex-1 w-full max-w-3xl mx-auto flex flex-col p-6 pt-14 md:p-12 lg:px-16 overflow-y-auto custom-scrollbar">
+                    {/* Journal Meta Header */}
+                    <div className="flex flex-col gap-4 mb-8 border-b border-black/5 dark:border-white/5 pb-6 shrink-0">
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={handleAutoSave}
+                        placeholder="Note Title..."
+                        className="w-full bg-transparent text-3xl md:text-4xl font-serif font-medium text-[#2D3748] dark:text-[#E2E8F0] outline-none placeholder-gray-300 dark:placeholder-[#4A5568]"
+                      />
+                      <div className="flex items-center gap-4 text-xs font-sans text-gray-400 dark:text-[#718096] uppercase tracking-widest">
+                        <span>{formatDate(bookmark.created_at)}</span>
+                        <span>•</span>
+                        <span>{wordCount} Words</span>
+                      </div>
+                    </div>
+                    
+                    {/* Main Journal Body */}
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      onBlur={handleAutoSave}
+                      placeholder="Start writing..."
+                      className="w-full flex-1 bg-transparent font-serif text-lg md:text-xl leading-[1.8] text-[#4A5568] dark:text-[#CBD5E0] outline-none resize-none whitespace-pre-wrap break-words selection:bg-[#EBF8FF] selection:text-[#2B6CB0] dark:selection:bg-[#2A4365] dark:selection:text-[#90CDF4]"
+                      spellCheck={false}
+                    />
+                  </div>
                 </div>
 
               ) : displayType === 'twitter' ? (
                 <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto relative z-20 pointer-events-auto">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                     
                     <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
@@ -534,8 +546,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     </div>
                   </div>
                 </div>
-
-              
 
               ) : displayType === 'instagram' && instaData ? (
                 <div className="w-full min-h-full flex bg-gray-50 dark:bg-[#000000] p-0 md:p-4 py-12 md:py-8 overflow-y-auto custom-scrollbar">
@@ -632,36 +642,37 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
 
             {/* RIGHT PANE (Editor) */}
-            <div className="w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-16 md:pb-0">
+            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FDFCF8] dark:bg-[#1A202C] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-16 md:pb-0 ${displayType === 'note' ? 'hidden md:flex' : ''}`}>
               <div className="px-6 md:px-12 py-8 md:py-12 flex flex-col min-h-full">
                 
                 <div className="flex flex-col gap-10 md:gap-12 flex-1">
-                  {/* Title & Links */}
-                  <div className="flex flex-col gap-2 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-6 md:pb-8">
-                    <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Title</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onBlur={handleAutoSave}
-                      placeholder="Enter Title"
-                      className="w-full bg-transparent border-none outline-none text-xl md:text-3xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
-                    />
-                    
-                    {bookmark.url && !bookmark.url.includes('/note-') && (
-                      <div className="mt-4 flex flex-col gap-2">
-                        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-medium">
-                          <span>Read Source</span>
-                          <ExternalLinkIcon />
-                        </a>
-                        <span className="text-[11px] font-sans text-[#D97706] dark:text-[#FBD38D] truncate max-w-full select-all mt-1">
-                          {bookmark.url}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  
+                  {displayType !== 'note' && (
+                    <div className="flex flex-col gap-2 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-6 md:pb-8">
+                      <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Title</label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={handleAutoSave}
+                        placeholder="Enter Title"
+                        className="w-full bg-transparent border-none outline-none text-xl md:text-3xl font-serif text-[#2D3748] dark:text-[#E2E8F0] tracking-wide transition-colors rounded-none placeholder-[#A0AEC0] dark:placeholder-[#718096]"
+                      />
+                      
+                      {bookmark.url && !bookmark.url.includes('/note-') && (
+                        <div className="mt-4 flex flex-col gap-2">
+                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#2B6CB0] dark:text-[#90CDF4] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-medium">
+                            <span>Read Source</span>
+                            <ExternalLinkIcon />
+                          </a>
+                          <span className="text-[11px] font-sans text-[#D97706] dark:text-[#FBD38D] truncate max-w-full select-all mt-1">
+                            {bookmark.url}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  {/* Organization */}
                   <div className="flex flex-col gap-4 border-b border-[#E5E0D8] dark:border-[#4A5568] pb-6 md:pb-8">
                     <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">Folder</label>
                     <div className="flex flex-col gap-4">
@@ -719,7 +730,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     </div>
                   </div>
 
-                  {/* Notes */}
                   {displayType !== 'note' && (
                     <div className="flex-1 flex flex-col min-h-[140px] gap-4">
                       <label className="text-[10px] font-sans text-[#718096] dark:text-[#A0AEC0] uppercase tracking-widest">
@@ -736,7 +746,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   )}
                 </div>
 
-                {/* Footer: Date & Delete */}
                 <div className="flex flex-col gap-3 pt-6 border-t border-[#E5E0D8] dark:border-[#4A5568] mt-8">
                   <div className="text-[14px] font-medium font-sans text-[#718096] dark:text-[#A0AEC0]">
                      Saved {formatDateTime(bookmark.created_at)}
@@ -752,7 +761,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               </div>
             </div>
 
-            {/* Editorial Delete Confirmation */}
             {showDeleteConfirm && (
               <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-white/95 dark:bg-[#1A202C]/95 backdrop-blur-sm transition-colors duration-500" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="w-full max-w-sm bg-white dark:bg-[#2D3748] border border-[#E5E0D8] dark:border-[#4A5568] flex flex-col shadow-xl rounded-sm">
@@ -774,7 +782,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         document.body
       )}
 
-      {/* ─── FULLSCREEN OVERLAYS ─── */}
       {mounted && isFullscreenImage && createPortal(
         <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/95 backdrop-blur-md cursor-zoom-out" onClick={() => setIsFullscreenImage(false)}>
           <button className="absolute top-4 right-4 md:top-6 md:right-6 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors z-50 cursor-pointer">
@@ -784,8 +791,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         </div>,
         document.body
       )}
-
-      {/* Reader Overlay omitted here for brevity since it's unmodified */}
     </>
   )
 }
