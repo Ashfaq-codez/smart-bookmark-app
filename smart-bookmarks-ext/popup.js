@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const urlEl = document.getElementById('tab-url');
+  const noteInput = document.getElementById('note-input');
   const btn = document.getElementById('save-btn');
   const status = document.getElementById('status');
 
@@ -13,6 +14,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.textContent = 'Saving...';
     status.style.display = 'none';
 
+    const personalNote = noteInput.value.trim();
+    const payload = {
+      url: activeTab.url,
+      ...(personalNote && { content: personalNote })
+    };
+
     try {
       const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
 
@@ -22,34 +29,33 @@ document.addEventListener('DOMContentLoaded', async () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include', 
-        body: JSON.stringify({ url: activeTab.url }),
+        body: JSON.stringify(payload),
       });
       
       const data = await res.json().catch(() => ({}));
 
-      // Intercept the Duplicate Conflict
       if (res.status === 409) {
         status.style.display = 'block';
-        status.style.backgroundColor = '#fef08a'; // Yellow warning
-        status.style.color = '#854d0e';
+        status.style.backgroundColor = '#FEF3C7';
+        status.style.color = '#92400E';
         status.textContent = 'Already in Space';
-        setTimeout(() => window.close(), 1500);
+        setTimeout(() => window.close(), 1400);
       } else if (res.ok) {
         status.style.display = 'block';
-        status.style.backgroundColor = '#bbf7d0'; 
-        status.style.color = '#15803d';
-        status.textContent = 'Saved to Inbox!';
-        setTimeout(() => window.close(), 1200);
+        status.style.backgroundColor = '#E8EFE5';
+        status.style.color = '#4D6A51';
+        status.textContent = 'Cataloged to inntoit';
+        setTimeout(() => window.close(), 1000);
       } else {
         throw new Error(data.error || 'Failed to save');
       }
     } catch (err) {
       status.style.display = 'block';
-      status.style.backgroundColor = '#fecaca'; 
-      status.style.color = '#b91c1c';
-      status.textContent = err.message || 'Error saving tab';
+      status.style.backgroundColor = '#FEE2E2';
+      status.style.color = '#991B1B';
+      status.textContent = err.message || 'Error saving';
       btn.disabled = false;
-      btn.textContent = 'Retry Save';
+      btn.textContent = 'Retry';
     }
   });
 });
