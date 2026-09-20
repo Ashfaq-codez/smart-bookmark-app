@@ -4,7 +4,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: "save-to-inntoit",
-      title: "Save to inntoit",
+      title: "Save inntoit",
       contexts: ["all"]
     });
   });
