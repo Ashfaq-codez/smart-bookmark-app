@@ -87,7 +87,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   
   // Focus Mode State
   const [isInputFocused, setIsInputFocused] = useState(false)
-  const isExpanded = isInputFocused;
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const captureBarRef = useRef<HTMLDivElement>(null)
@@ -130,6 +130,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
+        setIsExpanded(false);
       }
     };
 
@@ -238,8 +239,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = inputValue
     const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
+    const hasMediaOrStructure = tempDiv.querySelector('img, hr, table, iframe') !== null;
 
-    if (!rawInput) return
+    if (!rawInput && !hasMediaOrStructure) return
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
@@ -276,6 +278,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')
+      setIsExpanded(false)
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
       }
@@ -627,6 +630,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           className={`fixed inset-0 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md z-[90] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
           onPointerDown={(e) => {
             e.preventDefault();
+            setIsExpanded(false);
             if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
           }}
         />
@@ -651,7 +655,10 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                  Press ⌘+Enter to save
                </span>
                <button 
-                 onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur() }}
+                 onClick={() => { 
+                   setIsExpanded(false);
+                   if (document.activeElement instanceof HTMLElement) document.activeElement.blur() 
+                 }}
                  className="text-xs sm:hidden font-bold uppercase tracking-widest text-white/80 dark:text-[#171A17]/80 hover:text-white"
                >
                  Done
@@ -665,7 +672,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 <TipTapEditor 
                   value={inputValue} 
                   onChange={setInputValue} 
-                  onFocus={() => setIsInputFocused(true)} 
+                  onFocus={() => { setIsInputFocused(true); setIsExpanded(true); }} 
                   onBlur={() => setIsInputFocused(false)}
                   isExpanded={isExpanded}
                 />
@@ -691,7 +698,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute right-1.5 top-1/2 -translate-y-1/2'}`}>
                 <button
                   onClick={handleQuickCapture}
-                  disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
+                  disabled={isSaving || (!inputValue.replace(/<[^>]*>?/gm, '').trim() && !/<(img|hr|table)/i.test(inputValue))}
                   className={`shrink-0 text-[#4D6A51] dark:text-white bg-white dark:bg-[#171A17] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 ${isExpanded ? 'w-10 h-10 shadow-lg' : 'w-10 h-10'}`}
                 >
                   <SendIcon />

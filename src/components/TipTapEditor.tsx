@@ -100,7 +100,7 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert focus:outline-none max-w-none text-white dark:text-[#171A17] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none',
+        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-white dark:text-[#171A17] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm',
       }
     },
   })
