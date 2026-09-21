@@ -63,7 +63,7 @@ function formatDateHeader(dateString?: string): string {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
+export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string | null }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -80,7 +80,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [inputValue, setInputValue] = useState('')
-  const [editorKey, setEditorKey] = useState(0) // Forces the editor to clear after saving
+  const [editorKey, setEditorKey] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   
@@ -189,7 +189,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const handleQuickCapture = async () => {
-    // 1. Extract plain text from Novel HTML to check if the user just pasted a URL
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = inputValue
     const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
@@ -219,7 +218,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         let finalUrl = rawInput
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         
-        // 2. Save the rich HTML input if it's a note, not just the raw text
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
         
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -233,7 +231,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (!res.ok) throw new Error('Failed')
       }
       
-      // 3. Clear the Novel editor state
       setInputValue('')
       setEditorKey(prev => prev + 1)
     } catch { 
@@ -587,20 +584,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* PREMIUM SIGNATURE CAPTURE BAR (Themed Glass with NOVEL EDITOR) */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[600px]">
-          <div className="w-full flex items-end gap-2 bg-[#4D6A51]/95 dark:bg-[#8FAA91]/20 backdrop-blur-3xl saturate-150 rounded-[24px] px-3 py-2 shadow-[0_8px_32px_rgba(77,106,81,0.3)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-[#4D6A51]/20 dark:border-[#8FAA91]/20 transition-all duration-500">
+        {/* RESTORED: SOLID PREMIUM CAPTURE BAR WITH EXACT ORIGINAL ALIGNMENT */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
+          <div className="w-full flex items-center gap-2 bg-[#4D6A51] dark:bg-[#1A1D1A] rounded-3xl px-3 py-2 shadow-xl border border-transparent dark:border-white/10 transition-colors duration-500">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
             
             <button 
               onClick={() => fileInputRef.current?.click()} 
               disabled={isUploading}
-              className="w-9 h-9 mb-0.5 shrink-0 text-white/70 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-9 h-9 shrink-0 text-white/70 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
             
-            <div className="flex-1 max-h-[40vh] overflow-y-auto custom-scrollbar py-2 px-1">
+            {/* The Editor replaces the basic input but keeps the clean, centered flex layout */}
+            <div className="flex-1 flex flex-col justify-center min-w-0 max-h-[150px] overflow-y-auto custom-scrollbar px-2 py-1">
               <Editor
                 key={editorKey}
                 defaultValue={""}
@@ -610,14 +608,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                     setInputValue(editor.getHTML());
                   }
                 }}
-                className="w-full bg-solid text-white outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:text-white/90 dark:prose-p:text-white/90 min-h-[24px]"
+                className="w-full bg-transparent text-white outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:leading-normal prose-p:text-white dark:prose-p:text-white min-h-[24px]"
               />
             </div>
 
             <button 
               onClick={handleQuickCapture} 
               disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'} 
-              className="w-9 h-9 mb-0.5 shrink-0 text-[#4D6A51] dark:text-[#151815] bg-white hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 disabled:bg-white/30 disabled:text-white/50"
+              className="w-9 h-9 shrink-0 text-[#4D6A51] dark:text-[#151815] bg-white hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 disabled:bg-white/30 disabled:text-white/50"
             >
               <SendIcon />
             </button>
