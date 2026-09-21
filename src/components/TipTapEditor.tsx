@@ -103,7 +103,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
       return
     }
 
-    const texts = ["Paste a link or write a note...", "Type '/' for edit tools", "Save a quick thought..."]
+    const texts = ["Paste a link or write a note...", "Save a quick thought..."]
     let idx = 0
     const interval = setInterval(() => {
       idx = (idx + 1) % texts.length

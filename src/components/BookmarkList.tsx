@@ -616,7 +616,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 New Quick Note
              </span>
              <span className="text-[10px] font-sans text-black/30 dark:text-white/30 uppercase tracking-widest hidden sm:block border border-black/5 dark:border-white/10 px-2 py-1 rounded-md">
-               Press ⌘+Enter to save
+               Type '/' for edit tools 
              </span>
            </div>
 
