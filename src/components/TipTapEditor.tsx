@@ -16,7 +16,7 @@ const H1Icon = () => <span className="font-bold text-xs tracking-wider">H1</span
 const H2Icon = () => <span className="font-bold text-xs tracking-wider">H2</span>
 const ListIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
 const TaskIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-const QuoteIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1.5.5 1.5 1.5L5 16c0 1.5-2 2.5-2 5h0z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.5c0 1 0 1.5 0 2l-.5 1c0 1.5-2 2.5-2 5h0z"></path></svg>
+const QuoteIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.5c0 1 0 1.5 0 2l-.5 1c0 1.5-2 2.5-2 5h0z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.5c0 1 0 1.5 0 2l-.5 1c0 1.5-2 2.5-2 5h0z"></path></svg>
 const CodeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
 const DividerIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 const TableIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line><line x1="15" y1="9" x2="15" y2="21"></line></svg>
@@ -32,9 +32,21 @@ const SLASH_COMMANDS = [
   { title: 'Divider', icon: <DividerIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setHorizontalRule().run() } },
 ]
 
-export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpanded }: { value: string, onChange: (val: string) => void, onFocus?: () => void, onBlur?: () => void, isExpanded: boolean }) {
+export default function TipTapEditor({ 
+  value, 
+  onChange, 
+  onFocus, 
+  onBlur, 
+  isExpanded = false 
+}: { 
+  value: string, 
+  onChange: (val: string) => void, 
+  onFocus?: () => void, 
+  onBlur?: () => void,
+  isExpanded?: boolean 
+}) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [menuCoords, setMenuCoords] = useState({ bottom: 0, left: 0 })
+  const [menuCoords, setMenuCoords] = useState({ top: 0, bottom: 0, left: 0 })
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [range, setRange] = useState({ from: 0, to: 0 })
@@ -75,9 +87,9 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
       const textBefore = $head.parent.textBetween(0,$head.parentOffset, undefined, '\ufffc')
       const match = textBefore.match(/(?:^|\s)(\/([a-zA-Z]*))$/)
       
-      if (match && isExpanded) {
+      if (match) {
         const coords = view.coordsAtPos(selection.from)
-        setMenuCoords({ bottom: coords.bottom, left: coords.left })
+        setMenuCoords({ top: coords.top, bottom: coords.bottom, left: coords.left })
         setQuery(match[2])
         setRange({ from: selection.from - match[1].length, to: selection.from })
         setSelectedIndex(0)
@@ -93,10 +105,11 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
     },
   })
 
+  // Dynamic Rotating Placeholder Logic
   useEffect(() => {
     if (!isExpanded) {
       placeholderRef.current = "Paste a link or write a note..."
-      if (editor) editor.view.dispatch(editor.state.tr)
+      if (editor && !editor.isDestroyed) editor.view.dispatch(editor.state.tr)
       return
     }
 
@@ -141,19 +154,31 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
     }
   }
 
+  // Calculate safe portal coordinates so it doesn't get clipped by mobile keyboard or screen edges
+  const getPortalPosition = () => {
+    const spaceBelow = window.innerHeight - menuCoords.bottom
+    const spaceAbove = menuCoords.top
+    const menuHeight = 300 // Approx max height
+    
+    const renderAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow
+    
+    return {
+      top: renderAbove ? undefined : menuCoords.bottom + 8,
+      bottom: renderAbove ? window.innerHeight - menuCoords.top + 8 : undefined,
+      left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)), // Keep within safe screen width bounds
+    }
+  }
+
   return (
     <div className="relative w-full h-full flex flex-col min-h-0" onKeyDown={handleKeyDown}>
       <EditorContent editor={editor} className="w-full h-full custom-scrollbar" />
       
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(
         <div 
-          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden"
-          style={{
-            top: menuCoords.bottom + 8, // Directly below the cursor line
-            left: Math.min(menuCoords.left, window.innerWidth - 270), // Prevent right-side cutoff
-          }}
+          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto"
+          style={getPortalPosition()}
         >
-          <div className="px-3 pb-2 mb-2 text-[10px] uppercase tracking-wider text-[#A0A6A0] border-b border-black/[0.04] dark:border-white/[0.04]">
+          <div className="px-3 pb-2 mb-2 text-[10px] uppercase tracking-wider text-[#A0A6A0] border-b border-black/[0.04] dark:border-white/[0.04] sticky top-0 bg-[#FBF9F4] dark:bg-[#1A1D1A] z-10">
             Basic Blocks
           </div>
           {filteredCommands.map((cmd, index) => (
@@ -168,7 +193,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
                 setMenuOpen(false)
               }}
             >
-              <div className="flex items-center justify-center w-6 h-6 rounded bg-white dark:bg-black/20 text-[#4D6A51] dark:text-[#8FAA91] shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
+              <div className="flex items-center justify-center shrink-0 w-6 h-6 rounded bg-white dark:bg-black/20 text-[#4D6A51] dark:text-[#8FAA91] shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
                 {cmd.icon}
               </div>
               <span>{cmd.title}</span>
