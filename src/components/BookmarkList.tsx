@@ -82,6 +82,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  
+  const [isInputFocused, setIsInputFocused] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [columnsCount, setColumnsCount] = useState(2)
@@ -97,6 +99,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
+
+  // Auto-blur (release) the input bar on page scroll
+  useEffect(() => {
+    const handleGlobalScroll = () => {
+      if (isInputFocused && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
+    }
+    window.addEventListener('scroll', handleGlobalScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleGlobalScroll)
+  }, [isInputFocused])
 
   useEffect(() => {
     if (isSidebarOpen && window.innerWidth < 1024) {
@@ -188,7 +201,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const handleQuickCapture = async () => {
-    // 1. Strip Tiptap HTML cleanly to check if the content is just a raw URL
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = inputValue
     const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
@@ -217,7 +229,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         let finalUrl = rawInput
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         
-        // 2. Save the rich HTML input if it's a note
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
 
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -383,7 +394,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         />
       </div>
 
-      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
@@ -404,7 +414,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 <MenuIcon />
               </button>
 
-              {/* Dynamic Title with Badge */}
               <div className="flex items-center gap-3">
                 <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
                   inntoit
@@ -418,7 +427,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
 
             <div className="flex items-center gap-4 flex-1 justify-end">
-              {/* DESKTOP SEARCH BAR & SORT */}
               <div className="hidden sm:flex items-center gap-2 w-full max-w-[500px] justify-end">
                 <div className="relative flex-1">
                   <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
@@ -436,7 +444,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   )}
                 </div>
 
-                {/* Desktop Date Group Toggle */}
                 <button
                   onClick={() => setIsGroupedByDate(!isGroupedByDate)}
                   title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
@@ -449,7 +456,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   <CalendarIcon />
                 </button>
 
-                {/* Desktop Sort Button */}
                 <button
                   onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                   title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
@@ -461,7 +467,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
           </header>
 
-          {/* MOBILE SEARCH BAR & SORT */}
           <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
              <div className="flex items-center gap-2 w-full">
                 <div className="relative flex-1">
@@ -480,7 +485,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   )}
                 </div>
 
-                {/* Mobile Date Group Toggle */}
                 <button
                   onClick={() => setIsGroupedByDate(!isGroupedByDate)}
                   title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
@@ -493,7 +497,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   <CalendarIcon />
                 </button>
 
-                {/* Mobile Sort Button */}
                 <button
                   onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                   title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
@@ -505,11 +508,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </div>
 
-        {/* MASONRY GRID & TIMELINE RENDERER */}
         <main className="flex-1 p-4 sm:p-8 pb-32">
-          {/* We keep the gridRef container full width so ResizeObserver always fires correctly */}
           <div className="w-full flex flex-col items-start" ref={gridRef}>
-
             {isLoading ? (
               <div className="w-full flex gap-3 sm:gap-6">
                 {Array.from({ length: columnsCount }).map((_, colIndex) => (
@@ -519,16 +519,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 ))}
               </div>
             ) : isGroupedByDate && groupedBookmarks ? (
-
-              /* GROUPED DATE VIEW */
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
-                // Distribute items for this specific date group into masonry columns
                 const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
                 groupBookmarks.forEach((b, i) => groupCols[i % columnsCount].push(b))
 
                 return (
                   <div key={dateLabel} className="w-full mb-10">
-                    {/* Date Header + Divider Line */}
                     <div className="flex items-center gap-4 mb-6">
                       <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0] shrink-0 tracking-wide">
                         {dateLabel}
@@ -536,7 +532,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                       <div className="h-px bg-black/[0.06] dark:bg-white/[0.06] flex-1"></div>
                     </div>
 
-                    {/* Group Masonry Grid */}
                     <div className="w-full flex gap-3 sm:gap-6 items-start">
                       {groupCols.map((colBookmarks, colIndex) => (
                         <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
@@ -561,10 +556,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   </div>
                 )
               })
-
             ) : (
-
-              /* STANDARD FLAT VIEW */
               <div className="w-full flex gap-3 sm:gap-6 items-start">
                 {masonryColumns.map((colBookmarks, colIndex) => (
                   <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
@@ -587,32 +579,36 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 ))}
               </div>
             )}
-
           </div>
         </main>
 
-        {/* CUSTOM TIPTAP CAPTURE BAR WITH FLAWLESS ORIGINAL LAYOUT */}
+        {/* EXPANDING CAPTURE BAR WITH TIPTAP */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-white/95 dark:bg-[#151815]/95 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10">
+          <div className={`w-full flex ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'items-end py-3' : 'items-center py-2'} gap-2 bg-white/95 dark:bg-[#151815]/95 backdrop-blur-3xl saturate-150 rounded-3xl px-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10 transition-all duration-300`}>
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+              className={`w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-1' : 'mb-0'}`}
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
 
-            {/* Replaces <input> perfectly without altering alignment */}
-            <div className="flex-1 max-h-[150px] overflow-y-auto custom-scrollbar flex items-center px-2 text-[16px] sm:text-sm">
-              <TipTapEditor value={inputValue} onChange={setInputValue} />
+            {/* Dynamic expanding wrapper for the Editor */}
+            <div className={`flex-1 flex flex-col justify-center min-w-0 overflow-y-auto custom-scrollbar px-2 text-[16px] sm:text-sm transition-all duration-300 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'min-h-[80px] max-h-[250px]' : 'min-h-[24px] max-h-[24px]'}`}>
+              <TipTapEditor 
+                value={inputValue} 
+                onChange={setInputValue} 
+                onFocus={() => setIsInputFocused(true)} 
+                onBlur={() => setIsInputFocused(false)} 
+              />
             </div>
 
             <button
               onClick={handleQuickCapture}
               disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
-              className="w-9 h-9 shrink-0 text-white bg-black dark:bg-white dark:text-black hover:opacity-80 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 disabled:bg-black/20 dark:disabled:bg-white/20 disabled:text-black/40 dark:disabled:text-white/40"
+              className={`w-9 h-9 shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-30 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-1' : 'mb-0'}`}
             >
               <SendIcon />
             </button>
@@ -621,7 +617,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       </div>
 
-      {/* DUPLICATE MODAL */}
       {duplicateMatch && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
           <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] p-6 rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
