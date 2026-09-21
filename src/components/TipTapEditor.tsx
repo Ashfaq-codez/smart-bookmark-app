@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -32,13 +32,16 @@ const SLASH_COMMANDS = [
   { title: 'Divider', icon: <DividerIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setHorizontalRule().run() } },
 ]
 
-export default function TipTapEditor({ value, onChange, onFocus, onBlur, placeholder = "Paste a link or write a note..." }: { value: string, onChange: (val: string) => void, onFocus?: () => void, onBlur?: () => void, placeholder?: string }) {
+export default function TipTapEditor({ value, onChange, onFocus, onBlur }: { value: string, onChange: (val: string) => void, onFocus?: () => void, onBlur?: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 })
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [range, setRange] = useState({ from: 0, to: 0 })
   const [mounted, setMounted] = useState(false)
+  
+  // Rotating Placeholder Logic
+  const placeholderRef = useRef("Paste a link or write a note...")
 
   useEffect(() => setMounted(true), [])
 
@@ -47,7 +50,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, placeho
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Placeholder.configure({ placeholder }),
+      Placeholder.configure({ placeholder: () => placeholderRef.current }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Table.configure({ resizable: true }),
@@ -70,7 +73,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, placeho
         return
       }
       
-      const textBefore = $head.parent.textBetween(0, $head.parentOffset, undefined, '\ufffc')
+      const textBefore = $head.parent.textBetween(0,$head.parentOffset, undefined, '\ufffc')
       const match = textBefore.match(/(?:^|\s)(\/([a-zA-Z]*))$/)
       
       if (match) {
@@ -86,10 +89,27 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, placeho
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-normal min-h-[24px]',
+        class: 'prose prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px]',
       }
     },
   })
+
+  // Timer to swap placeholder text
+  useEffect(() => {
+    const texts = ["Paste a link or write a note...", "Type '/' for edit tools"]
+    let idx = 0
+    const interval = setInterval(() => {
+      idx = (idx + 1) % texts.length
+      placeholderRef.current = texts[idx]
+      
+      // Force TipTap to re-evaluate the placeholder function
+      if (editor && !editor.isDestroyed) {
+        editor.view.dispatch(editor.state.tr)
+      }
+    }, 3500)
+    
+    return () => clearInterval(interval)
+  }, [editor])
 
   useEffect(() => {
     if (value === '' && editor && editor.getHTML() !== '<p></p>') {
@@ -139,7 +159,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, placeho
               key={index}
               className={`flex items-center gap-3 px-3 py-2 mx-1 rounded-lg text-sm transition-colors text-left ${index === selectedIndex ? 'bg-black/[0.04] dark:bg-white/[0.04] text-[#171A17] dark:text-white font-medium' : 'text-[#636A63] dark:text-[#9DA59D] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#171A17] dark:hover:text-white'}`}
               onMouseDown={(e) => {
-                e.preventDefault() // Prevents focus loss before command executes
+                e.preventDefault()
                 if (editor) {
                   cmd.command({ editor, range })
                 }

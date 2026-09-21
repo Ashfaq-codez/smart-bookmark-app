@@ -582,21 +582,22 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* EXPANDING CAPTURE BAR WITH TIPTAP */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className={`w-full flex ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'items-end py-3' : 'items-center py-2'} gap-2 bg-white/95 dark:bg-[#151815]/95 backdrop-blur-3xl saturate-150 rounded-3xl px-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10 transition-all duration-300`}>
+        {/* EXPANDING CAPTURE BAR WITH TIPTAP (FOCUS MODE) */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[540px]">
+          <div className={`w-full flex ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'items-end py-3 px-4 rounded-[26px]' : 'items-center py-2 px-3 rounded-full'} gap-3 bg-white/95 dark:bg-[#151815]/95 backdrop-blur-3xl saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10 transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)]`}>
+            
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className={`w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-1' : 'mb-0'}`}
+              className={`w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-0.5' : 'mb-0'}`}
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
 
             {/* Dynamic expanding wrapper for the Editor */}
-            <div className={`flex-1 flex flex-col justify-center min-w-0 overflow-y-auto custom-scrollbar px-2 text-[16px] sm:text-sm transition-all duration-300 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'min-h-[80px] max-h-[250px]' : 'min-h-[24px] max-h-[24px]'}`}>
+            <div className={`flex-1 flex flex-col justify-center min-w-0 overflow-y-auto custom-scrollbar text-[16px] sm:text-[15px] transition-all duration-300 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'min-h-[160px] max-h-[50vh] py-1' : 'min-h-[24px] max-h-[24px] px-1'}`}>
               <TipTapEditor 
                 value={inputValue} 
                 onChange={setInputValue} 
@@ -608,7 +609,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             <button
               onClick={handleQuickCapture}
               disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
-              className={`w-9 h-9 shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-30 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-1' : 'mb-0'}`}
+              className={`w-9 h-9 shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-30 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-0.5' : 'mb-0'}`}
             >
               <SendIcon />
             </button>
