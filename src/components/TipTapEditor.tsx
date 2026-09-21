@@ -12,7 +12,6 @@ import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 
-// Clean UI Icons
 const H1Icon = () => <span className="font-bold text-xs tracking-wider">H1</span>
 const H2Icon = () => <span className="font-bold text-xs tracking-wider">H2</span>
 const ListIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -41,7 +40,6 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
   const [range, setRange] = useState({ from: 0, to: 0 })
   const [mounted, setMounted] = useState(false)
   
-  // Rotating Placeholder State
   const placeholderRef = useRef("Paste a link or write a note...")
 
   useEffect(() => setMounted(true), [])
@@ -74,7 +72,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
         return
       }
       
-      const textBefore = $head.parent.textBetween(0, $head.parentOffset, undefined, '\ufffc')
+      const textBefore = $head.parent.textBetween(0,$head.parentOffset, undefined, '\ufffc')
       const match = textBefore.match(/(?:^|\s)(\/([a-zA-Z]*))$/)
       
       if (match && isExpanded) {
@@ -90,12 +88,11 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none',
+        class: 'prose prose-sm dark:prose-invert focus:outline-none max-w-none text-white dark:text-[#171A17] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none',
       }
     },
   })
 
-  // Dynamic Rotating Placeholder Logic
   useEffect(() => {
     if (!isExpanded) {
       placeholderRef.current = "Paste a link or write a note..."
@@ -108,7 +105,6 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
     const interval = setInterval(() => {
       idx = (idx + 1) % texts.length
       placeholderRef.current = texts[idx]
-      // Force TipTap to re-render the placeholder
       if (editor && !editor.isDestroyed) {
         editor.view.dispatch(editor.state.tr)
       }
@@ -153,7 +149,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
         <div 
           className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden"
           style={{
-            top: menuCoords.top + 24, // Renders safely below the cursor in focus mode
+            top: menuCoords.top + 24,
             left: menuCoords.left,
           }}
         >
@@ -165,7 +161,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
               key={index}
               className={`flex items-center gap-3 px-3 py-2 mx-1 rounded-lg text-sm transition-colors text-left ${index === selectedIndex ? 'bg-black/[0.04] dark:bg-white/[0.04] text-[#171A17] dark:text-white font-medium' : 'text-[#636A63] dark:text-[#9DA59D] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#171A17] dark:hover:text-white'}`}
               onMouseDown={(e) => {
-                e.preventDefault() // Prevents focus loss before command executes
+                e.preventDefault()
                 if (editor) {
                   cmd.command({ editor, range })
                 }
