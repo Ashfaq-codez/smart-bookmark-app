@@ -90,6 +90,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const isExpanded = isInputFocused;
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const captureBarRef = useRef<HTMLDivElement>(null)
   const [columnsCount, setColumnsCount] = useState(2)
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
@@ -104,33 +105,44 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Fixed Scroll Listener: Ignores the mobile keyboard shift to prevent instant auto-closing
+  // Smart Scroll Listener: Ignores mobile keyboard shifts, only blurs on intentional scrolling OUTSIDE the editor
   useEffect(() => {
-    let initialScrollY = window.scrollY;
+    let startY = 0;
 
-    const handleGlobalScroll = () => {
-      if (!isInputFocused) {
-        initialScrollY = window.scrollY;
+    const handleTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY;
+    };
+
+    const handleScrollIntent = (e: Event, isTouch = false, currentY = 0) => {
+      if (!isInputFocused) return;
+      
+      // Do not blur if the user is scrolling INSIDE the active editor notes area
+      if (e.target instanceof Node && captureBarRef.current?.contains(e.target)) {
         return;
       }
-      
-      // On mobile, the keyboard opening triggers a resize and pseudo-scroll event.
-      // We only blur if the user actively scrolls more than 40px manually.
-      if (Math.abs(window.scrollY - initialScrollY) > 40) {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
+
+      if (isTouch && Math.abs(currentY - startY) < 30) {
+        return; // Ignore tiny accidental swipes
+      }
+
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
       }
     };
 
-    window.addEventListener('scroll', handleGlobalScroll, { passive: true });
-    window.addEventListener('touchmove', handleGlobalScroll, { passive: true });
-    
+    const handleTouchMove = (e: TouchEvent) => handleScrollIntent(e, true, e.touches[0].clientY);
+    const handleWheel = (e: WheelEvent) => handleScrollIntent(e, false);
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: true });
+
     return () => {
-      window.removeEventListener('scroll', handleGlobalScroll);
-      window.removeEventListener('touchmove', handleGlobalScroll);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('wheel', handleWheel);
     };
-  }, [isInputFocused])
+  }, [isInputFocused]);
 
   // Capture CMD+Enter for saving in focus mode
   useEffect(() => {
@@ -624,16 +636,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         {/* 1. Dark Backdrop */}
         <div 
           className={`fixed inset-0 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md z-[90] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-          onClick={() => {
+          onPointerDown={(e) => {
+            e.preventDefault();
             if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
           }}
         />
 
         {/* 2. The Capture Bar / Modal Editor */}
         <div 
+          ref={captureBarRef}
           className={`fixed z-[100] flex flex-col bg-[#4D6A51] dark:bg-[#FAF9F5] text-white dark:text-[#171A17] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
             isExpanded 
-              // Responsive Mobile/Desktop sizing ensuring the keyboard does not crush it
               ? 'bottom-[2dvh] sm:bottom-[50vh] sm:translate-y-1/2 left-1/2 -translate-x-1/2 w-[96vw] sm:w-[600px] md:w-[750px] h-[45dvh] sm:h-[65vh] rounded-[24px] p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/[0.08]' 
               : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/10 hover:shadow-xl hover:-translate-y-0.5'
           }`}
