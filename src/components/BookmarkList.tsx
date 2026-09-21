@@ -265,13 +265,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     });
   }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]);
 
-  const masonryColumns = useMemo(() => {
+  // Generate standard columns if NOT grouped
+  const standardMasonryColumns = useMemo(() => {
     if (isGroupedByDate) return [];
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
     filteredBookmarks.forEach((b, i) => cols[i % columnsCount].push(b))
     return cols
   }, [filteredBookmarks, columnsCount, isGroupedByDate])
 
+  // Generate grouped structure if IS grouped
   const groupedBookmarks = useMemo(() => {
     if (!isGroupedByDate) return null;
 
@@ -376,6 +378,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         />
       </div>
 
+      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
@@ -388,57 +391,120 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── MAIN CONTENT ─── */}
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
 
+        {/* PERMANENTLY FIXED HEADER AREA */}
         <div className="sticky top-0 z-40 w-full">
           <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150 border-b border-white/40 dark:border-white/10 shadow-sm transition-colors">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#171A17]/70 dark:text-white/70 hover:text-[#171A17] dark:hover:text-white transition-colors">
                 <MenuIcon />
               </button>
-              <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
-                inntoit
+
+              {/* Dynamic Title with Badge */}
+              <div className="flex items-center gap-3">
+                <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
+                  inntoit
+                </div>
+                {activeMediaType && (
+                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider bg-[#4D6A51]/10 text-[#4D6A51] dark:bg-[#8FAA91]/20 dark:text-[#8FAA91]">
+                     {mediaTypeLabels[activeMediaType]}
+                   </span>
+                )}
               </div>
             </div>
 
             <div className="flex items-center gap-4 flex-1 justify-end">
-              <div className="relative w-full max-w-sm hidden sm:block">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                <input
-                  type="text"
-                  placeholder="Search your mind..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                    <ClearIcon />
-                  </button>
-                )}
+              {/* DESKTOP SEARCH BAR & SORT */}
+              <div className="hidden sm:flex items-center gap-2 w-full max-w-[500px] justify-end">
+                <div className="relative flex-1">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
+                  <input
+                    type="text"
+                    placeholder="Search your mind..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
+                      <ClearIcon />
+                    </button>
+                  )}
+                </div>
+
+                {/* Desktop Date Group Toggle */}
+                <button
+                  onClick={() => setIsGroupedByDate(!isGroupedByDate)}
+                  title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
+                  className={`shrink-0 p-2 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all ${
+                    isGroupedByDate
+                      ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]'
+                      : 'bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <CalendarIcon />
+                </button>
+
+                {/* Desktop Sort Button */}
+                <button
+                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
+                  className="shrink-0 p-2 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all hover:bg-white/60 dark:hover:bg-white/10"
+                >
+                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
+                </button>
               </div>
             </div>
           </header>
 
+          {/* MOBILE SEARCH BAR & SORT */}
           <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
-             <div className="relative w-full">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                <input
-                  type="text"
-                  placeholder="Search your mind..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                    <ClearIcon />
-                  </button>
-                )}
-              </div>
+             <div className="flex items-center gap-2 w-full">
+                <div className="relative flex-1">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
+                  <input
+                    type="text"
+                    placeholder="Search your mind..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
+                      <ClearIcon />
+                    </button>
+                  )}
+                </div>
+
+                {/* Mobile Date Group Toggle */}
+                <button
+                  onClick={() => setIsGroupedByDate(!isGroupedByDate)}
+                  title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
+                  className={`shrink-0 p-2.5 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all ${
+                    isGroupedByDate
+                      ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]'
+                      : 'bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  <CalendarIcon />
+                </button>
+
+                {/* Mobile Sort Button */}
+                <button
+                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
+                  className="shrink-0 p-2.5 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all"
+                >
+                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
+                </button>
+             </div>
           </div>
         </div>
 
+        {/* MASONRY GRID & TIMELINE RENDERER */}
         <main className="flex-1 p-4 sm:p-8 pb-32">
+          {/* We keep the gridRef container full width so ResizeObserver always fires correctly */}
           <div className="w-full flex flex-col items-start" ref={gridRef}>
+
             {isLoading ? (
               <div className="w-full flex gap-3 sm:gap-6">
                 {Array.from({ length: columnsCount }).map((_, colIndex) => (
@@ -448,19 +514,24 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 ))}
               </div>
             ) : isGroupedByDate && groupedBookmarks ? (
+
+              /* GROUPED DATE VIEW */
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
+                // Distribute items for this specific date group into masonry columns
                 const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
                 groupBookmarks.forEach((b, i) => groupCols[i % columnsCount].push(b))
 
                 return (
                   <div key={dateLabel} className="w-full mb-10">
+                    {/* Date Header + Divider Line */}
                     <div className="flex items-center gap-4 mb-6">
                       <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0] shrink-0 tracking-wide">
                         {dateLabel}
                       </h3>
                       <div className="h-px bg-black/[0.06] dark:bg-white/[0.06] flex-1"></div>
                     </div>
-                    
+
+                    {/* Group Masonry Grid */}
                     <div className="w-full flex gap-3 sm:gap-6 items-start">
                       {groupCols.map((colBookmarks, colIndex) => (
                         <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
@@ -485,9 +556,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   </div>
                 )
               })
+
             ) : (
+
+              /* STANDARD FLAT VIEW */
               <div className="w-full flex gap-3 sm:gap-6 items-start">
-                {masonryColumns.map((colBookmarks, colIndex) => (
+                {standardMasonryColumns.map((colBookmarks, colIndex) => (
                   <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
                     {colBookmarks.map(bookmark => (
                       <BookmarkCard
@@ -508,18 +582,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 ))}
               </div>
             )}
+
           </div>
         </main>
 
-        {/* RESTORED ORIGINAL CAPTURE BAR */}
+        {/* PREMIUM SIGNATURE CAPTURE BAR (Themed Glass) */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-white/60 dark:bg-[#151815]/60 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/60 dark:border-white/10">
+          <div className="w-full flex items-center gap-2 bg-[#4D6A51]/85 dark:bg-[#8FAA91]/20 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(77,106,81,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-[#4D6A51]/20 dark:border-[#8FAA91]/20 transition-colors duration-500">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-9 h-9 shrink-0 text-white/70 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
@@ -531,13 +606,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
               disabled={isSaving}
               placeholder="Paste a link or write a note..."
-              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-[#171A17] dark:text-white placeholder-black/40 dark:placeholder-white/40"
+              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-white placeholder-white/60"
             />
 
             <button
               onClick={handleQuickCapture}
               disabled={isSaving || !inputValue.trim()}
-              className="w-9 h-9 shrink-0 text-white bg-black dark:bg-white dark:text-black hover:opacity-80 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 disabled:bg-black/20 dark:disabled:bg-white/20 disabled:text-black/40 dark:disabled:text-white/40"
+              className="w-9 h-9 shrink-0 text-[#4D6A51] dark:text-[#151815] bg-white hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 disabled:bg-white/30 disabled:text-white/50"
             >
               <SendIcon />
             </button>
@@ -546,6 +621,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       </div>
 
+      {/* DUPLICATE MODAL */}
       {duplicateMatch && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
           <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] p-6 rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -559,6 +635,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                <button onClick={() => {
                   setActiveFilter('All');
                   setActiveSubFilter(null);
+                  setActiveMediaType(null);
                   setSearchQuery('');
                   setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
                   setDuplicateMatch(null);
