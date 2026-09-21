@@ -33,6 +33,7 @@
   "overrides": {
     "postcss": "^8.5.10",
     "serialize-javascript": "^6.0.2",
-    "terser": "^5.14.2"
+    "terser": "^5.14.2",
+    "prosemirror-view": "1.37.2"
   }
 }
