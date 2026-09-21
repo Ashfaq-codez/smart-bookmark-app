@@ -20,6 +20,7 @@ const QuoteIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="no
 const CodeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
 const DividerIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 const TableIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line><line x1="15" y1="9" x2="15" y2="21"></line></svg>
+const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
 
 const SLASH_COMMANDS = [
   { title: 'Heading 1', icon: <H1Icon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run() } },
@@ -30,6 +31,7 @@ const SLASH_COMMANDS = [
   { title: 'Code Block', icon: <CodeIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleCodeBlock().run() } },
   { title: 'Table', icon: <TableIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() } },
   { title: 'Divider', icon: <DividerIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setHorizontalRule().run() } },
+  { title: 'Delete Table', icon: <TrashIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).deleteTable().run() } },
 ]
 
 export default function TipTapEditor({ 
@@ -158,14 +160,24 @@ export default function TipTapEditor({
   const getPortalPosition = () => {
     const spaceBelow = window.innerHeight - menuCoords.bottom
     const spaceAbove = menuCoords.top
-    const menuHeight = 300 // Approx max height
+    const menuHeight = 280 // Max height estimate of the portal
     
-    const renderAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow
-    
-    return {
-      top: renderAbove ? undefined : menuCoords.bottom + 8,
-      bottom: renderAbove ? window.innerHeight - menuCoords.top + 8 : undefined,
-      left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)), // Keep within safe screen width bounds
+    if (spaceBelow >= menuHeight) {
+      return {
+        top: menuCoords.bottom + 8,
+        left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)),
+      }
+    } else if (spaceAbove >= menuHeight) {
+      return {
+        bottom: window.innerHeight - menuCoords.top + 8,
+        left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)),
+      }
+    } else {
+      // Fallback: Stick it near the bottom if both dimensions are highly restricted
+      return {
+        bottom: 20,
+        left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)),
+      }
     }
   }
 
