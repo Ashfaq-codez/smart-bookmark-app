@@ -17,19 +17,6 @@ const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 
-const SortDescIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M4 14v7"></path><path d="M7 18l-3 3-3-3"></path></svg>
-const SortAscIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 19h10"></path><path d="M11 15h7"></path><path d="M11 11h4"></path><path d="M4 10V3"></path><path d="M7 6l-3-3-3 3"></path></svg>
-const CalendarIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-
-const mediaTypeLabels: Record<string, string> = {
-  'link': 'Links',
-  'note': 'Notes',
-  'image': 'Images',
-  'videos': 'Videos',
-  'documents': 'Documents',
-  'socials': 'Socials'
-};
-
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
   if (!trimmed) return ''
@@ -50,42 +37,26 @@ function normalizeUrl(rawUrl: string): string {
   } catch { return trimmed.toLowerCase().replace(/\/+$/, '') }
 }
 
-function formatDateHeader(dateString?: string): string {
-  if (!dateString) return 'Unknown Date';
-  const date = new Date(dateString);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string | null }) {
+export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  
+
   const supabase = createClient()
-  
+
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
   const [activeMediaType, setActiveMediaType] = useState<string | null>(null)
-  
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
-  const [isGroupedByDate, setIsGroupedByDate] = useState(false)
-  
+
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [inputValue, setInputValue] = useState('')
   const [editorKey, setEditorKey] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [columnsCount, setColumnsCount] = useState(2) 
+  const [columnsCount, setColumnsCount] = useState(2)
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
@@ -158,7 +129,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
     setIsUploading(true)
     const fileExt = file.name.split('.').pop()
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Unauthenticated")
@@ -194,7 +165,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
 
     if (!rawInput) return
-
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
     const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
@@ -219,7 +189,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
-        
+
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         const data = await res.json().catch(() => ({}))
 
@@ -230,24 +200,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         }
         if (!res.ok) throw new Error('Failed')
       }
-      
       setInputValue('')
       setEditorKey(prev => prev + 1)
-    } catch { 
-      toast.error('Error.') 
-    } finally { 
-      setIsSaving(false) 
-    }
+    } catch { toast.error('Error.') } finally { setIsSaving(false) }
   }
 
   const filteredBookmarks = useMemo(() => {
-    const filtered = bookmarks.filter((bookmark) => {
+    return bookmarks.filter((bookmark) => {
       const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
       const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
-      
+
       let isMediaTypeMatch = true;
       if (activeMediaType !== null) {
-        const bookmarkType = bookmark.type || 'link'; 
+        const bookmarkType = bookmark.type || 'link';
+
         if (activeMediaType === 'socials') {
           isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'linkedin' || bookmarkType === 'github';
         } else if (activeMediaType === 'videos') {
@@ -260,42 +226,23 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       }
 
       const searchTarget = searchQuery.toLowerCase();
-      const isSearchMatch = searchTarget === '' || 
-        bookmark.title.toLowerCase().includes(searchTarget) || 
-        bookmark.url.toLowerCase().includes(searchTarget) || 
-        (bookmark.content !== null && bookmark.content !== undefined && bookmark.content.toLowerCase().includes(searchTarget)) || 
+      const isSearchMatch = searchTarget === '' ||
+        bookmark.title.toLowerCase().includes(searchTarget) ||
+        bookmark.url.toLowerCase().includes(searchTarget) ||
+        (bookmark.content !== null && bookmark.content !== undefined && bookmark.content.toLowerCase().includes(searchTarget)) ||
         (bookmark.description !== null && bookmark.description !== undefined && bookmark.description.toLowerCase().includes(searchTarget)) ||
         (bookmark.category !== null && bookmark.category !== undefined && bookmark.category.toLowerCase().includes(searchTarget)) ||
         (bookmark.sub_category !== null && bookmark.sub_category !== undefined && bookmark.sub_category.toLowerCase().includes(searchTarget));
 
       return isCategoryMatch && isSubCategoryMatch && isMediaTypeMatch && isSearchMatch;
     });
+  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery]);
 
-    return filtered.sort((a, b) => {
-      const dateA = new Date(a.created_at || 0).getTime();
-      const dateB = new Date(b.created_at || 0).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
-  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]);
-
-  const standardMasonryColumns = useMemo(() => {
-    if (isGroupedByDate) return [];
+  const masonryColumns = useMemo(() => {
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
     filteredBookmarks.forEach((b, i) => cols[i % columnsCount].push(b))
     return cols
-  }, [filteredBookmarks, columnsCount, isGroupedByDate])
-
-  const groupedBookmarks = useMemo(() => {
-    if (!isGroupedByDate) return null;
-    
-    const groups: Record<string, Bookmark[]> = {};
-    filteredBookmarks.forEach(bookmark => {
-      const header = formatDateHeader(bookmark.created_at);
-      if (!groups[header]) groups[header] = [];
-      groups[header].push(bookmark);
-    });
-    return groups;
-  }, [filteredBookmarks, isGroupedByDate]);
+  }, [filteredBookmarks, columnsCount])
 
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {}
@@ -335,7 +282,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const handleDeleteCategory = async (catToDelete: string) => {
-    setCustomCategories(p => p.filter(c => c !== catToDelete)); 
+    setCustomCategories(p => p.filter(c => c !== catToDelete));
     if (activeFilter === catToDelete) { setActiveFilter('All'); setActiveSubFilter(null) };
   }
 
@@ -351,253 +298,151 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
-      
+
       {/* ─── SIDEBAR DRAWER ─── */}
       <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-all duration-300 flex flex-col border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-[80vw] sm:w-[280px]' : '-translate-x-full lg:w-[72px]'}`}>
-        <Sidebar 
-          isCollapsed={!isSidebarOpen} 
-          userEmail={userEmail || null} 
-          handleSignOut={handleSignOut} 
-          isMobileMenuOpen={isSidebarOpen} 
-          setIsMobileMenuOpen={setIsSidebarOpen} 
-          activeFilter={activeFilter} 
-          setActiveFilter={setActiveFilter} 
-          activeSubFilter={activeSubFilter} 
-          setActiveSubFilter={setActiveSubFilter} 
-          
+        <Sidebar
+          isCollapsed={!isSidebarOpen}
+          userEmail={userEmail || null}
+          handleSignOut={handleSignOut}
+          isMobileMenuOpen={isSidebarOpen}
+          setIsMobileMenuOpen={setIsSidebarOpen}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
+          activeSubFilter={activeSubFilter}
+          setActiveSubFilter={setActiveSubFilter}
+
           activeMediaType={activeMediaType}
           setActiveMediaType={setActiveMediaType}
 
-          getCounts={getCounts} 
-          folderHierarchy={folderHierarchy} 
-          expandedFolders={expandedFolders} 
-          toggleFolderExpand={toggleFolderExpand} 
-          customCategories={customCategories} 
-          handleDeleteCategory={handleDeleteCategory} 
-          handleDragOver={handleDragOver} 
-          handleDrop={handleDrop} 
-          creatingSubFor={creatingSubFor} 
-          setCreatingSubFor={setCreatingSubFor} 
-          newSubfolderName={newSubfolderName} 
-          setNewSubfolderName={setNewSubfolderName} 
-          handleAddSubfolder={handleAddSubfolder} 
-          isAddingCategory={isAddingCategory} 
-          setIsAddingCategory={setIsAddingCategory} 
-          newCategoryName={newCategoryName} 
-          setNewCategoryName={setNewCategoryName} 
-          handleAddCategory={handleAddCategory} 
+          getCounts={getCounts}
+          folderHierarchy={folderHierarchy}
+          expandedFolders={expandedFolders}
+          toggleFolderExpand={toggleFolderExpand}
+          customCategories={customCategories}
+          handleDeleteCategory={handleDeleteCategory}
+          handleDragOver={handleDragOver}
+          handleDrop={handleDrop}
+          creatingSubFor={creatingSubFor}
+          setCreatingSubFor={setCreatingSubFor}
+          newSubfolderName={newSubfolderName}
+          setNewSubfolderName={setNewSubfolderName}
+          handleAddSubfolder={handleAddSubfolder}
+          isAddingCategory={isAddingCategory}
+          setIsAddingCategory={setIsAddingCategory}
+          newCategoryName={newCategoryName}
+          setNewCategoryName={setNewCategoryName}
+          handleAddCategory={handleAddCategory}
         />
       </div>
 
-      {/* Mobile Overlay */}
       {isSidebarOpen && (
-        <div 
-          onClick={() => setIsSidebarOpen(false)} 
+        <div
+          onClick={() => setIsSidebarOpen(false)}
           onTouchMove={() => setIsSidebarOpen(false)}
           onWheel={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity lg:hidden" 
+          className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity lg:hidden"
         />
       )}
-        
+
       {/* ─── MAIN CONTENT ─── */}
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
-        
-        {/* PERMANENTLY FIXED HEADER AREA */}
+
         <div className="sticky top-0 z-40 w-full">
           <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150 border-b border-white/40 dark:border-white/10 shadow-sm transition-colors">
             <div className="flex items-center gap-4">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#171A17]/70 dark:text-white/70 hover:text-[#171A17] dark:hover:text-white transition-colors">
                 <MenuIcon />
               </button>
-              
-              <div className="flex items-center gap-3">
-                <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
-                  inntoit
-                </div>
-                {activeMediaType && (
-                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider bg-[#4D6A51]/10 text-[#4D6A51] dark:bg-[#8FAA91]/20 dark:text-[#8FAA91]">
-                     {mediaTypeLabels[activeMediaType]}
-                   </span>
-                )}
+              <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
+                inntoit
               </div>
             </div>
-            
-            <div className="flex items-center gap-4 flex-1 justify-end">
-              <div className="hidden sm:flex items-center gap-2 w-full max-w-[500px] justify-end">
-                <div className="relative flex-1">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                  <input
-                    type="text"
-                    placeholder="Search your mind..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                      <ClearIcon />
-                    </button>
-                  )}
-                </div>
-                
-                <button 
-                  onClick={() => setIsGroupedByDate(!isGroupedByDate)}
-                  title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
-                  className={`shrink-0 p-2 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all ${
-                    isGroupedByDate 
-                      ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]' 
-                      : 'bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
-                  }`}
-                >
-                  <CalendarIcon />
-                </button>
 
-                <button 
-                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
-                  className="shrink-0 p-2 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all hover:bg-white/60 dark:hover:bg-white/10"
-                >
-                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
-                </button>
+            <div className="flex items-center gap-4 flex-1 justify-end">
+              <div className="relative w-full max-w-sm hidden sm:block">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
+                <input
+                  type="text"
+                  placeholder="Search your mind..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
+                    <ClearIcon />
+                  </button>
+                )}
               </div>
             </div>
           </header>
 
           <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
-             <div className="flex items-center gap-2 w-full">
-                <div className="relative flex-1">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                  <input
-                    type="text"
-                    placeholder="Search your mind..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                      <ClearIcon />
-                    </button>
-                  )}
-                </div>
-
-                <button 
-                  onClick={() => setIsGroupedByDate(!isGroupedByDate)}
-                  title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
-                  className={`shrink-0 p-2.5 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all ${
-                    isGroupedByDate 
-                      ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]' 
-                      : 'bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white'
-                  }`}
-                >
-                  <CalendarIcon />
-                </button>
-
-                <button 
-                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
-                  className="shrink-0 p-2.5 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all"
-                >
-                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
-                </button>
-             </div>
+             <div className="relative w-full">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
+                <input
+                  type="text"
+                  placeholder="Search your mind..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
+                    <ClearIcon />
+                  </button>
+                )}
+              </div>
           </div>
         </div>
 
-        {/* MASONRY GRID & TIMELINE RENDERER */}
+        {/* RESTORED HORIZONTAL MASONRY ALIGNMENT */}
         <main className="flex-1 p-4 sm:p-8 pb-32">
-          <div className="w-full flex flex-col items-start" ref={gridRef}>
-            
+          <div className="w-full flex gap-3 sm:gap-6 items-start" ref={gridRef}>
             {isLoading ? (
-              <div className="w-full flex gap-3 sm:gap-6">
-                {Array.from({ length: columnsCount }).map((_, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
-                    {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
-                  </div>
-                ))}
-              </div>
-            ) : isGroupedByDate && groupedBookmarks ? (
-              
-              Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
-                const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
-                groupBookmarks.forEach((b, i) => groupCols[i % columnsCount].push(b))
-
-                return (
-                  <div key={dateLabel} className="w-full mb-10">
-                    <div className="flex items-center gap-4 mb-6">
-                      <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0] shrink-0 tracking-wide">
-                        {dateLabel}
-                      </h3>
-                      <div className="h-px bg-black/[0.06] dark:bg-white/[0.06] flex-1"></div>
-                    </div>
-                    
-                    <div className="w-full flex gap-3 sm:gap-6 items-start">
-                      {groupCols.map((colBookmarks, colIndex) => (
-                        <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
-                          {colBookmarks.map(bookmark => (
-                            <BookmarkCard 
-                              key={bookmark.id} 
-                              bookmark={bookmark} 
-                              theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }} 
-                              isDragged={draggedId === bookmark.id} 
-                              onDragStart={handleDragStart} 
-                              onDragEnd={handleDragEnd} 
-                              updateBookmark={updateBookmark} 
-                              deleteBookmark={deleteBookmark} 
-                              forceOpenModal={forcedInspectId === bookmark.id} 
-                              onCloseForcedModal={() => setForcedInspectId(null)}
-                              folderHierarchy={folderHierarchy}
-                            />
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })
-              
+              Array.from({ length: columnsCount }).map((_, colIndex) => (
+                <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                  {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
+                </div>
+              ))
             ) : (
-              
-              <div className="w-full flex gap-3 sm:gap-6 items-start">
-                {standardMasonryColumns.map((colBookmarks, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
-                    {colBookmarks.map(bookmark => (
-                      <BookmarkCard 
-                        key={bookmark.id} 
-                        bookmark={bookmark} 
-                        theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }} 
-                        isDragged={draggedId === bookmark.id} 
-                        onDragStart={handleDragStart} 
-                        onDragEnd={handleDragEnd} 
-                        updateBookmark={updateBookmark} 
-                        deleteBookmark={deleteBookmark} 
-                        forceOpenModal={forcedInspectId === bookmark.id} 
-                        onCloseForcedModal={() => setForcedInspectId(null)}
-                        folderHierarchy={folderHierarchy}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
+              masonryColumns.map((colBookmarks, colIndex) => (
+                <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                  {colBookmarks.map(bookmark => (
+                    <BookmarkCard
+                      key={bookmark.id}
+                      bookmark={bookmark}
+                      theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
+                      isDragged={draggedId === bookmark.id}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      updateBookmark={updateBookmark}
+                      deleteBookmark={deleteBookmark}
+                      forceOpenModal={forcedInspectId === bookmark.id}
+                      onCloseForcedModal={() => setForcedInspectId(null)}
+                      folderHierarchy={folderHierarchy}
+                    />
+                  ))}
+                </div>
+              ))
             )}
-
           </div>
         </main>
 
-        {/* RESTORED: SOLID PREMIUM CAPTURE BAR WITH EXACT ORIGINAL ALIGNMENT */}
+        {/* SOLID CAPTURE BAR WITH NOVEL EDITOR */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-[#4D6A51] dark:bg-[#1A1D1A] rounded-3xl px-3 py-2 shadow-xl border border-transparent dark:border-white/10 transition-colors duration-500">
+          <div className="w-full flex items-center gap-2 bg-white dark:bg-[#151815] rounded-3xl px-3 py-2 shadow-xl border border-black/5 dark:border-white/10 transition-colors duration-500">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
-            
-            <button 
-              onClick={() => fileInputRef.current?.click()} 
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="w-9 h-9 shrink-0 text-white/70 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
-            
-            {/* The Editor replaces the basic input but keeps the clean, centered flex layout */}
+
             <div className="flex-1 flex flex-col justify-center min-w-0 max-h-[150px] overflow-y-auto custom-scrollbar px-2 py-1">
               <Editor
                 key={editorKey}
@@ -608,14 +453,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                     setInputValue(editor.getHTML());
                   }
                 }}
-                className="w-full bg-transparent text-white outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:leading-normal prose-p:text-white dark:prose-p:text-white min-h-[24px]"
+                className="w-full bg-transparent outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:leading-normal text-[#171A17] dark:text-[#F3F0E9] min-h-[24px]"
               />
             </div>
 
-            <button 
-              onClick={handleQuickCapture} 
-              disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'} 
-              className="w-9 h-9 shrink-0 text-[#4D6A51] dark:text-[#151815] bg-white hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 disabled:bg-white/30 disabled:text-white/50"
+            <button
+              onClick={handleQuickCapture}
+              disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
+              className="w-9 h-9 shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30"
             >
               <SendIcon />
             </button>
@@ -626,7 +471,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       {/* DUPLICATE MODAL */}
       {duplicateMatch && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); setEditorKey(prev => prev + 1); }}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
           <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] p-6 rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-serif text-[#171A17] dark:text-white mb-2">Already Cataloged</h3>
             <p className="text-sm text-[#636A63] dark:text-[#9DA59D] mb-4">This source currently exists in your Space.</p>
@@ -635,19 +480,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                <p className="text-xs truncate text-[#737B73] dark:text-[#8F998F] mt-1">{duplicateMatch.url ? duplicateMatch.url.replace(/^https?:\/\/(www\.)?/, '') : ''}</p>
             </div>
             <div className="flex gap-2">
-               <button onClick={() => { 
+               <button onClick={() => {
                   setActiveFilter('All');
                   setActiveSubFilter(null);
-                  setActiveMediaType(null);
                   setSearchQuery('');
                   setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
-                  setDuplicateMatch(null); 
-                  setInputValue(''); 
-                  setEditorKey(prev => prev + 1);
+                  setDuplicateMatch(null);
+                  setInputValue('');
                }} className="flex-1 py-2 bg-[#4D6A51] text-white text-sm rounded-xl hover:opacity-90 transition-opacity">
                   View
                </button>
-               <button onClick={() => { setDuplicateMatch(null); setInputValue(''); setEditorKey(prev => prev + 1); }} className="flex-1 py-2 bg-black/5 dark:bg-white/5 text-sm rounded-xl text-[#171A17] dark:text-[#F3F0E9] hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+               <button onClick={() => { setDuplicateMatch(null); setInputValue(''); }} className="flex-1 py-2 bg-black/5 dark:bg-white/5 text-sm rounded-xl text-[#171A17] dark:text-[#F3F0E9] hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
                   Dismiss
                </button>
             </div>
