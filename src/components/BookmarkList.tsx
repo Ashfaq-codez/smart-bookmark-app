@@ -7,6 +7,7 @@ import { Bookmark } from '@/types'
 import Sidebar from '@/components/Sidebar'
 import BookmarkCard from '@/components/BookmarkCard'
 import BookmarkSkeleton from '@/components/BookmarkSkeleton'
+import TipTapEditor from '@/components/TipTapEditor'
 import { toast } from 'react-hot-toast'
 
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -187,7 +188,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const handleQuickCapture = async () => {
-    const rawInput = inputValue.trim()
+    // 1. Strip Tiptap HTML cleanly to check if the content is just a raw URL
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = inputValue
+    const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
+
     if (!rawInput) return
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
@@ -211,7 +216,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
-        const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: rawInput, type: 'note' }
+        
+        // 2. Save the rich HTML input if it's a note
+        const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
 
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         const data = await res.json().catch(() => ({}))
@@ -265,15 +272,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     });
   }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]);
 
-  // Generate standard columns if NOT grouped
-  const standardMasonryColumns = useMemo(() => {
+  const masonryColumns = useMemo(() => {
     if (isGroupedByDate) return [];
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
     filteredBookmarks.forEach((b, i) => cols[i % columnsCount].push(b))
     return cols
   }, [filteredBookmarks, columnsCount, isGroupedByDate])
 
-  // Generate grouped structure if IS grouped
   const groupedBookmarks = useMemo(() => {
     if (!isGroupedByDate) return null;
 
@@ -561,7 +566,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
               /* STANDARD FLAT VIEW */
               <div className="w-full flex gap-3 sm:gap-6 items-start">
-                {standardMasonryColumns.map((colBookmarks, colIndex) => (
+                {masonryColumns.map((colBookmarks, colIndex) => (
                   <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
                     {colBookmarks.map(bookmark => (
                       <BookmarkCard
@@ -586,33 +591,28 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* PREMIUM SIGNATURE CAPTURE BAR (Themed Glass) */}
+        {/* CUSTOM TIPTAP CAPTURE BAR WITH FLAWLESS ORIGINAL LAYOUT */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-[#4D6A51]/85 dark:bg-[#8FAA91]/20 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(77,106,81,0.25)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-[#4D6A51]/20 dark:border-[#8FAA91]/20 transition-colors duration-500">
+          <div className="w-full flex items-center gap-2 bg-white/95 dark:bg-[#151815]/95 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="w-9 h-9 shrink-0 text-white/70 hover:text-white hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+              className="w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
             >
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
 
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
-              disabled={isSaving}
-              placeholder="Paste a link or write a note..."
-              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-white placeholder-white/60"
-            />
+            {/* Replaces <input> perfectly without altering alignment */}
+            <div className="flex-1 max-h-[150px] overflow-y-auto custom-scrollbar flex items-center px-2 text-[16px] sm:text-sm">
+              <TipTapEditor value={inputValue} onChange={setInputValue} />
+            </div>
 
             <button
               onClick={handleQuickCapture}
-              disabled={isSaving || !inputValue.trim()}
-              className="w-9 h-9 shrink-0 text-[#4D6A51] dark:text-[#151815] bg-white hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 disabled:bg-white/30 disabled:text-white/50"
+              disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
+              className="w-9 h-9 shrink-0 text-white bg-black dark:bg-white dark:text-black hover:opacity-80 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 disabled:bg-black/20 dark:disabled:bg-white/20 disabled:text-black/40 dark:disabled:text-white/40"
             >
               <SendIcon />
             </button>

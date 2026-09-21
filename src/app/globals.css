@@ -42,3 +42,11 @@ body {
 
 
 
+/* Custom Tiptap Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgba(160, 166, 160, 0.7); /* Adjusts nicely for dark/light mode */
+}
