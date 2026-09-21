@@ -610,7 +610,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                     setInputValue(editor.getHTML());
                   }
                 }}
-                className="w-full bg-transparent text-white outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:text-white/90 dark:prose-p:text-white/90 min-h-[24px]"
+                className="w-full bg-solid text-white outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:text-white/90 dark:prose-p:text-white/90 min-h-[24px]"
               />
             </div>
 

@@ -39,3 +39,46 @@ body {
 .group-hover\:scale-105 {
   transition-property: transform;
 }
+/* --- INNTOIT NOVEL COMMAND MENU FIXES --- */
+
+/* 1. Force a solid, premium background (Overrides the transparent glass effect) */
+[cmdk-root],
+div[class*="z-50"][class*="w-72"][class*="overflow-y-auto"] {
+  background-color: #151815 !important; /* Dark mode solid background */
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: none !important; /* Forces opacity off */
+}
+
+/* Light mode solid background */
+html:not(.dark) [cmdk-root],
+html:not(.dark) div[class*="z-50"][class*="w-72"][class*="overflow-y-auto"] {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 2. Safely hide unwanted AI, Feedback, and redundant Text commands */
+[cmdk-item][data-value="continue writing"],
+[cmdk-item][data-value="send feedback"],
+[cmdk-item][data-value="text"] {
+  display: none !important;
+}
+
+/* 3. Hide social embeds to strictly match your requested screenshot */
+[cmdk-item][data-value="twitter"],
+[cmdk-item][data-value="youtube"] {
+  display: none !important;
+}
+
+/* 4. Enhance the hover/selection state for a premium feel */
+[cmdk-item][aria-selected="true"] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-radius: 6px !important;
+}
+
+html:not(.dark) [cmdk-item][aria-selected="true"] {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border-radius: 6px !important;
+}
