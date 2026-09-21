@@ -83,7 +83,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   
+  // Focus Mode State
   const [isInputFocused, setIsInputFocused] = useState(false)
+  const isExpanded = isInputFocused;
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [columnsCount, setColumnsCount] = useState(2)
@@ -100,16 +102,29 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Auto-blur (release) the input bar on page scroll
+  // Global Scroll Listener: Auto-blurs and shrinks the modal back to a draft state
   useEffect(() => {
     const handleGlobalScroll = () => {
       if (isInputFocused && document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
       }
     }
+    // Only captures scroll events on the main window body, not inside the modal editor
     window.addEventListener('scroll', handleGlobalScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleGlobalScroll)
   }, [isInputFocused])
+
+  // Capture CMD+Enter for saving in focus mode
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if (isExpanded && (e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleQuickCapture()
+      }
+    }
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [isExpanded, inputValue])
 
   useEffect(() => {
     if (isSidebarOpen && window.innerWidth < 1024) {
@@ -118,17 +133,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; }
-  }, [isSidebarOpen]);
-
-  useEffect(() => {
-    let initialScroll = window.scrollY;
-    const handleSidebarCloseOnScroll = () => {
-      if (isSidebarOpen && Math.abs(window.scrollY - initialScroll) > 10) {
-        setIsSidebarOpen(false);
-      }
-    };
-    window.addEventListener('scroll', handleSidebarCloseOnScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleSidebarCloseOnScroll);
   }, [isSidebarOpen]);
 
   useEffect(() => {
@@ -242,6 +246,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
     } catch { toast.error('Error.') } finally { setIsSaving(false) }
   }
 
@@ -582,38 +589,77 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* EXPANDING CAPTURE BAR WITH TIPTAP (FOCUS MODE) */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[540px]">
-          <div className={`w-full flex ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'items-end py-3 px-4 rounded-[26px]' : 'items-center py-2 px-3 rounded-full'} gap-3 bg-white/95 dark:bg-[#151815]/95 backdrop-blur-3xl saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10 transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)]`}>
-            
-            <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
+        {/* --- FOCUS MODE OVERLAY & CAPTURE BAR --- */}
+        
+        {/* 1. Dark Backdrop (Fades in only when focused) */}
+        <div 
+          className={`fixed inset-0 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md z-[90] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+          onClick={() => {
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+          }}
+        />
 
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className={`w-9 h-9 shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-0.5' : 'mb-0'}`}
-            >
-              {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
-            </button>
+        {/* 2. The Capture Bar / Modal Editor */}
+        <div 
+          className={`fixed z-[100] flex flex-col bg-white dark:bg-[#151815] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
+            isExpanded 
+              // EXPANDED STATE (Focus Mode Modal)
+              ? 'bottom-[50vh] translate-y-1/2 left-1/2 -translate-x-1/2 w-[90vw] sm:w-[600px] md:w-[750px] h-[65vh] rounded-[24px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-black/[0.08] dark:border-white/[0.08]' 
+              // COLLAPSED STATE (Bottom Bar Draft)
+              : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10 hover:shadow-xl hover:-translate-y-0.5'
+          }`}
+        >
+           {/* Top Header (Visible only in Focus Mode) */}
+           <div className={`flex items-center justify-between w-full transition-opacity duration-300 ${isExpanded ? 'opacity-100 h-auto mb-6 delay-150' : 'opacity-0 h-0 hidden'}`}>
+             <span className="text-[11px] font-bold uppercase tracking-widest text-[#A0A6A0] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#4D6A51] dark:bg-[#8FAA91] shadow-[0_0_8px_rgba(77,106,81,0.6)]"></span>
+                New Quick Note
+             </span>
+             <span className="text-[10px] font-sans text-black/30 dark:text-white/30 uppercase tracking-widest hidden sm:block border border-black/5 dark:border-white/10 px-2 py-1 rounded-md">
+               Press ⌘+Enter to save
+             </span>
+           </div>
 
-            {/* Dynamic expanding wrapper for the Editor */}
-            <div className={`flex-1 flex flex-col justify-center min-w-0 overflow-y-auto custom-scrollbar text-[16px] sm:text-[15px] transition-all duration-300 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'min-h-[160px] max-h-[50vh] py-1' : 'min-h-[24px] max-h-[24px] px-1'}`}>
-              <TipTapEditor 
-                value={inputValue} 
-                onChange={setInputValue} 
-                onFocus={() => setIsInputFocused(true)} 
-                onBlur={() => setIsInputFocused(false)} 
-              />
-            </div>
+           {/* Editor Body */}
+           <div className={`flex-1 w-full relative flex flex-col justify-center ${isExpanded ? 'items-start' : 'items-center px-11'}`}>
+             <div className={`w-full custom-scrollbar transition-all duration-500 ${isExpanded ? 'h-full overflow-y-auto text-lg md:text-xl delay-75' : 'h-[24px] overflow-hidden text-[16px] sm:text-sm whitespace-nowrap'}`}>
+                <TipTapEditor 
+                  value={inputValue} 
+                  onChange={setInputValue} 
+                  onFocus={() => setIsInputFocused(true)} 
+                  onBlur={() => setIsInputFocused(false)}
+                  isExpanded={isExpanded}
+                />
+             </div>
+           </div>
 
-            <button
-              onClick={handleQuickCapture}
-              disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
-              className={`w-9 h-9 shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-30 ${isInputFocused || (inputValue && inputValue !== '<p></p>') ? 'mb-0.5' : 'mb-0'}`}
-            >
-              <SendIcon />
-            </button>
-          </div>
+           {/* Bottom Actions */}
+           <div className={`w-full flex items-center transition-all ${isExpanded ? 'justify-between mt-4 pt-4 border-t border-black/5 dark:border-white/5 opacity-100 delay-150' : 'absolute inset-0 pointer-events-none'}`}>
+              
+              {/* Paperclip Button */}
+              <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute left-1.5 top-1/2 -translate-y-1/2'}`}>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className={`shrink-0 text-black/50 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${isExpanded ? 'w-10 h-10 bg-black/5 dark:bg-white/5' : 'w-10 h-10'}`}
+                >
+                  {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
+                </button>
+              </div>
+
+              {/* Send Button */}
+              <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute right-1.5 top-1/2 -translate-y-1/2'}`}>
+                <button
+                  onClick={handleQuickCapture}
+                  disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
+                  className={`shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 ${isExpanded ? 'w-10 h-10 shadow-lg' : 'w-10 h-10'}`}
+                >
+                  <SendIcon />
+                </button>
+              </div>
+
+           </div>
         </div>
 
       </div>
