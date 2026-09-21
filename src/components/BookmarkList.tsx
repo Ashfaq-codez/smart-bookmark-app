@@ -104,15 +104,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Global Scroll Listener: Auto-blurs and shrinks the modal back to a draft state
+  // Fixed Scroll Listener: Ignores the mobile keyboard shift to prevent instant auto-closing
   useEffect(() => {
+    let initialScrollY = window.scrollY;
+
     const handleGlobalScroll = () => {
-      if (isInputFocused && document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur()
+      if (!isInputFocused) {
+        initialScrollY = window.scrollY;
+        return;
       }
-    }
-    window.addEventListener('scroll', handleGlobalScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleGlobalScroll)
+      
+      // On mobile, the keyboard opening triggers a resize and pseudo-scroll event.
+      // We only blur if the user actively scrolls more than 40px manually.
+      if (Math.abs(window.scrollY - initialScrollY) > 40) {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleGlobalScroll, { passive: true });
+    window.addEventListener('touchmove', handleGlobalScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleGlobalScroll);
+      window.removeEventListener('touchmove', handleGlobalScroll);
+    };
   }, [isInputFocused])
 
   // Capture CMD+Enter for saving in focus mode
@@ -612,11 +629,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           }}
         />
 
-        {/* 2. The Capture Bar / Modal Editor (Green in light mode, almost white in dark mode) */}
+        {/* 2. The Capture Bar / Modal Editor */}
         <div 
           className={`fixed z-[100] flex flex-col bg-[#4D6A51] dark:bg-[#FAF9F5] text-white dark:text-[#171A17] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
             isExpanded 
-              ? 'bottom-[50vh] translate-y-1/2 left-1/2 -translate-x-1/2 w-[90vw] sm:w-[600px] md:w-[750px] h-[65vh] rounded-[24px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/[0.08]' 
+              // Responsive Mobile/Desktop sizing ensuring the keyboard does not crush it
+              ? 'bottom-[2dvh] sm:bottom-[50vh] sm:translate-y-1/2 left-1/2 -translate-x-1/2 w-[96vw] sm:w-[600px] md:w-[750px] h-[45dvh] sm:h-[65vh] rounded-[24px] p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/[0.08]' 
               : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/10 hover:shadow-xl hover:-translate-y-0.5'
           }`}
         >
@@ -627,7 +645,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 New Quick Note
              </span>
              <span className="text-[10px] font-sans text-white/80 dark:text-[#171A17]/70 uppercase tracking-widest hidden sm:block border border-white/20 dark:border-black/10 px-2 py-1 rounded-md">
-               Type '/' for edit tools
+               Press ⌘+Enter to save
              </span>
            </div>
 
@@ -675,6 +693,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       </div>
 
+      {/* DUPLICATE MODAL */}
       {duplicateMatch && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
           <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] p-6 rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
