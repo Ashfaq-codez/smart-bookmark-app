@@ -1,4 +1,6 @@
 'use client'
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
@@ -109,7 +111,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         document.activeElement.blur()
       }
     }
-    // Only captures scroll events on the main window body, not inside the modal editor
     window.addEventListener('scroll', handleGlobalScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleGlobalScroll)
   }, [isInputFocused])
@@ -133,6 +134,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; }
+  }, [isSidebarOpen]);
+
+  useEffect(() => {
+    let initialScroll = window.scrollY;
+    const handleSidebarCloseOnScroll = () => {
+      if (isSidebarOpen && Math.abs(window.scrollY - initialScroll) > 10) {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('scroll', handleSidebarCloseOnScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleSidebarCloseOnScroll);
   }, [isSidebarOpen]);
 
   useEffect(() => {
@@ -364,8 +376,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
 
-      {/* ─── SIDEBAR DRAWER ─── */}
-      <div className={`fixed top-0 left-0 h-screen z-50 bg-[#FBF9F4] dark:bg-[#151815] transition-all duration-300 flex flex-col border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-[80vw] sm:w-[280px]' : '-translate-x-full lg:w-[72px]'}`}>
+      {/* ─── SIDEBAR DRAWER (z-[200] ensures it is ALWAYS on top) ─── */}
+      <div className={`fixed top-0 left-0 h-screen z-[200] bg-[#FBF9F4] dark:bg-[#151815] transition-all duration-300 flex flex-col border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-[80vw] sm:w-[280px]' : '-translate-x-full lg:w-[72px]'}`}>
         <Sidebar
           isCollapsed={!isSidebarOpen}
           userEmail={userEmail || null}
@@ -401,12 +413,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         />
       </div>
 
+      {/* Mobile Sidebar Overlay (z-[150] covers the rest of the app including capture bar) */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
           onTouchMove={() => setIsSidebarOpen(false)}
           onWheel={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity lg:hidden"
+          className="fixed inset-0 bg-black/10 dark:bg-black/40 backdrop-blur-sm z-[150] transition-opacity lg:hidden"
         />
       )}
 
@@ -591,7 +604,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
         {/* --- FOCUS MODE OVERLAY & CAPTURE BAR --- */}
         
-        {/* 1. Dark Backdrop (Fades in only when focused) */}
+        {/* 1. Dark Backdrop (z-[90] keeps it below the capture bar but above the cards) */}
         <div 
           className={`fixed inset-0 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md z-[90] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
           onClick={() => {
@@ -599,13 +612,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           }}
         />
 
-        {/* 2. The Capture Bar / Modal Editor */}
+        {/* 2. The Capture Bar / Modal Editor (z-[100] keeps it safely under the mobile sidebar z-[200]) */}
         <div 
           className={`fixed z-[100] flex flex-col bg-white dark:bg-[#151815] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
             isExpanded 
-              // EXPANDED STATE (Focus Mode Modal)
               ? 'bottom-[50vh] translate-y-1/2 left-1/2 -translate-x-1/2 w-[90vw] sm:w-[600px] md:w-[750px] h-[65vh] rounded-[24px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-black/[0.08] dark:border-white/[0.08]' 
-              // COLLAPSED STATE (Bottom Bar Draft)
               : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-black/5 dark:border-white/10 hover:shadow-xl hover:-translate-y-0.5'
           }`}
         >
@@ -616,7 +627,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 New Quick Note
              </span>
              <span className="text-[10px] font-sans text-black/30 dark:text-white/30 uppercase tracking-widest hidden sm:block border border-black/5 dark:border-white/10 px-2 py-1 rounded-md">
-               Type '/' for edit tools 
+               ype '/' for edit tools
              </span>
            </div>
 
