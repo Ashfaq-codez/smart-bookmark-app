@@ -8,7 +8,6 @@ import Sidebar from '@/components/Sidebar'
 import BookmarkCard from '@/components/BookmarkCard'
 import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import { toast } from 'react-hot-toast'
-import { Editor } from 'novel'
 
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 const PaperclipIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -16,6 +15,19 @@ const SpinnerIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="
 const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+
+const SortDescIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M4 14v7"></path><path d="M7 18l-3 3-3-3"></path></svg>
+const SortAscIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 19h10"></path><path d="M11 15h7"></path><path d="M11 11h4"></path><path d="M4 10V3"></path><path d="M7 6l-3-3-3 3"></path></svg>
+const CalendarIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+
+const mediaTypeLabels: Record<string, string> = {
+  'link': 'Links',
+  'note': 'Notes',
+  'image': 'Images',
+  'videos': 'Videos',
+  'documents': 'Documents',
+  'socials': 'Socials'
+};
 
 function normalizeUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim()
@@ -37,6 +49,19 @@ function normalizeUrl(rawUrl: string): string {
   } catch { return trimmed.toLowerCase().replace(/\/+$/, '') }
 }
 
+function formatDateHeader(dateString?: string): string {
+  if (!dateString) return 'Unknown Date';
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
@@ -48,10 +73,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
   const [activeMediaType, setActiveMediaType] = useState<string | null>(null)
 
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
+  const [isGroupedByDate, setIsGroupedByDate] = useState(false)
+
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [inputValue, setInputValue] = useState('')
-  const [editorKey, setEditorKey] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -160,10 +187,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const handleQuickCapture = async () => {
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = inputValue
-    const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
-
+    const rawInput = inputValue.trim()
     if (!rawInput) return
     const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
     const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
@@ -187,8 +211,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
         let finalUrl = rawInput
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
-        
-        const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
+        const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: rawInput, type: 'note' }
 
         const res = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         const data = await res.json().catch(() => ({}))
@@ -201,19 +224,17 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')
-      setEditorKey(prev => prev + 1)
     } catch { toast.error('Error.') } finally { setIsSaving(false) }
   }
 
   const filteredBookmarks = useMemo(() => {
-    return bookmarks.filter((bookmark) => {
+    const filtered = bookmarks.filter((bookmark) => {
       const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
       const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
 
       let isMediaTypeMatch = true;
       if (activeMediaType !== null) {
         const bookmarkType = bookmark.type || 'link';
-
         if (activeMediaType === 'socials') {
           isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'linkedin' || bookmarkType === 'github';
         } else if (activeMediaType === 'videos') {
@@ -236,13 +257,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       return isCategoryMatch && isSubCategoryMatch && isMediaTypeMatch && isSearchMatch;
     });
-  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery]);
+
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]);
 
   const masonryColumns = useMemo(() => {
+    if (isGroupedByDate) return [];
     const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
     filteredBookmarks.forEach((b, i) => cols[i % columnsCount].push(b))
     return cols
-  }, [filteredBookmarks, columnsCount])
+  }, [filteredBookmarks, columnsCount, isGroupedByDate])
+
+  const groupedBookmarks = useMemo(() => {
+    if (!isGroupedByDate) return null;
+
+    const groups: Record<string, Bookmark[]> = {};
+    filteredBookmarks.forEach(bookmark => {
+      const header = formatDateHeader(bookmark.created_at);
+      if (!groups[header]) groups[header] = [];
+      groups[header].push(bookmark);
+    });
+    return groups;
+  }, [filteredBookmarks, isGroupedByDate]);
 
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {}
@@ -397,42 +437,83 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </div>
 
-        {/* RESTORED HORIZONTAL MASONRY ALIGNMENT */}
         <main className="flex-1 p-4 sm:p-8 pb-32">
-          <div className="w-full flex gap-3 sm:gap-6 items-start" ref={gridRef}>
+          <div className="w-full flex flex-col items-start" ref={gridRef}>
             {isLoading ? (
-              Array.from({ length: columnsCount }).map((_, colIndex) => (
-                <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
-                  {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
-                </div>
-              ))
+              <div className="w-full flex gap-3 sm:gap-6">
+                {Array.from({ length: columnsCount }).map((_, colIndex) => (
+                  <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                    {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
+                  </div>
+                ))}
+              </div>
+            ) : isGroupedByDate && groupedBookmarks ? (
+              Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
+                const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
+                groupBookmarks.forEach((b, i) => groupCols[i % columnsCount].push(b))
+
+                return (
+                  <div key={dateLabel} className="w-full mb-10">
+                    <div className="flex items-center gap-4 mb-6">
+                      <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0] shrink-0 tracking-wide">
+                        {dateLabel}
+                      </h3>
+                      <div className="h-px bg-black/[0.06] dark:bg-white/[0.06] flex-1"></div>
+                    </div>
+                    
+                    <div className="w-full flex gap-3 sm:gap-6 items-start">
+                      {groupCols.map((colBookmarks, colIndex) => (
+                        <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                          {colBookmarks.map(bookmark => (
+                            <BookmarkCard
+                              key={bookmark.id}
+                              bookmark={bookmark}
+                              theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
+                              isDragged={draggedId === bookmark.id}
+                              onDragStart={handleDragStart}
+                              onDragEnd={handleDragEnd}
+                              updateBookmark={updateBookmark}
+                              deleteBookmark={deleteBookmark}
+                              forceOpenModal={forcedInspectId === bookmark.id}
+                              onCloseForcedModal={() => setForcedInspectId(null)}
+                              folderHierarchy={folderHierarchy}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
             ) : (
-              masonryColumns.map((colBookmarks, colIndex) => (
-                <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
-                  {colBookmarks.map(bookmark => (
-                    <BookmarkCard
-                      key={bookmark.id}
-                      bookmark={bookmark}
-                      theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
-                      isDragged={draggedId === bookmark.id}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      updateBookmark={updateBookmark}
-                      deleteBookmark={deleteBookmark}
-                      forceOpenModal={forcedInspectId === bookmark.id}
-                      onCloseForcedModal={() => setForcedInspectId(null)}
-                      folderHierarchy={folderHierarchy}
-                    />
-                  ))}
-                </div>
-              ))
+              <div className="w-full flex gap-3 sm:gap-6 items-start">
+                {masonryColumns.map((colBookmarks, colIndex) => (
+                  <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                    {colBookmarks.map(bookmark => (
+                      <BookmarkCard
+                        key={bookmark.id}
+                        bookmark={bookmark}
+                        theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
+                        isDragged={draggedId === bookmark.id}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        updateBookmark={updateBookmark}
+                        deleteBookmark={deleteBookmark}
+                        forceOpenModal={forcedInspectId === bookmark.id}
+                        onCloseForcedModal={() => setForcedInspectId(null)}
+                        folderHierarchy={folderHierarchy}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </main>
 
-        {/* SOLID CAPTURE BAR WITH NOVEL EDITOR */}
+        {/* RESTORED ORIGINAL CAPTURE BAR */}
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-[500px]">
-          <div className="w-full flex items-center gap-2 bg-white dark:bg-[#151815] rounded-3xl px-3 py-2 shadow-xl border border-black/5 dark:border-white/10 transition-colors duration-500">
+          <div className="w-full flex items-center gap-2 bg-white/60 dark:bg-[#151815]/60 backdrop-blur-3xl saturate-150 rounded-3xl px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/60 dark:border-white/10">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
 
             <button
@@ -443,24 +524,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
             </button>
 
-            <div className="flex-1 flex flex-col justify-center min-w-0 max-h-[150px] overflow-y-auto custom-scrollbar px-2 py-1">
-              <Editor
-                key={editorKey}
-                defaultValue={""}
-                disableLocalStorage={true}
-                onUpdate={(editor: any) => {
-                  if (editor) {
-                    setInputValue(editor.getHTML());
-                  }
-                }}
-                className="w-full bg-transparent outline-none prose prose-sm dark:prose-invert prose-p:m-0 prose-p:leading-normal text-[#171A17] dark:text-[#F3F0E9] min-h-[24px]"
-              />
-            </div>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCapture() }}
+              disabled={isSaving}
+              placeholder="Paste a link or write a note..."
+              className="flex-1 bg-transparent border-none outline-none px-2 text-[16px] sm:text-sm text-[#171A17] dark:text-white placeholder-black/40 dark:placeholder-white/40"
+            />
 
             <button
               onClick={handleQuickCapture}
-              disabled={isSaving || !inputValue.trim() || inputValue === '<p></p>'}
-              className="w-9 h-9 shrink-0 text-white bg-[#4D6A51] dark:bg-[#8FAA91] dark:text-[#151815] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30"
+              disabled={isSaving || !inputValue.trim()}
+              className="w-9 h-9 shrink-0 text-white bg-black dark:bg-white dark:text-black hover:opacity-80 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 disabled:bg-black/20 dark:disabled:bg-white/20 disabled:text-black/40 dark:disabled:text-white/40"
             >
               <SendIcon />
             </button>
@@ -469,7 +546,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
       </div>
 
-      {/* DUPLICATE MODAL */}
       {duplicateMatch && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={() => { setDuplicateMatch(null); setInputValue(''); }}>
           <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] p-6 rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
