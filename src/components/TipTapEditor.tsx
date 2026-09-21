@@ -31,7 +31,6 @@ const SLASH_COMMANDS = [
   { title: 'Code Block', icon: <CodeIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleCodeBlock().run() } },
   { title: 'Table', icon: <TableIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() } },
   { title: 'Divider', icon: <DividerIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setHorizontalRule().run() } },
-  { title: 'Delete Table', icon: <TrashIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).deleteTable().run() } },
 ]
 
 export default function TipTapEditor({ 
@@ -53,6 +52,7 @@ export default function TipTapEditor({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [range, setRange] = useState({ from: 0, to: 0 })
   const [mounted, setMounted] = useState(false)
+  const [isTableActive, setIsTableActive] = useState(false)
   
   const placeholderRef = useRef("Paste a link or write a note...")
 
@@ -74,6 +74,9 @@ export default function TipTapEditor({
     content: value,
     onFocus: () => { if (onFocus) onFocus() },
     onBlur: () => { if (onBlur) onBlur(); setMenuOpen(false); },
+    onTransaction: ({ editor }) => {
+      setIsTableActive(editor.isActive('table'))
+    },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
       
@@ -156,11 +159,10 @@ export default function TipTapEditor({
     }
   }
 
-  // Calculate safe portal coordinates so it doesn't get clipped by mobile keyboard or screen edges
   const getPortalPosition = () => {
     const spaceBelow = window.innerHeight - menuCoords.bottom
     const spaceAbove = menuCoords.top
-    const menuHeight = 280 // Max height estimate of the portal
+    const menuHeight = 280
     
     if (spaceBelow >= menuHeight) {
       return {
@@ -173,7 +175,6 @@ export default function TipTapEditor({
         left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)),
       }
     } else {
-      // Fallback: Stick it near the bottom if both dimensions are highly restricted
       return {
         bottom: 20,
         left: Math.max(10, Math.min(menuCoords.left, window.innerWidth - 270)),
@@ -183,6 +184,21 @@ export default function TipTapEditor({
 
   return (
     <div className="relative w-full h-full flex flex-col min-h-0" onKeyDown={handleKeyDown}>
+      {/* Manual Table Deletion Floating Button */}
+      {isTableActive && (
+        <div className="absolute top-0 right-0 z-50">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              editor?.chain().focus().deleteTable().run();
+            }}
+            className="flex items-center gap-1.5 bg-[#FBF9F4] dark:bg-[#1A1D1A] text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.15)] border border-black/[0.08] dark:border-white/[0.08] text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+          >
+            <TrashIcon /> Remove Table
+          </button>
+        </div>
+      )}
+
       <EditorContent editor={editor} className="w-full h-full custom-scrollbar" />
       
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(

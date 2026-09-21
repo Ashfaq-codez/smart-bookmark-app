@@ -36,58 +36,64 @@ body {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Exempt specific rapid interactions if needed, though 300ms usually feels premium */
 .group-hover\:scale-105 {
   transition-property: transform;
 }
 
 /* --- TIPTAP EDITOR OVERRIDES --- */
 
-/* Fix Task Lists alignment */
+/* Fix Task Lists alignment against Tailwind Typography */
 ul[data-type="taskList"] {
   list-style: none !important;
   padding: 0 !important;
   margin: 0 !important;
 }
 
+/* Prefixing with .prose outranks tailwind typography specificity */
+.prose li[data-type="taskItem"], 
 li[data-type="taskItem"] {
   display: flex !important;
-  flex-direction: row !important; /* Force items side by side */
+  flex-direction: row !important; /* Force horizontal alignment */
   align-items: flex-start !important;
   gap: 8px !important;
   margin-bottom: 4px !important;
+  padding: 0 !important;
 }
 
-li[data-type="taskItem"]::before,
-li[data-type="taskItem"]::after {
-  display: none !important; /* Override prose bullet pseudo-elements */
+.prose li[data-type="taskItem"]::before,
+.prose li[data-type="taskItem"]::after {
+  display: none !important; /* Kill default bullet points */
 }
 
+.prose li[data-type="taskItem"] > label,
 li[data-type="taskItem"] > label {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   padding-top: 4px !important;
   margin: 0 !important;
-  flex: 0 0 auto !important; /* Prevent label wrapper from growing or shrinking */
-  width: auto !important;
+  flex-shrink: 0 !important; /* Prevent the checkbox from compressing */
 }
 
+.prose li[data-type="taskItem"] > label input[type="checkbox"],
 li[data-type="taskItem"] > label input[type="checkbox"] {
   margin: 0 !important;
-  appearance: auto !important;
 }
 
+.prose li[data-type="taskItem"] > div,
 li[data-type="taskItem"] > div {
   flex: 1 1 auto !important;
   margin: 0 !important;
   min-width: 0 !important;
 }
 
-li[data-type="taskItem"] p {
+/* Force the internal P tag to stop acting like a block element */
+.prose li[data-type="taskItem"] > div > p,
+li[data-type="taskItem"] > div > p {
   margin: 0 !important;
   padding: 0 !important;
-  display: block !important;
+  display: inline-block !important;
+  width: 100% !important;
 }
 
 /* Fix Table borders and layout */
