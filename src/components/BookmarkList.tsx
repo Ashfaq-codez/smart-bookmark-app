@@ -647,23 +647,32 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           ref={captureBarRef}
           className={`fixed z-[100] flex flex-col bg-[#4D6A51] dark:bg-[#FAF9F5] text-white dark:text-[#171A17] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
             isExpanded 
-              ? 'bottom-[2dvh] sm:bottom-[50vh] sm:translate-y-1/2 left-1/2 -translate-x-1/2 w-[96vw] sm:w-[600px] md:w-[750px] h-[45dvh] sm:h-[65vh] rounded-[24px] p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/[0.08]' 
+              // Native Full-Screen on Mobile, Floating Zoom on Desktop
+              ? 'bottom-0 left-0 w-full h-[100dvh] rounded-none p-5 pt-safe-top sm:bottom-[50vh] sm:translate-y-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:w-[600px] md:w-[750px] sm:h-[65vh] sm:rounded-[24px] sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border-none sm:border border-white/20 dark:border-black/[0.08]' 
               : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/10 hover:shadow-xl hover:-translate-y-0.5'
           }`}
         >
            {/* Top Header (Visible only in Focus Mode) */}
-           <div className={`flex items-center justify-between w-full transition-opacity duration-300 ${isExpanded ? 'opacity-100 h-auto mb-6 delay-150' : 'opacity-0 h-0 hidden'}`}>
+           <div className={`flex items-center justify-between w-full transition-opacity duration-300 shrink-0 ${isExpanded ? 'opacity-100 h-auto mb-6 mt-8 sm:mt-0 delay-150' : 'opacity-0 h-0 hidden'}`}>
              <span className="text-[11px] font-bold uppercase tracking-widest text-white/90 dark:text-[#171A17]/80 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-white dark:bg-[#4D6A51] shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
                 New Quick Note
              </span>
-             <span className="text-[10px] font-sans text-white/80 dark:text-[#171A17]/70 uppercase tracking-widest hidden sm:block border border-white/20 dark:border-black/10 px-2 py-1 rounded-md">
-               Press ⌘+Enter to save
-             </span>
+             <div className="flex items-center gap-3">
+               <span className="text-[10px] font-sans text-white/80 dark:text-[#171A17]/70 uppercase tracking-widest hidden sm:block border border-white/20 dark:border-black/10 px-2 py-1 rounded-md">
+                 Press ⌘+Enter to save
+               </span>
+               <button 
+                 onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur() }}
+                 className="text-xs sm:hidden font-bold uppercase tracking-widest text-white/80 dark:text-[#171A17]/80 hover:text-white"
+               >
+                 Done
+               </button>
+             </div>
            </div>
 
-           {/* Editor Body */}
-           <div className={`flex-1 w-full relative flex flex-col justify-center ${isExpanded ? 'items-start' : 'items-center px-11'}`}>
+           {/* Editor Body (min-h-0 strictly prevents text from pushing the bottom bar away) */}
+           <div className={`flex-1 w-full relative flex flex-col justify-center min-h-0 ${isExpanded ? 'items-start' : 'items-center px-11'}`}>
              <div className={`w-full custom-scrollbar transition-all duration-500 ${isExpanded ? 'h-full overflow-y-auto text-lg md:text-xl delay-75' : 'h-[24px] overflow-hidden text-[16px] sm:text-sm whitespace-nowrap'}`}>
                 <TipTapEditor 
                   value={inputValue} 
@@ -676,7 +685,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
            </div>
 
            {/* Bottom Actions */}
-           <div className={`w-full flex items-center transition-all ${isExpanded ? 'justify-between mt-4 pt-4 border-t border-white/20 dark:border-black/10 opacity-100 delay-150' : 'absolute inset-0 pointer-events-none'}`}>
+           <div className={`w-full shrink-0 flex items-center transition-all ${isExpanded ? 'justify-between mt-4 pt-4 border-t border-white/20 dark:border-black/10 opacity-100 delay-150 mb-safe-bottom sm:mb-0' : 'absolute inset-0 pointer-events-none'}`}>
               
               {/* Paperclip Button */}
               <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute left-1.5 top-1/2 -translate-y-1/2'}`}>

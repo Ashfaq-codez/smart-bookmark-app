@@ -34,7 +34,7 @@ const SLASH_COMMANDS = [
 
 export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpanded }: { value: string, onChange: (val: string) => void, onFocus?: () => void, onBlur?: () => void, isExpanded: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 })
+  const [menuCoords, setMenuCoords] = useState({ bottom: 0, left: 0 })
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [range, setRange] = useState({ from: 0, to: 0 })
@@ -77,7 +77,7 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
       
       if (match && isExpanded) {
         const coords = view.coordsAtPos(selection.from)
-        setMenuCoords({ top: coords.top, left: coords.left })
+        setMenuCoords({ bottom: coords.bottom, left: coords.left })
         setQuery(match[2])
         setRange({ from: selection.from - match[1].length, to: selection.from })
         setSelectedIndex(0)
@@ -142,15 +142,15 @@ export default function TipTapEditor({ value, onChange, onFocus, onBlur, isExpan
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col" onKeyDown={handleKeyDown}>
-      <EditorContent editor={editor} className="w-full h-full" />
+    <div className="relative w-full h-full flex flex-col min-h-0" onKeyDown={handleKeyDown}>
+      <EditorContent editor={editor} className="w-full h-full custom-scrollbar" />
       
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(
         <div 
           className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden"
           style={{
-            top: menuCoords.top + 24,
-            left: menuCoords.left,
+            top: menuCoords.bottom + 8, // Directly below the cursor line
+            left: Math.min(menuCoords.left, window.innerWidth - 270), // Prevent right-side cutoff
           }}
         >
           <div className="px-3 pb-2 mb-2 text-[10px] uppercase tracking-wider text-[#A0A6A0] border-b border-black/[0.04] dark:border-white/[0.04]">
