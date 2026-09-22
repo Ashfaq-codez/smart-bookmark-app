@@ -112,8 +112,7 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        // Fixed: The colors are correctly inverted now -> Light text on dark bg, Dark text on light bg.
-        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm',
+        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
       }
     },
   })
@@ -193,9 +192,9 @@ export default function TipTapEditor({
   return (
     <div className="relative w-full h-full flex flex-col min-h-0" onKeyDown={handleKeyDown}>
       
-      {/* Persistent Top Dock Toolbar */}
+      {/* Persistent Top Dock Toolbar - Pinned natively to scroll top */}
       {isExpanded && (
-        <div className="flex items-center gap-1.5 p-2 bg-[#FDFCF8] dark:bg-[#151815] border-b border-black/[0.08] dark:border-white/[0.08] overflow-x-auto custom-scrollbar shrink-0 z-10 w-full">
+        <div className="flex items-center gap-1.5 p-2 bg-[#FDFCF8] dark:bg-[#151815] border-b border-black/[0.08] dark:border-white/[0.08] overflow-x-auto custom-scrollbar shrink-0 z-50 w-full sticky top-0">
            {TOOLBAR_COMMANDS.map((cmd, index) => (
              <button
                key={index}
@@ -211,7 +210,7 @@ export default function TipTapEditor({
 
       {/* Manual Table Deletion Floating Button */}
       {isTableActive && (
-        <div className="absolute top-12 right-2 z-50">
+        <div className="absolute top-16 right-2 z-50">
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -224,7 +223,8 @@ export default function TipTapEditor({
         </div>
       )}
 
-      <EditorContent editor={editor} className={`flex-1 w-full overflow-y-auto custom-scrollbar ${isExpanded ? 'p-4 md:p-6' : ''}`} />
+      {/* Notice `overflow-visible md:overflow-y-auto` below */}
+      <EditorContent editor={editor} className={`flex-1 w-full overflow-visible md:overflow-y-auto custom-scrollbar ${isExpanded ? 'p-4 md:p-6' : ''}`} />
       
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(
         <div 
