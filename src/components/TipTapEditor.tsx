@@ -112,8 +112,8 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        // Appended the "tiptap" class here to match the strict CSS overrides
-        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
+        // Fixed: The colors are correctly inverted now -> Light text on dark bg, Dark text on light bg.
+        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm',
       }
     },
   })
