@@ -42,7 +42,7 @@ body {
 
 /* --- TIPTAP EDITOR OVERRIDES --- */
 
-/* Fix Task Lists alignment against Tailwind Typography */
+/* Base Task List Reset */
 .prose ul[data-type="taskList"],
 .tiptap ul[data-type="taskList"],
 ul[data-type="taskList"] {
@@ -51,15 +51,18 @@ ul[data-type="taskList"] {
   margin: 0 !important;
 }
 
-/* Force strict horizontal flex row */
+/* 
+  Force strict CSS Grid alignment.
+  Column 1 (auto) hugs the checkbox. Column 2 (minmax) forces the text to stay on the same row.
+*/
 .prose li[data-type="taskItem"],
 .tiptap li[data-type="taskItem"],
 li[data-type="taskItem"] {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: flex-start !important;
-  gap: 8px !important;
-  margin-bottom: 4px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  gap: 12px !important;
+  align-items: start !important;
+  margin-bottom: 6px !important;
   margin-top: 0 !important;
   padding: 0 !important;
 }
@@ -75,7 +78,7 @@ li[data-type="taskItem"]::after {
   content: none !important;
 }
 
-/* Checkbox Container: Lock size so it never grows or shrinks */
+/* Checkbox Label Container */
 .prose li[data-type="taskItem"] > label,
 .tiptap li[data-type="taskItem"] > label,
 li[data-type="taskItem"] > label {
@@ -88,31 +91,97 @@ li[data-type="taskItem"] > label {
   user-select: none !important;
 }
 
+/* 
+  Custom Circular Checkbox
+  Overrides default browser appearance to match app theme
+*/
 .prose li[data-type="taskItem"] > label input[type="checkbox"],
 .tiptap li[data-type="taskItem"] > label input[type="checkbox"],
 li[data-type="taskItem"] > label input[type="checkbox"] {
-  margin: 0 !important;
-  appearance: auto !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  border: 2px solid #A0AEC0 !important;
+  background-color: transparent !important;
   cursor: pointer !important;
+  position: relative !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease-in-out !important;
 }
 
-/* Text Wrapper: Takes up remaining horizontal space */
+/* Checked State: Green Background */
+.prose li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"],
+.tiptap li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"],
+li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"] {
+  background-color: #4D6A51 !important; 
+  border-color: #4D6A51 !important;
+}
+
+/* The White Checkmark inside the green circle */
+.prose li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"]::after,
+.tiptap li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"]::after,
+li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"]::after {
+  content: "" !important;
+  width: 5px !important;
+  height: 10px !important;
+  border: solid white !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) translateY(-1px) !important;
+}
+
+/* Dark Mode Checkbox Overrides */
+.dark .prose li[data-type="taskItem"] > label input[type="checkbox"],
+.dark .tiptap li[data-type="taskItem"] > label input[type="checkbox"],
+.dark li[data-type="taskItem"] > label input[type="checkbox"] {
+  border-color: #718096 !important;
+}
+.dark .prose li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"],
+.dark .tiptap li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"],
+.dark li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"] {
+  background-color: #8FAA91 !important;
+  border-color: #8FAA91 !important;
+}
+.dark .prose li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"]::after,
+.dark .tiptap li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"]::after,
+.dark li[data-type="taskItem"][data-checked="true"] > label input[type="checkbox"]::after {
+  border-color: #151815 !important;
+}
+
+/* Text Wrapper */
 .prose li[data-type="taskItem"] > div,
 .tiptap li[data-type="taskItem"] > div,
 li[data-type="taskItem"] > div {
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  width: 100% !important;
 }
 
-/* Text Node: MUST remain display: block for the Tiptap editor engine to work correctly */
+/* Text Node Configuration */
 .prose li[data-type="taskItem"] > div > p,
 .tiptap li[data-type="taskItem"] > div > p,
 li[data-type="taskItem"] > div > p {
   margin: 0 !important;
   padding: 0 !important;
   display: block !important; 
+  transition: color 0.2s ease-in-out !important;
+}
+
+/* Checked State: Strikethrough & Grey out text */
+.prose li[data-type="taskItem"][data-checked="true"] > div > p,
+.tiptap li[data-type="taskItem"][data-checked="true"] > div > p,
+li[data-type="taskItem"][data-checked="true"] > div > p {
+  text-decoration: line-through !important;
+  color: #A0AEC0 !important;
+}
+.dark .prose li[data-type="taskItem"][data-checked="true"] > div > p,
+.dark .tiptap li[data-type="taskItem"][data-checked="true"] > div > p,
+.dark li[data-type="taskItem"][data-checked="true"] > div > p {
+  color: #718096 !important;
 }
 
 /* Fix Table borders and layout */
