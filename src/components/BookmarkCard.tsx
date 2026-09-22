@@ -11,6 +11,7 @@ import TipTapEditor from './TipTapEditor'
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 
@@ -111,11 +112,17 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [isVisible, setIsVisible] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
+  const [isReaderMode, setIsReaderMode] = useState(false)
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
+  const [isNoteEditMode, setIsNoteEditMode] = useState(false)
+  
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
   
   const confirmDeleteRef = useRef<HTMLButtonElement>(null)
+  
   const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
@@ -202,6 +209,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       setIsModalOpen(false)
       setShowDeleteConfirm(false)
       setIsFullscreenImage(false)
+      setIsReaderMode(false)
+      setIsNoteEditMode(false)
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
 
@@ -218,14 +227,34 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal()
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientY)
+    setTouchEnd(0)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientY)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchEnd - touchStart
+    if (distance > 45) {
+      handleCloseWithSave()
+    }
+    setTouchStart(0)
+    setTouchEnd(0)
+  }
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (!isModalOpen) return
       
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (isFullscreenImage) {
+        if (isFullscreenImage || isReaderMode) {
           setIsFullscreenImage(false)
+          setIsReaderMode(false)
           return
         }
         if (showDeleteConfirm) {
@@ -237,7 +266,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
+  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
 
@@ -316,6 +345,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
+
+  const wordCount = editContent ? editContent.replace(/<[^>]*>?/gm, '').trim().split(/\s+/).filter(word => word.length > 0).length : 0;
 
   return (
     <>
@@ -466,8 +497,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             <div className={`w-full md:w-[60%] flex flex-col border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 overflow-hidden ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F] min-h-[60dvh] md:h-full' : 'bg-white dark:bg-[#1A1D1A] items-center justify-center h-[35%] min-h-[200px] md:min-h-0 md:h-full'}`}>
               
               {displayType === 'note' ? (
-                <div className="w-full h-full flex flex-col relative bg-white dark:bg-[#1A1D1A]">
-                   {/* Full 100% Pane Tiptap Editor */}
+                <div className="w-full h-full flex flex-col relative bg-[#FAF9F5] dark:bg-[#0F120F]">
                    <TipTapEditor
                      value={editContent || ''}
                      onChange={setEditContent}
@@ -600,7 +630,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
 
             {/* RIGHT PANE (Meta) */}
-            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FBF9F4] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-10`}>
+            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FAF9F5] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-32 md:pb-12`}>
               <div className="px-6 md:px-10 py-8 md:py-10 flex flex-col min-h-full">
                 
                 <div className="flex flex-col gap-10 md:gap-12 flex-1 mt-4 md:mt-0">
@@ -702,7 +732,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   )}
                 </div>
 
-                <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.04] dark:border-white/[0.04] mt-8">
+                <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.04] dark:border-white/[0.04] mt-8 mb-12 md:mb-0">
                   <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
                      Saved {formatDateTime(bookmark.created_at)}
                   </div>
