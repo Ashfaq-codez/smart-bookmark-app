@@ -38,13 +38,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         status.style.display = 'block';
         status.style.backgroundColor = '#FEF3C7';
         status.style.color = '#92400E';
-        status.textContent = 'Already in Space';
+        status.textContent = 'Already inntoit';
         setTimeout(() => window.close(), 1400);
       } else if (res.ok) {
         status.style.display = 'block';
         status.style.backgroundColor = '#E8EFE5';
         status.style.color = '#4D6A51';
-        status.textContent = 'Cataloged to inntoit';
+        status.textContent = 'Added inntoit';
         setTimeout(() => window.close(), 1000);
       } else {
         throw new Error(data.error || 'Failed to save');

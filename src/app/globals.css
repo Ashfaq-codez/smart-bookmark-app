@@ -43,45 +43,62 @@ body {
 /* --- TIPTAP EDITOR OVERRIDES --- */
 
 /* Fix Task Lists alignment against Tailwind Typography */
+.prose ul[data-type="taskList"],
+.tiptap ul[data-type="taskList"],
 ul[data-type="taskList"] {
   list-style: none !important;
   padding: 0 !important;
   margin: 0 !important;
 }
 
+/* Force strict horizontal flex row */
+.prose li[data-type="taskItem"],
+.tiptap li[data-type="taskItem"],
 li[data-type="taskItem"] {
   display: flex !important;
   flex-direction: row !important;
   align-items: flex-start !important;
   gap: 8px !important;
   margin-bottom: 4px !important;
+  margin-top: 0 !important;
   padding: 0 !important;
 }
 
+/* Kill default tailwind prose bullet points */
+.prose li[data-type="taskItem"]::before,
+.prose li[data-type="taskItem"]::after,
+.tiptap li[data-type="taskItem"]::before,
+.tiptap li[data-type="taskItem"]::after,
 li[data-type="taskItem"]::before,
 li[data-type="taskItem"]::after {
   display: none !important;
   content: none !important;
 }
 
-/* Checkbox Container */
+/* Checkbox Container: Lock size so it never grows or shrinks */
+.prose li[data-type="taskItem"] > label,
+.tiptap li[data-type="taskItem"] > label,
 li[data-type="taskItem"] > label {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   margin: 0 !important;
-  padding-top: 4px !important; /* Aligns checkbox with the first line of text */
-  flex-shrink: 0 !important;
+  padding-top: 4px !important; /* Aligns checkbox with the text baseline */
+  flex: 0 0 auto !important; 
   user-select: none !important;
 }
 
+.prose li[data-type="taskItem"] > label input[type="checkbox"],
+.tiptap li[data-type="taskItem"] > label input[type="checkbox"],
 li[data-type="taskItem"] > label input[type="checkbox"] {
   margin: 0 !important;
   appearance: auto !important;
   cursor: pointer !important;
 }
 
-/* Text Wrapper */
+/* Text Wrapper: Takes up remaining horizontal space */
+.prose li[data-type="taskItem"] > div,
+.tiptap li[data-type="taskItem"] > div,
 li[data-type="taskItem"] > div {
   flex: 1 1 auto !important;
   min-width: 0 !important;
@@ -89,11 +106,13 @@ li[data-type="taskItem"] > div {
   padding: 0 !important;
 }
 
-/* Force the paragraph to flow inline so it NEVER drops below the checkbox */
+/* Text Node: MUST remain display: block for the Tiptap editor engine to work correctly */
+.prose li[data-type="taskItem"] > div > p,
+.tiptap li[data-type="taskItem"] > div > p,
 li[data-type="taskItem"] > div > p {
   margin: 0 !important;
   padding: 0 !important;
-  display: inline !important; 
+  display: block !important; 
 }
 
 /* Fix Table borders and layout */
