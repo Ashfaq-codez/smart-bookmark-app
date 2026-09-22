@@ -12,16 +12,53 @@ import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import TipTapEditor from '@/components/TipTapEditor'
 import { toast } from 'react-hot-toast'
 
+// --- Existing Icons ---
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 const PaperclipIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
 const SpinnerIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
 const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-
 const SortDescIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M4 14v7"></path><path d="M7 18l-3 3-3-3"></path></svg>
 const SortAscIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 19h10"></path><path d="M11 15h7"></path><path d="M11 11h4"></path><path d="M4 10V3"></path><path d="M7 6l-3-3-3 3"></path></svg>
 const CalendarIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+
+// --- New Grid Control & View Icons ---
+const Grid5Icon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="2" y="3" width="2.5" height="18" rx="0.5" />
+    <rect x="6.5" y="3" width="2.5" height="18" rx="0.5" />
+    <rect x="11" y="3" width="2.5" height="18" rx="0.5" />
+    <rect x="15.5" y="3" width="2.5" height="18" rx="0.5" />
+    <rect x="20" y="3" width="2.5" height="18" rx="0.5" />
+  </svg>
+)
+const Grid6Icon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="2" y="3" width="5.5" height="8" rx="1" />
+    <rect x="9.25" y="3" width="5.5" height="8" rx="1" />
+    <rect x="16.5" y="3" width="5.5" height="8" rx="1" />
+    <rect x="2" y="13" width="5.5" height="8" rx="1" />
+    <rect x="9.25" y="13" width="5.5" height="8" rx="1" />
+    <rect x="16.5" y="13" width="5.5" height="8" rx="1" />
+  </svg>
+)
+const Grid9Icon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    {[0,1,2].map(col => [0,1,2].map(row => <rect key={`${row}-${col}`} x={2 + col*7.5} y={2 + row*7.5} width="5" height="5" rx="1" />))}
+  </svg>
+)
+const ViewMinimalIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+  </svg>
+)
+const ViewDetailedIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="3" y1="15" x2="21" y2="15"></line>
+  </svg>
+)
 
 const mediaTypeLabels: Record<string, string> = {
   'link': 'Links',
@@ -78,6 +115,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   const [isGroupedByDate, setIsGroupedByDate] = useState(false)
+  
+  // Layout Management State
+  const [userColPreference, setUserColPreference] = useState<'auto' | 5 | 6 | 9>('auto')
+  const [showGridMenu, setShowGridMenu] = useState(false)
+  const [columnsCount, setColumnsCount] = useState(2)
+  const [isMinimalist, setIsMinimalist] = useState(false)
 
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -85,13 +128,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   
-  // Focus Mode State
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const captureBarRef = useRef<HTMLDivElement>(null)
-  const [columnsCount, setColumnsCount] = useState(2)
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
@@ -105,7 +146,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [creatingSubFor, setCreatingSubFor] = useState<string | null>(null)
   const [newSubfolderName, setNewSubfolderName] = useState('')
 
-  // Smart Scroll Listener: Blurs ONLY when deliberately scrolling the dashboard background
+  // Smart Scroll Listener
   useEffect(() => {
     let startY = 0;
 
@@ -115,14 +156,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
     const handleScrollIntent = (e: Event) => {
       if (!isInputFocused) return;
-      
-      // Ignore scroll if it happens inside the Capture Bar OR the TipTap Slash Menu portal
       const target = e.target as HTMLElement;
       if (target?.closest?.('.fixed.z-\\[100\\]') || target?.closest?.('.fixed.z-\\[9999\\]') || target?.closest?.('.custom-scrollbar')) {
         return;
       }
 
-      // Ignore tiny layout shifts caused by the mobile keyboard
       if ('touches' in e) {
         const deltaY = Math.abs((e as TouchEvent).touches[0].clientY - startY);
         if (deltaY < 30) return; 
@@ -145,7 +183,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     };
   }, [isInputFocused]);
 
-  // Capture CMD+Enter for saving in focus mode
+  // Capture CMD+Enter
   useEffect(() => {
     const handleShortcut = (e: KeyboardEvent) => {
       if (isExpanded && (e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -158,11 +196,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }, [isExpanded, inputValue])
 
   useEffect(() => {
-    if (isSidebarOpen && window.innerWidth < 1024) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (isSidebarOpen && window.innerWidth < 1024) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; }
   }, [isSidebarOpen]);
 
@@ -170,8 +205,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     try {
       const savedCats = localStorage.getItem('space_custom_cats')
       const savedSubs = localStorage.getItem('space_custom_subs')
+      const savedGrid = localStorage.getItem('space_grid_pref')
+      const savedMin = localStorage.getItem('space_minimalist')
       if (savedCats) setCustomCategories(JSON.parse(savedCats))
       if (savedSubs) setCustomSubCategories(JSON.parse(savedSubs))
+      if (savedGrid) setUserColPreference(Number(savedGrid) as 5 | 6 | 9)
+      if (savedMin) setIsMinimalist(savedMin === 'true')
     } catch (e) {} finally { setFoldersLoaded(true) }
   }, [])
 
@@ -182,20 +221,38 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     }
   }, [customCategories, customSubCategories, foldersLoaded])
 
+  // Strict Mobile 2-Column Logic & Desktop Scaling
   useEffect(() => {
     const updateColumns = () => {
       if (!gridRef.current) return
       const width = gridRef.current.offsetWidth
-      if (width >= 1600) setColumnsCount(4)
-      else if (width >= 1024) setColumnsCount(3)
-      else setColumnsCount(2)
+      
+      if (width < 640) {
+        setColumnsCount(2) // Lock mobile specifically to 2 columns
+        return
+      }
+
+      if (userColPreference !== 'auto') {
+        setColumnsCount(userColPreference)
+        return
+      }
+
+      if (width >= 1600) setColumnsCount(6)
+      else setColumnsCount(5)
     }
+
     const observer = new ResizeObserver(updateColumns)
     if (gridRef.current) observer.observe(gridRef.current)
     updateColumns()
     const timer = setTimeout(() => setIsLoading(false), 300)
     return () => { observer.disconnect(); clearTimeout(timer) }
-  }, [])
+  }, [userColPreference])
+
+  const toggleMinimalist = () => {
+    const newVal = !isMinimalist;
+    setIsMinimalist(newVal);
+    localStorage.setItem('space_minimalist', String(newVal));
+  }
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
@@ -434,7 +491,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         />
       </div>
 
-      {/* Mobile Sidebar Overlay (z-[150] covers the rest of the app including capture bar) */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
@@ -485,6 +541,34 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   )}
                 </div>
 
+                {/* DESKTOP GRID CHANGER */}
+                <div className="relative hidden sm:block">
+                  <button
+                    onClick={() => setShowGridMenu(!showGridMenu)}
+                    title="Change Grid Layout"
+                    className="shrink-0 p-2 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all hover:bg-white/60 dark:hover:bg-white/10"
+                  >
+                    {userColPreference === 5 ? <Grid5Icon /> : userColPreference === 9 ? <Grid9Icon /> : <Grid6Icon />}
+                  </button>
+                  {showGridMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowGridMenu(false)} />
+                      <div className="absolute right-0 top-full mt-2 p-1.5 flex flex-col gap-1.5 bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl z-50">
+                        {[5, 6, 9].map((cols) => (
+                           <button 
+                             key={cols}
+                             onClick={() => { setUserColPreference(cols as 5|6|9); localStorage.setItem('space_grid_pref', String(cols)); setShowGridMenu(false); }}
+                             className={`p-2 rounded-xl transition-all ${userColPreference === cols ? 'bg-[#4D6A51] text-white dark:bg-[#8FAA91] dark:text-[#151815]' : 'text-[#171A17]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#171A17] dark:hover:text-white'}`}
+                             title={`${cols} Columns`}
+                           >
+                             {cols === 5 ? <Grid5Icon /> : cols === 9 ? <Grid9Icon /> : <Grid6Icon />}
+                           </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <button
                   onClick={() => setIsGroupedByDate(!isGroupedByDate)}
                   title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
@@ -526,6 +610,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   )}
                 </div>
 
+                {/* MOBILE MINIMALIST VIEW TOGGLE */}
+                <button
+                  onClick={toggleMinimalist}
+                  title={isMinimalist ? "Detailed View" : "Minimalist View"}
+                  className="shrink-0 p-2.5 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all sm:hidden"
+                >
+                  {isMinimalist ? <ViewMinimalIcon /> : <ViewDetailedIcon />}
+                </button>
+
                 <button
                   onClick={() => setIsGroupedByDate(!isGroupedByDate)}
                   title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
@@ -549,12 +642,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </div>
 
-        <main className="flex-1 p-4 sm:p-8 pb-32">
+        {/* Tighter layout padding specifically for mobile viewing */}
+        <main className="flex-1 p-2 sm:p-8 pb-32 sm:pb-32">
           <div className="w-full flex flex-col items-start" ref={gridRef}>
             {isLoading ? (
-              <div className="w-full flex gap-3 sm:gap-6">
+              <div className="w-full flex gap-1.5 sm:gap-6">
                 {Array.from({ length: columnsCount }).map((_, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                  <div key={colIndex} className="flex flex-col gap-1.5 sm:gap-6 w-full flex-1 min-w-0">
                     {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
                   </div>
                 ))}
@@ -573,9 +667,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                       <div className="h-px bg-black/[0.06] dark:bg-white/[0.06] flex-1"></div>
                     </div>
 
-                    <div className="w-full flex gap-3 sm:gap-6 items-start">
+                    <div className="w-full flex gap-1.5 sm:gap-6 items-start">
                       {groupCols.map((colBookmarks, colIndex) => (
-                        <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                        <div key={colIndex} className="flex flex-col gap-1.5 sm:gap-6 w-full flex-1 min-w-0">
                           {colBookmarks.map(bookmark => (
                             <BookmarkCard
                               key={bookmark.id}
@@ -589,6 +683,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                               forceOpenModal={forcedInspectId === bookmark.id}
                               onCloseForcedModal={() => setForcedInspectId(null)}
                               folderHierarchy={folderHierarchy}
+                              isMinimalist={isMinimalist}
                             />
                           ))}
                         </div>
@@ -598,9 +693,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 )
               })
             ) : (
-              <div className="w-full flex gap-3 sm:gap-6 items-start">
+              <div className="w-full flex gap-1.5 sm:gap-6 items-start">
                 {masonryColumns.map((colBookmarks, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-3 sm:gap-6 w-full flex-1 min-w-0">
+                  <div key={colIndex} className="flex flex-col gap-1.5 sm:gap-6 w-full flex-1 min-w-0">
                     {colBookmarks.map(bookmark => (
                       <BookmarkCard
                         key={bookmark.id}
@@ -614,6 +709,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                         forceOpenModal={forcedInspectId === bookmark.id}
                         onCloseForcedModal={() => setForcedInspectId(null)}
                         folderHierarchy={folderHierarchy}
+                        isMinimalist={isMinimalist}
                       />
                     ))}
                   </div>

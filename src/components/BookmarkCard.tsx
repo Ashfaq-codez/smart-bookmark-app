@@ -11,7 +11,6 @@ import TipTapEditor from './TipTapEditor'
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 
@@ -104,19 +103,18 @@ interface BookmarkCardProps {
   forceOpenModal?: boolean;
   onCloseForcedModal?: () => void;
   folderHierarchy?: Record<string, string[]>;
+  isMinimalist?: boolean;
 }
 
-export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy }: BookmarkCardProps) {
+export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy, isMinimalist }: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
-  const [isReaderMode, setIsReaderMode] = useState(false)
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
-  const [isNoteEditMode, setIsNoteEditMode] = useState(false)
   
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
@@ -209,8 +207,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       setIsModalOpen(false)
       setShowDeleteConfirm(false)
       setIsFullscreenImage(false)
-      setIsReaderMode(false)
-      setIsNoteEditMode(false)
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
 
@@ -252,9 +248,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (isFullscreenImage || isReaderMode) {
+        if (isFullscreenImage) {
           setIsFullscreenImage(false)
-          setIsReaderMode(false)
           return
         }
         if (showDeleteConfirm) {
@@ -266,7 +261,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
+  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
 
@@ -346,8 +341,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
-  const wordCount = editContent ? editContent.replace(/<[^>]*>?/gm, '').trim().split(/\s+/).filter(word => word.length > 0).length : 0;
-
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -364,27 +357,27 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         onDragStart={(e) => onDragStart(e, bookmark.id)} 
         onDragEnd={onDragEnd} 
         onClick={openModal} 
-        className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
+        className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
       >
         
         {displayType === 'note' ? (
-          <div className="w-full bg-white dark:bg-[#151815] rounded-2xl p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative">
-            <p className="text-[16px] font-serif text-[#171A17] dark:text-[#F3F0E9] leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
+          <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative">
+            <p className="text-[14px] sm:text-[16px] font-serif text-[#171A17] dark:text-[#F3F0E9] leading-relaxed whitespace-pre-wrap break-words line-clamp-10 w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
           </div>
           
         ) : displayType === 'twitter' ? (
-          <div className="w-full bg-white dark:bg-[#1C1D21] rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-transparent relative overflow-hidden">
+          <div className="w-full bg-white dark:bg-[#1C1D21] rounded-xl sm:rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-transparent relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
               <XIcon />
             </div>
             
-            <div className="text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
+            <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
               {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
             </div>
             
             {bookmark.image_url && (
-              <div className="w-full mt-1 relative rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
+              <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                 {isVideoMedia(bookmark.image_url) ? (
                   <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
                 ) : (
@@ -398,13 +391,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               </div>
             )}
             
-            <p className="text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
+            <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
               by {getTwitterAuthor(bookmark.url)}
             </p>
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
-          <div className="w-full aspect-[4/5] relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
             {displayType === 'instagram' ? (
               <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" />
             ) : (
@@ -413,41 +406,41 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             
             <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
             
-            <div className={`absolute top-4 left-4 z-10 rounded-full p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
+            <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
               {displayType === 'instagram' ? <InstagramIcon /> : <TikTokIcon />}
             </div>
             
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors z-10 pointer-events-none">
-              <PlayCircleIcon className="w-14 h-14 text-white/90 drop-shadow-lg" />
+              <PlayCircleIcon className="w-10 h-10 sm:w-14 sm:h-14 text-white/90 drop-shadow-lg" />
             </div>
           </div>
 
         ) : displayType === 'youtube' ? (
-          <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
+          <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
             <img src={ytHighResThumbnail || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
             
-            <div className="absolute top-4 left-4 z-10 rounded-full p-1.5 shadow-sm bg-white">
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white">
               <YouTubeIcon className="text-[#FF0000]" />
             </div>
 
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10 pointer-events-none">
-              <PlayCircleIcon className="w-12 h-12 text-white drop-shadow-lg" />
+              <PlayCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" />
             </div>
           </div>
 
         ) : displayType === 'video' ? (
-          <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
             <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
         ) : displayType === 'pdf' ? (
-          <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl overflow-hidden flex items-center justify-center p-4 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5">
+          <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center p-3 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5">
             <div 
               className="w-full h-full bg-[#FAF9F5] shadow-xl relative flex flex-col items-center justify-center overflow-hidden"
               style={{ clipPath: 'polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 0 100%)' }}
             >
-              <div className="absolute top-0 right-0 w-[36px] h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
+              <div className="absolute top-0 right-0 w-[24px] h-[24px] sm:w-[36px] sm:h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
                    src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
@@ -462,19 +455,20 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : (
-          <div className="w-full relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815]">
+          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815]">
             <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
           </div>
         )}
 
-        {displayType !== 'note' && displayType !== 'twitter' && (
-          <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1">
+        {/* Minimalist View hides this meta section */}
+        {!isMinimalist && displayType !== 'note' && displayType !== 'twitter' && (
+          <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1 pb-1 sm:pb-0">
             {hasValidTitle && displayType !== 'instagram' && (
-              <h4 className="text-[14px] font-semibold font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-2 leading-snug w-full">
+              <h4 className="text-[13px] sm:text-[14px] font-semibold font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-2 leading-snug w-full">
                 {bookmark.title}
               </h4>
             )}
-            <p className="text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
+            <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
               {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
             </p>
           </div>
@@ -482,7 +476,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       </div>
 
       {mounted && isModalOpen && createPortal(
-        <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
+        <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
           
           <div 
             className={`relative w-full h-[100dvh] md:h-[90vh] flex flex-col md:flex-row bg-[#FAF9F5] dark:bg-[#0F120F] border-0 md:border border-black/[0.04] dark:border-white/[0.04] shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:shadow-2xl rounded-none md:rounded-3xl overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
