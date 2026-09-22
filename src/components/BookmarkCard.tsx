@@ -341,6 +341,18 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
+  const plainTextLength = bookmark.content ? bookmark.content.replace(/<[^>]*>?/gm, '').trim().length : 0;
+  
+  // Dynamic mobile scaling for the preview card to maximize visible text
+  let mobileContentScaleClass = 'text-[14px] leading-relaxed [&_p]:text-[14px] [&_p]:leading-relaxed [&_li]:text-[14px] [&_li]:leading-relaxed line-clamp-10';
+  if (plainTextLength > 400) {
+    mobileContentScaleClass = 'text-[10px] leading-tight [&_p]:text-[10px] [&_p]:leading-tight [&_li]:text-[10px] [&_li]:leading-tight line-clamp-[24]';
+  } else if (plainTextLength > 250) {
+    mobileContentScaleClass = 'text-[11px] leading-snug [&_p]:text-[11px] [&_p]:leading-snug [&_li]:text-[11px] [&_li]:leading-snug line-clamp-[16]';
+  } else if (plainTextLength > 150) {
+    mobileContentScaleClass = 'text-[13px] leading-normal [&_p]:text-[13px] [&_p]:leading-normal [&_li]:text-[13px] [&_li]:leading-normal line-clamp-[12]';
+  }
+
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -361,8 +373,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       >
         
         {displayType === 'note' ? (
-          <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative">
-            <div className="text-[14px] sm:text-[16px] font-serif text-[#171A17] dark:text-[#F3F0E9] leading-relaxed break-words line-clamp-10 w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
+          <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative overflow-hidden">
+            <div 
+              className={`tiptap prose dark:prose-invert max-w-none font-serif text-[#171A17] dark:text-[#F3F0E9] break-words w-full ${mobileContentScaleClass} sm:text-[16px] sm:leading-relaxed sm:[&_p]:text-[16px] sm:[&_p]:leading-relaxed sm:[&_li]:text-[16px] sm:[&_li]:leading-relaxed sm:line-clamp-10`} 
+              dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} 
+            />
           </div>
           
         ) : displayType === 'twitter' ? (

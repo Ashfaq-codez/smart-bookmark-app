@@ -43,18 +43,14 @@ body {
 /* --- TIPTAP EDITOR OVERRIDES --- */
 
 /* Reset List */
-ul[data-type="taskList"],
-.tiptap ul[data-type="taskList"],
-.prose ul[data-type="taskList"] {
+.tiptap ul[data-type="taskList"] {
   list-style: none !important;
   padding: 0 !important;
   margin: 0 !important;
 }
 
 /* Layout: Flex row with NO WRAPPING to physically prevent text dropping */
-li[data-type="taskItem"],
-.tiptap li[data-type="taskItem"],
-.prose li[data-type="taskItem"] {
+.tiptap li[data-type="taskItem"] {
   display: flex !important;
   flex-direction: row !important;
   align-items: flex-start !important;
@@ -67,38 +63,30 @@ li[data-type="taskItem"],
 }
 
 /* Hide default bullets injected by Tailwind Typography */
-li[data-type="taskItem"]::before,
-li[data-type="taskItem"]::after,
 .tiptap li[data-type="taskItem"]::before,
-.tiptap li[data-type="taskItem"]::after,
-.prose li[data-type="taskItem"]::before,
-.prose li[data-type="taskItem"]::after {
+.tiptap li[data-type="taskItem"]::after {
   display: none !important;
   content: none !important;
 }
 
 /* Checkbox Label wrapper */
-li[data-type="taskItem"] label,
-.tiptap li[data-type="taskItem"] label,
-.prose li[data-type="taskItem"] label {
+.tiptap li[data-type="taskItem"] > label {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   margin: 0 !important;
-  padding-top: 2px !important; /* visually aligns circle with text */
+  padding-top: 4px !important; /* visually aligns circle with text */
   flex: 0 0 auto !important;
   user-select: none !important;
   cursor: pointer !important;
 }
 
-/* The Circular Checkbox (Aggressive Override for ProseMirror) */
-li[data-type="taskItem"] input[type="checkbox"],
-.tiptap li[data-type="taskItem"] input[type="checkbox"],
-.prose li[data-type="taskItem"] input[type="checkbox"] {
+/* The Circular Checkbox */
+.tiptap li[data-type="taskItem"] input[type="checkbox"] {
   appearance: none !important;
   -webkit-appearance: none !important;
-  width: 20px !important;
-  height: 20px !important;
+  width: 18px !important;
+  height: 18px !important;
   border-radius: 50% !important;
   border: 2px solid #A0AEC0 !important;
   background-color: transparent !important;
@@ -113,60 +101,42 @@ li[data-type="taskItem"] input[type="checkbox"],
 }
 
 /* Checked State -> Green Circle */
-li[data-type="taskItem"] input[type="checkbox"]:checked,
-li[data-type="taskItem"][data-checked="true"] input[type="checkbox"],
-.tiptap li[data-type="taskItem"] input[type="checkbox"]:checked,
 .tiptap li[data-type="taskItem"][data-checked="true"] input[type="checkbox"],
-.prose li[data-type="taskItem"] input[type="checkbox"]:checked,
-.prose li[data-type="taskItem"][data-checked="true"] input[type="checkbox"] {
+.tiptap li[data-type="taskItem"] input[type="checkbox"]:checked {
   background-color: #4D6A51 !important;
   border-color: #4D6A51 !important;
 }
 
 /* The White Checkmark */
-li[data-type="taskItem"] input[type="checkbox"]:checked::after,
-li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after,
-.tiptap li[data-type="taskItem"] input[type="checkbox"]:checked::after,
 .tiptap li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after,
-.prose li[data-type="taskItem"] input[type="checkbox"]:checked::after,
-.prose li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after {
+.tiptap li[data-type="taskItem"] input[type="checkbox"]:checked::after {
   content: "" !important;
-  width: 6px !important;
-  height: 11px !important;
+  position: absolute !important;
+  width: 5px !important;
+  height: 10px !important;
   border: solid white !important;
   border-width: 0 2px 2px 0 !important;
-  transform: rotate(45deg) translateY(-1px) !important;
-  position: absolute !important;
+  transform: rotate(45deg) !important;
+  top: 1px !important;
+  left: 5px !important;
 }
 
-/* Dark Mode specific Checkbox */
-.dark li[data-type="taskItem"] input[type="checkbox"],
-.dark .tiptap li[data-type="taskItem"] input[type="checkbox"],
-.dark .prose li[data-type="taskItem"] input[type="checkbox"] {
+/* Dark Mode Checkbox */
+.dark .tiptap li[data-type="taskItem"] input[type="checkbox"] {
   border-color: #718096 !important;
 }
-.dark li[data-type="taskItem"] input[type="checkbox"]:checked,
-.dark li[data-type="taskItem"][data-checked="true"] input[type="checkbox"],
-.dark .tiptap li[data-type="taskItem"] input[type="checkbox"]:checked,
 .dark .tiptap li[data-type="taskItem"][data-checked="true"] input[type="checkbox"],
-.dark .prose li[data-type="taskItem"] input[type="checkbox"]:checked,
-.dark .prose li[data-type="taskItem"][data-checked="true"] input[type="checkbox"] {
+.dark .tiptap li[data-type="taskItem"] input[type="checkbox"]:checked {
   background-color: #8FAA91 !important;
   border-color: #8FAA91 !important;
 }
-.dark li[data-type="taskItem"] input[type="checkbox"]:checked::after,
-.dark li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after,
-.dark .tiptap li[data-type="taskItem"] input[type="checkbox"]:checked::after,
 .dark .tiptap li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after,
-.dark .prose li[data-type="taskItem"] input[type="checkbox"]:checked::after,
-.dark .prose li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after {
+.dark .tiptap li[data-type="taskItem"] input[type="checkbox"]:checked::after {
   border-color: #151815 !important;
 }
 
 /* Text Container */
-li[data-type="taskItem"] > div,
-.tiptap li[data-type="taskItem"] > div,
-.prose li[data-type="taskItem"] > div {
+.tiptap li[data-type="taskItem"] > div {
   flex: 1 1 auto !important;
   min-width: 0 !important;
   margin: 0 !important;
@@ -174,10 +144,8 @@ li[data-type="taskItem"] > div,
   display: block !important;
 }
 
-/* Text Paragraph */
-li[data-type="taskItem"] > div > p,
-.tiptap li[data-type="taskItem"] > div > p,
-.prose li[data-type="taskItem"] > div > p {
+/* Text Paragraph Override */
+.tiptap li[data-type="taskItem"] > div > p {
   margin: 0 !important;
   padding: 0 !important;
   display: block !important; 
@@ -186,21 +154,13 @@ li[data-type="taskItem"] > div > p,
 }
 
 /* Strikethrough text when checked */
-li[data-type="taskItem"][data-checked="true"] > div > p,
-li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p,
 .tiptap li[data-type="taskItem"][data-checked="true"] > div > p,
-.tiptap li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p,
-.prose li[data-type="taskItem"][data-checked="true"] > div > p,
-.prose li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p {
+.tiptap li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p {
   text-decoration: line-through !important;
   color: #A0AEC0 !important;
 }
-.dark li[data-type="taskItem"][data-checked="true"] > div > p,
-.dark li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p,
 .dark .tiptap li[data-type="taskItem"][data-checked="true"] > div > p,
-.dark .tiptap li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p,
-.dark .prose li[data-type="taskItem"][data-checked="true"] > div > p,
-.dark .prose li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p {
+.dark .tiptap li[data-type="taskItem"]:has(input[type="checkbox"]:checked) > div > p {
   color: #718096 !important;
 }
 
