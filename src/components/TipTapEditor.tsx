@@ -22,15 +22,22 @@ const DividerIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="
 const TableIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line><line x1="15" y1="9" x2="15" y2="21"></line></svg>
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
 
+const TOOLBAR_COMMANDS = [
+  { title: 'Heading 1', icon: <H1Icon />, command: ({ editor }: any) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+  { title: 'Heading 2', icon: <H2Icon />, command: ({ editor }: any) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+  { title: 'Bullet List', icon: <ListIcon />, command: ({ editor }: any) => editor.chain().focus().toggleBulletList().run() },
+  { title: 'Task List', icon: <TaskIcon />, command: ({ editor }: any) => editor.chain().focus().toggleTaskList().run() },
+  { title: 'Blockquote', icon: <QuoteIcon />, command: ({ editor }: any) => editor.chain().focus().toggleBlockquote().run() },
+  { title: 'Code Block', icon: <CodeIcon />, command: ({ editor }: any) => editor.chain().focus().toggleCodeBlock().run() },
+  { title: 'Table', icon: <TableIcon />, command: ({ editor }: any) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+  { title: 'Divider', icon: <DividerIcon />, command: ({ editor }: any) => editor.chain().focus().setHorizontalRule().run() },
+]
+
 const SLASH_COMMANDS = [
-  { title: 'Heading 1', icon: <H1Icon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run() } },
-  { title: 'Heading 2', icon: <H2Icon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run() } },
-  { title: 'Bullet List', icon: <ListIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleBulletList().run() } },
-  { title: 'Task List', icon: <TaskIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleTaskList().run() } },
-  { title: 'Blockquote', icon: <QuoteIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleBlockquote().run() } },
-  { title: 'Code Block', icon: <CodeIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleCodeBlock().run() } },
-  { title: 'Table', icon: <TableIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() } },
-  { title: 'Divider', icon: <DividerIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setHorizontalRule().run() } },
+  ...TOOLBAR_COMMANDS.map(cmd => ({
+    ...cmd,
+    command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range); cmd.command({ editor }); }
+  }))
 ]
 
 export default function TipTapEditor({ 
@@ -105,7 +112,8 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-white dark:text-[#171A17] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm',
+        // Fixed: The colors are correctly inverted now -> Light text on dark bg, Dark text on light bg.
+        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm',
       }
     },
   })
@@ -184,26 +192,43 @@ export default function TipTapEditor({
 
   return (
     <div className="relative w-full h-full flex flex-col min-h-0" onKeyDown={handleKeyDown}>
+      
+      {/* Persistent Top Dock Toolbar */}
+      {isExpanded && (
+        <div className="flex items-center gap-1.5 p-2 bg-[#FDFCF8] dark:bg-[#151815] border-b border-black/[0.08] dark:border-white/[0.08] overflow-x-auto custom-scrollbar shrink-0 z-10 w-full">
+           {TOOLBAR_COMMANDS.map((cmd, index) => (
+             <button
+               key={index}
+               onMouseDown={(e) => { e.preventDefault(); cmd.command({ editor }); }}
+               className="flex items-center justify-center p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#171A17]/70 dark:text-white/70 hover:text-[#171A17] dark:hover:text-white transition-colors shrink-0"
+               title={cmd.title}
+             >
+               {cmd.icon}
+             </button>
+           ))}
+        </div>
+      )}
+
       {/* Manual Table Deletion Floating Button */}
       {isTableActive && (
-        <div className="absolute top-0 right-0 z-50">
+        <div className="absolute top-12 right-2 z-50">
           <button
             onClick={(e) => {
               e.preventDefault();
               editor?.chain().focus().deleteTable().run();
             }}
-            className="flex items-center gap-1.5 bg-[#FBF9F4] dark:bg-[#1A1D1A] text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.15)] border border-black/[0.08] dark:border-white/[0.08] text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+            className="flex items-center gap-1.5 bg-white dark:bg-[#1A1D1A] text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg shadow-md border border-black/[0.08] dark:border-white/[0.08] text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
           >
             <TrashIcon /> Remove Table
           </button>
         </div>
       )}
 
-      <EditorContent editor={editor} className="w-full h-full custom-scrollbar" />
+      <EditorContent editor={editor} className={`flex-1 w-full overflow-y-auto custom-scrollbar ${isExpanded ? 'p-4 md:p-6' : ''}`} />
       
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(
         <div 
-          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto"
+          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-xl rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto"
           style={getPortalPosition()}
         >
           <div className="px-3 pb-2 mb-2 text-[10px] uppercase tracking-wider text-[#A0A6A0] border-b border-black/[0.04] dark:border-white/[0.04] sticky top-0 bg-[#FBF9F4] dark:bg-[#1A1D1A] z-10">

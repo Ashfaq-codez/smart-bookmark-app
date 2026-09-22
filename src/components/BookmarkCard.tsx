@@ -11,7 +11,6 @@ import TipTapEditor from './TipTapEditor'
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 
@@ -112,17 +111,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [isVisible, setIsVisible] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
-  const [isReaderMode, setIsReaderMode] = useState(false)
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
-  const [isNoteEditMode, setIsNoteEditMode] = useState(false)
-  
-  const [touchStart, setTouchStart] = useState(0)
-  const [touchEnd, setTouchEnd] = useState(0)
   
   const confirmDeleteRef = useRef<HTMLButtonElement>(null)
-  
   const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
@@ -200,7 +193,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     if (editTitle.trim() === (bookmark.title || '') && formatUrl(editUrl) === bookmark.url && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent === (bookmark.content || '')) return;
     await updateBookmark(bookmark.id, { title: editTitle.trim() || '', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
     
-    // Updated to match the soft, elegant theme of the main app
     toast.success('Saved', { style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } })
   }
 
@@ -210,8 +202,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       setIsModalOpen(false)
       setShowDeleteConfirm(false)
       setIsFullscreenImage(false)
-      setIsReaderMode(false)
-      setIsNoteEditMode(false)
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
 
@@ -228,34 +218,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     handleCloseModal()
   }
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientY)
-    setTouchEnd(0)
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientY)
-  }
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-    const distance = touchEnd - touchStart
-    if (distance > 45) {
-      handleCloseWithSave()
-    }
-    setTouchStart(0)
-    setTouchEnd(0)
-  }
-
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (!isModalOpen) return
       
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (isFullscreenImage || isReaderMode) {
+        if (isFullscreenImage) {
           setIsFullscreenImage(false)
-          setIsReaderMode(false)
           return
         }
         if (showDeleteConfirm) {
@@ -267,7 +237,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
+  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
 
@@ -346,8 +316,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
-
-  const wordCount = editContent ? editContent.replace(/<[^>]*>?/gm, '').trim().split(/\s+/).filter(word => word.length > 0).length : 0;
 
   return (
     <>
@@ -483,93 +451,30 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       </div>
 
       {mounted && isModalOpen && createPortal(
-        <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
+        <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
           
           <div 
-            className={`relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-[#FAF9F5] dark:bg-[#0F120F] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:shadow-2xl rounded-t-3xl md:rounded-3xl overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
+            className={`relative w-full h-[100dvh] md:h-[90vh] flex flex-col md:flex-row bg-[#FAF9F5] dark:bg-[#0F120F] border-0 md:border border-black/[0.04] dark:border-white/[0.04] shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:shadow-2xl rounded-none md:rounded-3xl overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
             onMouseDown={(e) => e.stopPropagation()}
           >
-            
-            <div 
-              className="absolute top-0 left-0 w-full h-12 z-[60] md:hidden flex items-start justify-center pt-3 touch-none"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <div className="w-12 h-1.5 bg-black/10 dark:bg-white/20 rounded-full pointer-events-none" />
-            </div>
 
-            <button onClick={handleCloseWithSave} className="hidden md:flex absolute top-6 right-6 z-[100] p-2 bg-transparent text-[#171A17]/50 dark:text-white/50 hover:text-[#171A17] dark:hover:text-white transition-all cursor-pointer items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-md rounded-full shadow-sm">
+            <button onClick={handleCloseWithSave} className="absolute top-4 right-4 z-[100] p-2 text-[#171A17]/50 dark:text-white/50 hover:text-[#171A17] dark:hover:text-white transition-all cursor-pointer items-center justify-center bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-full shadow-sm hover:bg-black/10 dark:hover:bg-white/10">
               <CloseIcon />
             </button>
 
             {/* LEFT PANE (Preview / Editor) */}
-            <div className={`w-full md:w-[60%] ${displayType === 'note' ? 'h-[70dvh] md:h-full' : 'h-[35%] min-h-[200px] md:min-h-0 md:h-full'} bg-white dark:bg-[#1A1D1A] relative flex flex-col border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 overflow-hidden ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F]' : 'items-center justify-center'}`}>
+            <div className={`w-full md:w-[60%] flex flex-col border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 overflow-hidden ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F] min-h-[60dvh] md:h-full' : 'bg-white dark:bg-[#1A1D1A] items-center justify-center h-[35%] min-h-[200px] md:min-h-0 md:h-full'}`}>
               
               {displayType === 'note' ? (
-                <div className="w-full h-full flex flex-col relative group">
-                  <button onClick={() => setIsReaderMode(true)} className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-50 p-2.5 bg-white/90 dark:bg-[#151815]/90 hover:bg-white dark:hover:bg-[#1A1D1A] text-[#171A17] dark:text-[#F3F0E9] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md border border-black/[0.04] dark:border-white/[0.04]" title="Fullscreen Reader">
-                    <ExpandIcon />
-                  </button>
-                  
-                  <div className="flex-1 w-full flex flex-col p-6 pt-14 md:p-12 lg:px-16 overflow-y-auto custom-scrollbar relative">
-                    
-                    {/* Note Meta Header */}
-                    <div className="flex flex-col gap-4 mb-8 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 shrink-0 max-w-3xl mx-auto w-full">
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onBlur={handleAutoSave}
-                        placeholder="Note Title..."
-                        className="w-full bg-transparent text-3xl md:text-4xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] outline-none placeholder-[#171A17]/30 dark:placeholder-white/30"
-                      />
-                      <div className="flex items-center gap-4 text-xs font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">
-                        <span>{formatDate(bookmark.created_at)}</span>
-                        <span>•</span>
-                        <span>{wordCount} Words</span>
-                      </div>
-                    </div>
-                    
-                    {/* Interactive Editor Body */}
-                    <div className="w-full flex-1 max-w-3xl mx-auto flex flex-col relative group/editor pb-20">
-                        <div 
-                          className={`w-full flex-1 transition-all duration-300 ${isNoteEditMode ? 'ring-1 ring-black/[0.08] dark:ring-white/[0.08] rounded-3xl p-5 bg-white/60 dark:bg-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-sm' : 'cursor-text p-2'}`}
-                          onClick={() => { if (!isNoteEditMode) setIsNoteEditMode(true) }}
-                        >
-                          <div className={`w-full h-full relative z-20 ${!isNoteEditMode ? 'pointer-events-none' : ''}`}>
-                            <TipTapEditor
-                              value={editContent || ''}
-                              onChange={setEditContent}
-                              onFocus={() => setIsNoteEditMode(true)}
-                              onBlur={() => {
-                                setTimeout(() => setIsNoteEditMode(false), 200);
-                                handleAutoSave();
-                              }}
-                              isExpanded={isNoteEditMode} 
-                            />
-                          </div>
-
-                          {!isNoteEditMode && (
-                            <div className="absolute inset-0 z-10" title="Click anywhere to edit" />
-                          )}
-                        </div>
-
-                        {/* Edit Mode Actions */}
-                        {isNoteEditMode && (
-                          <div className="absolute -top-4 -right-2 z-50 animate-in fade-in zoom-in duration-200">
-                             <button
-                               onMouseDown={(e) => { e.preventDefault(); setIsNoteEditMode(false); handleAutoSave(); }}
-                               className="bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-md"
-                             >
-                               Done
-                             </button>
-                          </div>
-                        )}
-                    </div>
-                  </div>
+                <div className="w-full h-full flex flex-col relative bg-white dark:bg-[#1A1D1A]">
+                   {/* Full 100% Pane Tiptap Editor */}
+                   <TipTapEditor
+                     value={editContent || ''}
+                     onChange={setEditContent}
+                     onBlur={handleAutoSave}
+                     isExpanded={true} 
+                   />
                 </div>
-
               ) : displayType === 'twitter' ? (
                 <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
                   <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-3xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
@@ -694,37 +599,35 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               )}
             </div>
 
-            {/* RIGHT PANE (Editor & Meta) */}
-            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FBF9F4] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-16 md:pb-0`}>
+            {/* RIGHT PANE (Meta) */}
+            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FBF9F4] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-10`}>
               <div className="px-6 md:px-10 py-8 md:py-10 flex flex-col min-h-full">
                 
-                <div className="flex flex-col gap-10 md:gap-12 flex-1">
+                <div className="flex flex-col gap-10 md:gap-12 flex-1 mt-4 md:mt-0">
                   
-                  {displayType !== 'note' && (
-                    <div className="flex flex-col gap-3 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
-                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Title</label>
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onBlur={handleAutoSave}
-                        placeholder="Enter Title"
-                        className="w-full bg-transparent border-none outline-none text-xl md:text-2xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
-                      />
-                      
-                      {bookmark.url && !bookmark.url.includes('/note-') && (
-                        <div className="mt-2 flex flex-col gap-2">
-                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
-                            <span>Read Source</span>
-                            <ExternalLinkIcon />
-                          </a>
-                          <span className="text-[11px] font-sans text-[#171A17]/40 dark:text-white/40 truncate max-w-full select-all mt-1">
-                            {bookmark.url}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-3 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
+                    <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Title</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onBlur={handleAutoSave}
+                      placeholder="Enter Title"
+                      className="w-full bg-transparent border-none outline-none text-xl md:text-2xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
+                    />
+                    
+                    {bookmark.url && !bookmark.url.includes('/note-') && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
+                          <span>Read Source</span>
+                          <ExternalLinkIcon />
+                        </a>
+                        <span className="text-[11px] font-sans text-[#171A17]/40 dark:text-white/40 truncate max-w-full select-all mt-1">
+                          {bookmark.url}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
                     <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Folder Structure</label>
