@@ -11,7 +11,6 @@ import TipTapEditor from './TipTapEditor'
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 
@@ -113,11 +112,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [isVisible, setIsVisible] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
-  const [isReaderMode, setIsReaderMode] = useState(false)
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
-  const [isNoteEditMode, setIsNoteEditMode] = useState(false)
   
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
@@ -210,8 +207,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       setIsModalOpen(false)
       setShowDeleteConfirm(false)
       setIsFullscreenImage(false)
-      setIsReaderMode(false)
-      setIsNoteEditMode(false)
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
 
@@ -253,9 +248,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (isFullscreenImage || isReaderMode) {
+        if (isFullscreenImage) {
           setIsFullscreenImage(false)
-          setIsReaderMode(false)
           return
         }
         if (showDeleteConfirm) {
@@ -267,7 +261,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, isReaderMode, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
+  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
 
@@ -347,8 +341,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
   const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
 
-  const wordCount = editContent ? editContent.replace(/<[^>]*>?/gm, '').trim().split(/\s+/).filter(word => word.length > 0).length : 0;
-
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -370,8 +362,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         
         {displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative">
-            {/* Using a DIV to safely wrap the rich text HTML without breaking block elements like lists */}
-            <div className="text-[14px] sm:text-[16px] font-serif text-[#171A17] dark:text-[#F3F0E9] leading-relaxed break-words line-clamp-10 w-full [&_p]:m-0" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
+            <div className="text-[14px] sm:text-[16px] font-serif text-[#171A17] dark:text-[#F3F0E9] leading-relaxed break-words line-clamp-10 w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
           </div>
           
         ) : displayType === 'twitter' ? (
@@ -492,261 +483,275 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             onMouseDown={(e) => e.stopPropagation()}
           >
 
+            {/* Drag Handle Top Bar on Mobile */}
+            <div 
+              className="absolute top-0 left-0 w-full h-12 z-[60] md:hidden flex items-start justify-center pt-3 touch-none"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className="w-12 h-1.5 bg-black/10 dark:bg-white/20 rounded-full pointer-events-none" />
+            </div>
+
             <button onClick={handleCloseWithSave} className="absolute top-4 right-4 z-[100] p-2 text-[#171A17]/50 dark:text-white/50 hover:text-[#171A17] dark:hover:text-white transition-all cursor-pointer items-center justify-center bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-full shadow-sm hover:bg-black/10 dark:hover:bg-white/10">
               <CloseIcon />
             </button>
 
-            {/* LEFT PANE (Preview / Editor) */}
-            <div className={`w-full md:w-[60%] flex flex-col border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 overflow-hidden ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F] min-h-[60dvh] md:h-full' : 'bg-white dark:bg-[#1A1D1A] items-center justify-center h-[35%] min-h-[200px] md:min-h-0 md:h-full'}`}>
-              
-              {displayType === 'note' ? (
-                <div className="w-full h-full flex flex-col relative bg-[#FAF9F5] dark:bg-[#0F120F]">
-                   <TipTapEditor
-                     value={editContent || ''}
-                     onChange={setEditContent}
-                     onBlur={handleAutoSave}
-                     isExpanded={true} 
-                   />
-                </div>
-              ) : displayType === 'twitter' ? (
-                <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-3xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
-                    <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
-                    
-                    <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
-                      <div className="text-[15px] font-sans text-[#F3F0E9] leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
-                        {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
+            {/* Seamless Mobile Scroll Wrapper */}
+            <div className="flex-1 w-full h-full overflow-y-auto md:overflow-hidden flex flex-col md:flex-row custom-scrollbar pt-12 md:pt-0">
+
+              {/* LEFT PANE (Preview / Editor) */}
+              <div className={`w-full md:w-[60%] flex flex-col shrink-0 md:shrink border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F]' : 'bg-white dark:bg-[#1A1D1A]'} md:h-full md:overflow-hidden`}>
+                
+                {displayType === 'note' ? (
+                  <div className="w-full flex flex-col relative bg-[#FAF9F5] dark:bg-[#0F120F] h-auto min-h-[50dvh] md:h-full">
+                     <TipTapEditor
+                       value={editContent || ''}
+                       onChange={setEditContent}
+                       onBlur={handleAutoSave}
+                       isExpanded={true} 
+                     />
+                  </div>
+                ) : displayType === 'twitter' ? (
+                  <div className="w-full flex bg-[#151618] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar">
+                    <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-3xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
+                      <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+                      
+                      <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
+                        <div className="text-[15px] font-sans text-[#F3F0E9] leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
+                          {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
+                        </div>
+                        
+                        {bookmark.image_url && (
+                          <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
+                            {isVideoMedia(bookmark.image_url) ? (
+                               <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
+                            ) : (
+                               <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
+                            )}
+                          </div>
+                        )}
                       </div>
                       
-                      {bookmark.image_url && (
-                        <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
-                          {isVideoMedia(bookmark.image_url) ? (
-                             <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
-                          ) : (
-                             <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
+                      <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-white/50">
+                        <span className="text-[12px] font-sans">
+                          Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
+                        </span>
+                        <XIcon />
+                      </div>
+                    </div>
+                  </div>
+
+                ) : displayType === 'instagram' && instaData ? (
+                  <div className="w-full flex bg-gray-50 dark:bg-black p-0 md:p-4 py-8 md:h-full md:overflow-y-auto custom-scrollbar">
+                    <div className="w-full md:max-w-[450px] bg-white dark:bg-[#151815] md:border border-black/[0.04] dark:border-white/[0.04] md:rounded-3xl flex flex-col m-auto shadow-xl">
+                      
+                      <div className="flex items-center justify-between p-4 border-b border-black/[0.04] dark:border-white/[0.04] shrink-0">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[14px] font-semibold text-[#171A17] dark:text-white leading-none">{instaData.username}</span>
+                        </div>
+                        <div className="text-[#171A17] dark:text-white"><InstaDotsIcon /></div>
+                      </div>
+
+                      <div className="w-full bg-black relative shrink-0 flex items-center justify-center">
+                        {isVideoMedia(bookmark.image_url) ? (
+                           <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
+                        ) : (
+                           <img src={bookmark.image_url || previewImageUrl} className="w-full h-auto max-h-[600px] object-contain block" />
+                        )}
+                      </div>
+
+                      <div className="p-5 flex flex-col gap-2 shrink-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-4 text-[#171A17] dark:text-white">
+                            <InstaHeartIcon />
+                            <InstaCommentIcon />
+                            <InstaShareIcon />
+                          </div>
+                          <div className="text-[#171A17] dark:text-white"><InstaSaveIcon /></div>
+                        </div>
+                        
+                        {instaData.likes && (
+                          <div className="text-[14px] font-semibold text-[#171A17] dark:text-white">{instaData.likes} likes</div>
+                        )}
+                        
+                        <div className="text-[14px] text-[#171A17] dark:text-white whitespace-pre-wrap leading-relaxed mt-1">
+                          <span className="font-semibold mr-2">{instaData.username}</span>
+                          {instaData.caption}
+                        </div>
+                        
+                        <div className="text-[10px] text-[#171A17]/50 dark:text-white/50 uppercase mt-2 tracking-wide font-bold">
+                          {formatDate(bookmark.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                ) : displayType === 'youtube' ? (
+                  <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
+                    <iframe 
+                      src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
+                      className="w-full h-full border-none" 
+                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen 
+                      title="YouTube Video"
+                    />
+                  </div>
+
+                ) : displayType === 'tiktok' ? (
+                  <div className="w-full aspect-[9/16] md:aspect-auto md:h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
+                    <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
+                    
+                    <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
+                       <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
+                           This content plays at the original link. TikTok blocks us from embedding their media.
+                           <div className="mt-3">
+                              <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
+                           </div>
+                       </div>
+                       <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
+                          <InfoIcon className="w-5 h-5" />
+                       </div>
+                    </div>
+                  </div>
+
+                ) : displayType === 'video' ? (
+                  <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
+                     <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
+                  </div>
+                ) : displayType === 'pdf' ? (
+                  <div className="w-full aspect-[3/4] md:h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
+                     <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
+                  </div>
+                ) : displayType === 'image' ? (
+                  <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => setIsFullscreenImage(true)}>
+                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full">
+                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
+                      <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT PANE (Meta) */}
+              <div className={`w-full md:w-[40%] flex flex-col shrink-0 md:shrink bg-[#FAF9F5] dark:bg-[#151815] transition-colors duration-500 md:h-full md:overflow-y-auto custom-scrollbar pb-16 md:pb-12`}>
+                <div className="px-6 md:px-10 py-8 md:py-10 flex flex-col min-h-full">
+                  
+                  <div className="flex flex-col gap-10 md:gap-12 flex-1 mt-4 md:mt-0">
+                    
+                    <div className="flex flex-col gap-3 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
+                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Title</label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={handleAutoSave}
+                        placeholder="Enter Title"
+                        className="w-full bg-transparent border-none outline-none text-xl md:text-2xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
+                      />
+                      
+                      {bookmark.url && !bookmark.url.includes('/note-') && (
+                        <div className="mt-2 flex flex-col gap-2">
+                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
+                            <span>Read Source</span>
+                            <ExternalLinkIcon />
+                          </a>
+                          <span className="text-[11px] font-sans text-[#171A17]/40 dark:text-white/40 truncate max-w-full select-all mt-1">
+                            {bookmark.url}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
+                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Folder Structure</label>
+                      <div className="flex flex-col gap-4">
+                        
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editCategory}
+                            onChange={(e) => { setEditCategory(e.target.value); setShowCatDropdown(true); }}
+                            onFocus={() => setShowCatDropdown(true)}
+                            onBlur={() => { setTimeout(() => setShowCatDropdown(false), 200); handleAutoSave(); }}
+                            placeholder="Main Folder"
+                            className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
+                          />
+                          {showCatDropdown && filteredCats.length > 0 && (
+                            <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
+                              {filteredCats.map(c => (
+                                <li 
+                                  key={c} 
+                                  onMouseDown={(e) => { e.preventDefault(); setEditCategory(c); setShowCatDropdown(false); }}
+                                  className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
+                                >
+                                  {c}
+                                </li>
+                              ))}
+                            </ul>
                           )}
                         </div>
-                      )}
-                    </div>
-                    
-                    <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-white/50">
-                      <span className="text-[12px] font-sans">
-                        Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
-                      </span>
-                      <XIcon />
-                    </div>
-                  </div>
-                </div>
 
-              ) : displayType === 'instagram' && instaData ? (
-                <div className="w-full min-h-full flex bg-gray-50 dark:bg-black p-0 md:p-4 py-12 md:py-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full md:max-w-[450px] bg-white dark:bg-[#151815] md:border border-black/[0.04] dark:border-white/[0.04] md:rounded-3xl flex flex-col m-auto shadow-xl">
-                    
-                    <div className="flex items-center justify-between p-4 border-b border-black/[0.04] dark:border-white/[0.04] shrink-0">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[14px] font-semibold text-[#171A17] dark:text-white leading-none">{instaData.username}</span>
-                      </div>
-                      <div className="text-[#171A17] dark:text-white"><InstaDotsIcon /></div>
-                    </div>
-
-                    <div className="w-full bg-black relative shrink-0 flex items-center justify-center">
-                      {isVideoMedia(bookmark.image_url) ? (
-                         <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
-                      ) : (
-                         <img src={bookmark.image_url || previewImageUrl} className="w-full h-auto max-h-[600px] object-contain block" />
-                      )}
-                    </div>
-
-                    <div className="p-5 flex flex-col gap-2 shrink-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-4 text-[#171A17] dark:text-white">
-                          <InstaHeartIcon />
-                          <InstaCommentIcon />
-                          <InstaShareIcon />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editSubCategory}
+                            onChange={(e) => { setEditSubCategory(e.target.value); setShowSubDropdown(true); }}
+                            onFocus={() => setShowSubDropdown(true)}
+                            onBlur={() => { setTimeout(() => setShowSubDropdown(false), 200); handleAutoSave(); }}
+                            placeholder="Subfolder"
+                            className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
+                          />
+                          {showSubDropdown && filteredSubs.length > 0 && (
+                            <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
+                              {filteredSubs.map(s => (
+                                <li 
+                                  key={s} 
+                                  onMouseDown={(e) => { e.preventDefault(); setEditSubCategory(s); setShowSubDropdown(false); }}
+                                  className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
+                                >
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
-                        <div className="text-[#171A17] dark:text-white"><InstaSaveIcon /></div>
-                      </div>
-                      
-                      {instaData.likes && (
-                        <div className="text-[14px] font-semibold text-[#171A17] dark:text-white">{instaData.likes} likes</div>
-                      )}
-                      
-                      <div className="text-[14px] text-[#171A17] dark:text-white whitespace-pre-wrap leading-relaxed mt-1">
-                        <span className="font-semibold mr-2">{instaData.username}</span>
-                        {instaData.caption}
-                      </div>
-                      
-                      <div className="text-[10px] text-[#171A17]/50 dark:text-white/50 uppercase mt-2 tracking-wide font-bold">
-                        {formatDate(bookmark.created_at)}
+
                       </div>
                     </div>
-                  </div>
-                </div>
 
-              ) : displayType === 'youtube' ? (
-                <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                  <iframe 
-                    src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
-                    className="w-full h-full border-none" 
-                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowFullScreen 
-                    title="YouTube Video"
-                  />
-                </div>
-
-              ) : displayType === 'tiktok' ? (
-                <div className="w-full h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
-                  <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
-                  
-                  <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
-                     <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
-                         This content plays at the original link. TikTok blocks us from embedding their media.
-                         <div className="mt-3">
-                            <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
-                         </div>
-                     </div>
-                     <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
-                        <InfoIcon className="w-5 h-5" />
-                     </div>
-                  </div>
-                </div>
-
-              ) : displayType === 'video' ? (
-                <div className="w-full h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                   <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
-                </div>
-              ) : displayType === 'pdf' ? (
-                <div className="w-full h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                   <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
-                </div>
-              ) : displayType === 'image' ? (
-                <div className="w-full h-full relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
-                  <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
-                </div>
-              ) : (
-                <div className="w-full h-full relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500">
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
-                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {/* RIGHT PANE (Meta) */}
-            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FAF9F5] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-32 md:pb-12`}>
-              <div className="px-6 md:px-10 py-8 md:py-10 flex flex-col min-h-full">
-                
-                <div className="flex flex-col gap-10 md:gap-12 flex-1 mt-4 md:mt-0">
-                  
-                  <div className="flex flex-col gap-3 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
-                    <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Title</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onBlur={handleAutoSave}
-                      placeholder="Enter Title"
-                      className="w-full bg-transparent border-none outline-none text-xl md:text-2xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
-                    />
-                    
-                    {bookmark.url && !bookmark.url.includes('/note-') && (
-                      <div className="mt-2 flex flex-col gap-2">
-                        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
-                          <span>Read Source</span>
-                          <ExternalLinkIcon />
-                        </a>
-                        <span className="text-[11px] font-sans text-[#171A17]/40 dark:text-white/40 truncate max-w-full select-all mt-1">
-                          {bookmark.url}
-                        </span>
+                    {displayType !== 'note' && (
+                      <div className="flex-1 flex flex-col min-h-[140px] gap-4">
+                        <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">
+                          {['instagram', 'twitter', 'tiktok'].includes(displayType || '') ? 'Caption / Notes' : 'Personal Notes'}
+                        </label>
+                        <textarea
+                          value={editContent || ''}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          onBlur={handleAutoSave}
+                          placeholder="Add personal notes..."
+                          className="w-full flex-1 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] p-5 text-base font-serif text-[#171A17] dark:text-[#F3F0E9] outline-none focus:bg-white/60 dark:focus:bg-white/10 resize-none transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 custom-scrollbar overflow-y-auto"
+                        />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
-                    <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Folder Structure</label>
-                    <div className="flex flex-col gap-4">
-                      
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={editCategory}
-                          onChange={(e) => { setEditCategory(e.target.value); setShowCatDropdown(true); }}
-                          onFocus={() => setShowCatDropdown(true)}
-                          onBlur={() => { setTimeout(() => setShowCatDropdown(false), 200); handleAutoSave(); }}
-                          placeholder="Main Folder"
-                          className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
-                        />
-                        {showCatDropdown && filteredCats.length > 0 && (
-                          <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
-                            {filteredCats.map(c => (
-                              <li 
-                                key={c} 
-                                onMouseDown={(e) => { e.preventDefault(); setEditCategory(c); setShowCatDropdown(false); }}
-                                className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
-                              >
-                                {c}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={editSubCategory}
-                          onChange={(e) => { setEditSubCategory(e.target.value); setShowSubDropdown(true); }}
-                          onFocus={() => setShowSubDropdown(true)}
-                          onBlur={() => { setTimeout(() => setShowSubDropdown(false), 200); handleAutoSave(); }}
-                          placeholder="Subfolder"
-                          className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
-                        />
-                        {showSubDropdown && filteredSubs.length > 0 && (
-                          <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
-                            {filteredSubs.map(s => (
-                              <li 
-                                key={s} 
-                                onMouseDown={(e) => { e.preventDefault(); setEditSubCategory(s); setShowSubDropdown(false); }}
-                                className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
-                              >
-                                {s}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
+                  <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.04] dark:border-white/[0.04] mt-8">
+                    <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
+                       Saved {formatDateTime(bookmark.created_at)}
                     </div>
+                    <button 
+                      onClick={() => setShowDeleteConfirm(true)} 
+                      className="text-[#171A17]/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-semibold transition-colors flex items-center gap-2 cursor-pointer w-max"
+                    >
+                      <TrashIcon /> Delete Entry
+                    </button>
                   </div>
 
-                  {displayType !== 'note' && (
-                    <div className="flex-1 flex flex-col min-h-[140px] gap-4">
-                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">
-                        {['instagram', 'twitter', 'tiktok'].includes(displayType || '') ? 'Caption / Notes' : 'Personal Notes'}
-                      </label>
-                      <textarea
-                        value={editContent || ''}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        onBlur={handleAutoSave}
-                        placeholder="Add personal notes..."
-                        className="w-full flex-1 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] p-5 text-base font-serif text-[#171A17] dark:text-[#F3F0E9] outline-none focus:bg-white/60 dark:focus:bg-white/10 resize-none transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 custom-scrollbar overflow-y-auto"
-                      />
-                    </div>
-                  )}
                 </div>
-
-                <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.04] dark:border-white/[0.04] mt-8 mb-12 md:mb-0">
-                  <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
-                     Saved {formatDateTime(bookmark.created_at)}
-                  </div>
-                  <button 
-                    onClick={() => setShowDeleteConfirm(true)} 
-                    className="text-[#171A17]/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-semibold transition-colors flex items-center gap-2 cursor-pointer w-max"
-                  >
-                    <TrashIcon /> Delete Entry
-                  </button>
-                </div>
-
               </div>
             </div>
 
