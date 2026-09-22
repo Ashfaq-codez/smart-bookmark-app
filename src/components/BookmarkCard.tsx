@@ -59,7 +59,7 @@ const renderTwitterText = (text: string, isExpanded: boolean = false) => {
     
     if (quoteMatch) {
       return (
-        <div key={i} className="mt-3 mb-1 w-full rounded-xl overflow-hidden border border-black/[0.08] dark:border-white/[0.08] bg-gray-50 dark:bg-black pointer-events-auto relative z-20" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+        <div key={i} className="mt-3 mb-1 w-full rounded-xl overflow-hidden border border-black/[0.04] dark:border-white/[0.04] bg-gray-50 dark:bg-black pointer-events-auto relative z-20" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
            <iframe 
              src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${quoteMatch[2]}`} 
              className={`w-full border-none bg-transparent ${isExpanded ? 'h-[350px] overflow-y-auto custom-scrollbar' : 'h-[200px]'}`} 
@@ -199,7 +199,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const handleAutoSave = async () => {
     if (editTitle.trim() === (bookmark.title || '') && formatUrl(editUrl) === bookmark.url && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent === (bookmark.content || '')) return;
     await updateBookmark(bookmark.id, { title: editTitle.trim() || '', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
-    toast.success('Saved', { style: { background: '#FAF9F5', color: '#171A17', border: '2px solid #171A17', boxShadow: '4px 4px 0 rgba(0,0,0,1)', borderRadius: '4px', fontWeight: 'bold' } })
+    
+    // Updated to match the soft, elegant theme of the main app
+    toast.success('Saved', { style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } })
   }
 
   const handleCloseModal = () => { 
@@ -403,7 +405,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
-          <div className="w-full aspect-[4/5] relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full aspect-[4/5] relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
             {displayType === 'instagram' ? (
               <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" />
             ) : (
@@ -422,7 +424,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
 
         ) : displayType === 'youtube' ? (
-          <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-2xl overflow-hidden shadow-sm bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
+          <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
             <img src={ytHighResThumbnail || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
             
@@ -436,7 +438,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
 
         ) : displayType === 'video' ? (
-          <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-sm bg-black border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full aspect-video relative rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
             <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
@@ -484,7 +486,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
           
           <div 
-            className={`relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-[#FAF9F5] dark:bg-[#151815] border border-black/[0.1] dark:border-white/[0.1] shadow-[0_20px_60px_rgba(0,0,0,0.15)] md:shadow-2xl rounded-t-3xl md:rounded-[24px] overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
+            className={`relative w-full h-[92dvh] md:h-[90vh] flex flex-col md:flex-row bg-[#FAF9F5] dark:bg-[#0F120F] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:shadow-2xl rounded-t-3xl md:rounded-3xl overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
             onMouseDown={(e) => e.stopPropagation()}
           >
             
@@ -494,26 +496,26 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full pointer-events-none" />
+              <div className="w-12 h-1.5 bg-black/10 dark:bg-white/20 rounded-full pointer-events-none" />
             </div>
 
             <button onClick={handleCloseWithSave} className="hidden md:flex absolute top-6 right-6 z-[100] p-2 bg-transparent text-[#171A17]/50 dark:text-white/50 hover:text-[#171A17] dark:hover:text-white transition-all cursor-pointer items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-md rounded-full shadow-sm">
               <CloseIcon />
             </button>
 
-            {/* LEFT PANE (Preview / Journal) */}
-            <div className={`w-full md:w-[60%] ${displayType === 'note' ? 'h-[70dvh] md:h-full' : 'h-[35%] min-h-[200px] md:min-h-0 md:h-full'} bg-white dark:bg-[#1A1D1A] relative flex flex-col border-b md:border-b-0 md:border-r border-black/[0.08] dark:border-white/[0.08] transition-colors duration-500 overflow-hidden ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#151815]' : 'items-center justify-center'}`}>
+            {/* LEFT PANE (Preview / Editor) */}
+            <div className={`w-full md:w-[60%] ${displayType === 'note' ? 'h-[70dvh] md:h-full' : 'h-[35%] min-h-[200px] md:min-h-0 md:h-full'} bg-white dark:bg-[#1A1D1A] relative flex flex-col border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 overflow-hidden ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F]' : 'items-center justify-center'}`}>
               
               {displayType === 'note' ? (
                 <div className="w-full h-full flex flex-col relative group">
-                  <button onClick={() => setIsReaderMode(true)} className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-50 p-2.5 bg-white/90 dark:bg-[#1A1D1A]/90 hover:bg-white dark:hover:bg-black text-[#171A17] dark:text-[#F3F0E9] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-[2px_2px_0_rgba(0,0,0,1)] dark:shadow-[2px_2px_0_rgba(255,255,255,0.5)] border border-black dark:border-white" title="Fullscreen Reader">
+                  <button onClick={() => setIsReaderMode(true)} className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-50 p-2.5 bg-white/90 dark:bg-[#151815]/90 hover:bg-white dark:hover:bg-[#1A1D1A] text-[#171A17] dark:text-[#F3F0E9] rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md border border-black/[0.04] dark:border-white/[0.04]" title="Fullscreen Reader">
                     <ExpandIcon />
                   </button>
                   
                   <div className="flex-1 w-full flex flex-col p-6 pt-14 md:p-12 lg:px-16 overflow-y-auto custom-scrollbar relative">
                     
                     {/* Note Meta Header */}
-                    <div className="flex flex-col gap-4 mb-8 border-b border-black/[0.08] dark:border-white/[0.08] pb-6 shrink-0 max-w-3xl mx-auto w-full">
+                    <div className="flex flex-col gap-4 mb-8 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 shrink-0 max-w-3xl mx-auto w-full">
                       <input
                         type="text"
                         value={editTitle}
@@ -530,13 +532,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     </div>
                     
                     {/* Interactive Editor Body */}
-                    <div className="w-full flex-1 max-w-3xl mx-auto flex flex-col relative group/editor">
+                    <div className="w-full flex-1 max-w-3xl mx-auto flex flex-col relative group/editor pb-20">
                         <div 
-                          className={`w-full flex-1 transition-all duration-300 ${isNoteEditMode ? 'ring-2 ring-[#4D6A51] dark:ring-[#8FAA91] rounded-xl p-3 bg-white dark:bg-[#1A1D1A] shadow-sm' : 'cursor-text'}`}
+                          className={`w-full flex-1 transition-all duration-300 ${isNoteEditMode ? 'ring-1 ring-black/[0.08] dark:ring-white/[0.08] rounded-3xl p-5 bg-white/60 dark:bg-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-sm' : 'cursor-text p-2'}`}
                           onClick={() => { if (!isNoteEditMode) setIsNoteEditMode(true) }}
                         >
-                          {/* We overlay a pointer-event shield when not in edit mode so clicking ANYWHERE triggers the editor, 
-                              but once editing, the editor captures events directly. */}
                           <div className={`w-full h-full relative z-20 ${!isNoteEditMode ? 'pointer-events-none' : ''}`}>
                             <TipTapEditor
                               value={editContent || ''}
@@ -546,7 +546,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                                 setTimeout(() => setIsNoteEditMode(false), 200);
                                 handleAutoSave();
                               }}
-                              isExpanded={true} 
+                              isExpanded={isNoteEditMode} 
                             />
                           </div>
 
@@ -557,10 +557,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                         {/* Edit Mode Actions */}
                         {isNoteEditMode && (
-                          <div className="absolute -top-3 -right-3 z-50 animate-in fade-in zoom-in duration-200">
+                          <div className="absolute -top-4 -right-2 z-50 animate-in fade-in zoom-in duration-200">
                              <button
                                onMouseDown={(e) => { e.preventDefault(); setIsNoteEditMode(false); handleAutoSave(); }}
-                               className="bg-[#4D6A51] text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-[2px_2px_0_rgba(0,0,0,1)] border-2 border-black hover:translate-y-[1px] hover:shadow-[1px_1px_0_rgba(0,0,0,1)] transition-all"
+                               className="bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-md"
                              >
                                Done
                              </button>
@@ -572,7 +572,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
               ) : displayType === 'twitter' ? (
                 <div className="w-full h-full flex bg-[#151618] p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-[18px] flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
+                  <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-3xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                     
                     <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
@@ -602,9 +602,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
               ) : displayType === 'instagram' && instaData ? (
                 <div className="w-full min-h-full flex bg-gray-50 dark:bg-black p-0 md:p-4 py-12 md:py-8 overflow-y-auto custom-scrollbar">
-                  <div className="w-full md:max-w-[450px] bg-white dark:bg-black md:border border-black/[0.08] dark:border-white/[0.08] md:rounded-xl flex flex-col m-auto shadow-xl">
+                  <div className="w-full md:max-w-[450px] bg-white dark:bg-[#151815] md:border border-black/[0.04] dark:border-white/[0.04] md:rounded-3xl flex flex-col m-auto shadow-xl">
                     
-                    <div className="flex items-center justify-between p-3 border-b border-black/[0.08] dark:border-white/[0.08] shrink-0">
+                    <div className="flex items-center justify-between p-4 border-b border-black/[0.04] dark:border-white/[0.04] shrink-0">
                       <div className="flex items-center gap-3">
                         <span className="text-[14px] font-semibold text-[#171A17] dark:text-white leading-none">{instaData.username}</span>
                       </div>
@@ -619,7 +619,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                       )}
                     </div>
 
-                    <div className="p-4 flex flex-col gap-2 shrink-0">
+                    <div className="p-5 flex flex-col gap-2 shrink-0">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-4 text-[#171A17] dark:text-white">
                           <InstaHeartIcon />
@@ -657,17 +657,17 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 </div>
 
               ) : displayType === 'tiktok' ? (
-                <div className="w-full h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#151815] overflow-hidden">
+                <div className="w-full h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
                   <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
                   
                   <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
-                     <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur text-white text-[12px] p-3 rounded-xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
+                     <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
                          This content plays at the original link. TikTok blocks us from embedding their media.
-                         <div className="mt-2">
+                         <div className="mt-3">
                             <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
                          </div>
                      </div>
-                     <div className="bg-black/40 backdrop-blur p-2.5 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
+                     <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
                         <InfoIcon className="w-5 h-5" />
                      </div>
                   </div>
@@ -678,15 +678,15 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                    <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
                 </div>
               ) : displayType === 'pdf' ? (
-                <div className="w-full h-full bg-[#FAF9F5] dark:bg-[#151815] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
+                <div className="w-full h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                    <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
                 </div>
               ) : displayType === 'image' ? (
-                <div className="w-full h-full relative overflow-hidden bg-[#FAF9F5] dark:bg-[#151815] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
+                <div className="w-full h-full relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
                   <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
                 </div>
               ) : (
-                <div className="w-full h-full relative overflow-hidden bg-[#FAF9F5] dark:bg-[#151815] transition-colors duration-500">
+                <div className="w-full h-full relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500">
                   <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
                     <img src={previewImageUrl} alt={bookmark.title} className="w-full h-full object-cover md:object-contain" />
                   </a>
@@ -695,30 +695,30 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
 
             {/* RIGHT PANE (Editor & Meta) */}
-            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FAF9F5] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-16 md:pb-0`}>
-              <div className="px-6 md:px-12 py-8 md:py-12 flex flex-col min-h-full">
+            <div className={`w-full md:w-[40%] flex-1 md:h-full flex flex-col bg-[#FBF9F4] dark:bg-[#151815] custom-scrollbar overflow-y-auto transition-colors duration-500 pb-16 md:pb-0`}>
+              <div className="px-6 md:px-10 py-8 md:py-10 flex flex-col min-h-full">
                 
                 <div className="flex flex-col gap-10 md:gap-12 flex-1">
                   
                   {displayType !== 'note' && (
-                    <div className="flex flex-col gap-2 border-b border-black/[0.08] dark:border-white/[0.08] pb-6 md:pb-8">
-                      <label className="text-[10px] font-sans text-[#171A17]/60 dark:text-white/60 uppercase tracking-widest font-bold">Title</label>
+                    <div className="flex flex-col gap-3 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
+                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Title</label>
                       <input
                         type="text"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         onBlur={handleAutoSave}
                         placeholder="Enter Title"
-                        className="w-full bg-transparent border-none outline-none text-xl md:text-3xl font-serif text-[#171A17] dark:text-[#F3F0E9] tracking-wide transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
+                        className="w-full bg-transparent border-none outline-none text-xl md:text-2xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
                       />
                       
                       {bookmark.url && !bookmark.url.includes('/note-') && (
-                        <div className="mt-4 flex flex-col gap-2">
-                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-bold">
+                        <div className="mt-2 flex flex-col gap-2">
+                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
                             <span>Read Source</span>
                             <ExternalLinkIcon />
                           </a>
-                          <span className="text-[11px] font-sans text-[#171A17]/50 dark:text-white/50 truncate max-w-full select-all mt-1 font-medium">
+                          <span className="text-[11px] font-sans text-[#171A17]/40 dark:text-white/40 truncate max-w-full select-all mt-1">
                             {bookmark.url}
                           </span>
                         </div>
@@ -726,8 +726,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-4 border-b border-black/[0.08] dark:border-white/[0.08] pb-6 md:pb-8">
-                    <label className="text-[10px] font-sans text-[#171A17]/60 dark:text-white/60 uppercase tracking-widest font-bold">Folder Structure</label>
+                  <div className="flex flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
+                    <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Folder Structure</label>
                     <div className="flex flex-col gap-4">
                       
                       <div className="relative">
@@ -738,15 +738,15 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                           onFocus={() => setShowCatDropdown(true)}
                           onBlur={() => { setTimeout(() => setShowCatDropdown(false), 200); handleAutoSave(); }}
                           placeholder="Main Folder"
-                          className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#1A1D1A] text-[#171A17] dark:text-[#F3F0E9] border-2 border-black/[0.1] dark:border-white/[0.1] focus:border-[#4D6A51] dark:focus:border-[#8FAA91] outline-none transition-colors rounded-xl placeholder-[#171A17]/30 dark:placeholder-white/30 font-medium"
+                          className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
                         />
                         {showCatDropdown && filteredCats.length > 0 && (
-                          <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white dark:bg-[#1A1D1A] border-2 border-black/[0.1] dark:border-white/[0.1] shadow-lg rounded-xl py-2">
+                          <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
                             {filteredCats.map(c => (
                               <li 
                                 key={c} 
                                 onMouseDown={(e) => { e.preventDefault(); setEditCategory(c); setShowCatDropdown(false); }}
-                                className="px-4 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
+                                className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
                               >
                                 {c}
                               </li>
@@ -763,15 +763,15 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                           onFocus={() => setShowSubDropdown(true)}
                           onBlur={() => { setTimeout(() => setShowSubDropdown(false), 200); handleAutoSave(); }}
                           placeholder="Subfolder"
-                          className="w-full text-sm font-sans px-4 py-3 bg-white dark:bg-[#1A1D1A] text-[#171A17] dark:text-[#F3F0E9] border-2 border-black/[0.1] dark:border-white/[0.1] focus:border-[#4D6A51] dark:focus:border-[#8FAA91] outline-none transition-colors rounded-xl placeholder-[#171A17]/30 dark:placeholder-white/30 font-medium"
+                          className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
                         />
                         {showSubDropdown && filteredSubs.length > 0 && (
-                          <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white dark:bg-[#1A1D1A] border-2 border-black/[0.1] dark:border-white/[0.1] shadow-lg rounded-xl py-2">
+                          <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
                             {filteredSubs.map(s => (
                               <li 
                                 key={s} 
                                 onMouseDown={(e) => { e.preventDefault(); setEditSubCategory(s); setShowSubDropdown(false); }}
-                                className="px-4 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
+                                className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
                               >
                                 {s}
                               </li>
@@ -785,7 +785,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                   {displayType !== 'note' && (
                     <div className="flex-1 flex flex-col min-h-[140px] gap-4">
-                      <label className="text-[10px] font-sans text-[#171A17]/60 dark:text-white/60 uppercase tracking-widest font-bold">
+                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">
                         {['instagram', 'twitter', 'tiktok'].includes(displayType || '') ? 'Caption / Notes' : 'Personal Notes'}
                       </label>
                       <textarea
@@ -793,19 +793,19 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                         onChange={(e) => setEditContent(e.target.value)}
                         onBlur={handleAutoSave}
                         placeholder="Add personal notes..."
-                        className="w-full flex-1 bg-white dark:bg-[#1A1D1A] border-2 border-black/[0.1] dark:border-white/[0.1] p-5 text-base font-serif text-[#171A17] dark:text-[#F3F0E9] outline-none focus:border-[#4D6A51] dark:focus:border-[#8FAA91] resize-none transition-colors rounded-xl placeholder-[#171A17]/30 dark:placeholder-white/30 custom-scrollbar overflow-y-auto"
+                        className="w-full flex-1 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] p-5 text-base font-serif text-[#171A17] dark:text-[#F3F0E9] outline-none focus:bg-white/60 dark:focus:bg-white/10 resize-none transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 custom-scrollbar overflow-y-auto"
                       />
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.08] dark:border-white/[0.08] mt-8">
-                  <div className="text-[14px] font-semibold font-sans text-[#171A17]/60 dark:text-white/60">
+                <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.04] dark:border-white/[0.04] mt-8">
+                  <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
                      Saved {formatDateTime(bookmark.created_at)}
                   </div>
                   <button 
                     onClick={() => setShowDeleteConfirm(true)} 
-                    className="text-[#171A17]/50 dark:text-white/50 hover:text-red-600 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-bold transition-colors flex items-center gap-2 cursor-pointer w-max"
+                    className="text-[#171A17]/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-semibold transition-colors flex items-center gap-2 cursor-pointer w-max"
                   >
                     <TrashIcon /> Delete Entry
                   </button>
@@ -815,25 +815,25 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
 
             {showDeleteConfirm && (
-              <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FAF9F5]/90 dark:bg-[#080A08]/90 backdrop-blur-sm transition-colors duration-500" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="w-full max-w-sm bg-white dark:bg-[#151815] border-2 border-black dark:border-white flex flex-col shadow-[8px_8px_0_rgba(0,0,0,1)] dark:shadow-[8px_8px_0_rgba(255,255,255,0.8)] rounded-2xl">
-                  <div className="p-8 flex flex-col gap-6 text-center">
-                    <h3 className="text-2xl font-serif font-bold text-[#171A17] dark:text-[#F3F0E9] leading-none">
+              <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-colors duration-500" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] flex flex-col shadow-2xl rounded-3xl">
+                  <div className="p-8 flex flex-col gap-5 text-center">
+                    <h3 className="text-2xl font-serif text-[#171A17] dark:text-[#F3F0E9] leading-none">
                       Delete this entry?
                     </h3>
-                    <p className="text-sm font-sans font-medium text-[#171A17]/70 dark:text-white/70">This action is permanent and cannot be undone.</p>
-                    <div className="flex flex-col gap-3 mt-4">
+                    <p className="text-sm font-sans text-[#171A17]/60 dark:text-white/60">This action is permanent and cannot be undone.</p>
+                    <div className="flex flex-col gap-2 mt-2">
                       <button 
                         ref={confirmDeleteRef}
                         onClick={handleConfirmDelete} 
                         onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmDelete() }}
-                        className="w-full py-3 bg-[#D93025] text-white font-sans font-bold text-xs tracking-widest uppercase hover:bg-[#B32015] transition-all rounded-xl shadow-[4px_4px_0_rgba(0,0,0,1)] border-2 border-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D93025]"
+                        className="w-full py-3 bg-[#D93025] text-white font-sans font-semibold text-xs tracking-widest uppercase hover:bg-[#B32015] transition-all rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D93025]"
                       >
                         Confirm
                       </button>
                       <button 
                         onClick={() => setShowDeleteConfirm(false)} 
-                        className="w-full py-3 bg-white dark:bg-[#1A1D1A] text-[#171A17] dark:text-[#F3F0E9] font-sans font-bold text-xs tracking-widest uppercase transition-all rounded-xl border-2 border-black dark:border-white shadow-[2px_2px_0_rgba(0,0,0,1)] dark:shadow-[2px_2px_0_rgba(255,255,255,0.5)] hover:translate-y-[1px] hover:shadow-[1px_1px_0_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0_rgba(255,255,255,0.5)]"
+                        className="w-full py-3 bg-black/5 dark:bg-white/5 text-[#171A17] dark:text-[#F3F0E9] font-sans font-semibold text-xs tracking-widest uppercase hover:bg-black/10 dark:hover:bg-white/10 transition-all rounded-2xl"
                       >
                         Cancel
                       </button>
