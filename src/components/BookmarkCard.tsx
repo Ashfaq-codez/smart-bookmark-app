@@ -50,39 +50,21 @@ const isVideoMedia = (url?: string | null) => {
 
 const renderTwitterText = (text: string, isExpanded: boolean = false) => {
   if (!text) return null;
-  
   const parts = text.split(/(https?:\/\/(?:twitter\.com|x\.com)\/\w+\/status\/\d+(?:\?[^\s]*)?)/g);
-  
   return parts.map((part, i) => {
     const quoteMatch = part.match(/https?:\/\/(?:twitter\.com|x\.com)\/(\w+)\/status\/(\d+)/);
-    
     if (quoteMatch) {
       return (
         <div key={i} className="mt-3 mb-1 w-full rounded-xl overflow-hidden border border-black/[0.04] dark:border-white/[0.04] bg-gray-50 dark:bg-black pointer-events-auto relative z-20" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-           <iframe 
-             src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${quoteMatch[2]}`} 
-             className={`w-full border-none bg-transparent ${isExpanded ? 'h-[350px] overflow-y-auto custom-scrollbar' : 'h-[200px]'}`} 
-             title="Nested X Post"
-             scrolling={isExpanded ? "yes" : "no"}
-           />
+           <iframe src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${quoteMatch[2]}`} className={`w-full border-none bg-transparent ${isExpanded ? 'h-[350px] overflow-y-auto custom-scrollbar' : 'h-[200px]'}`} title="Nested X Post" scrolling={isExpanded ? "yes" : "no"} />
         </div>
       );
     }
-
     const subParts = part.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
     return subParts.map((sub, j) => {
       if (sub.match(/^(https?:\/\/[^\s]+|@\w+|#\w+)$/)) {
         return (
-          <a 
-            key={`${i}-${j}`} 
-            href={sub.startsWith('http') ? sub : `https://x.com/${sub}`} 
-            target="_blank" 
-            rel="noreferrer" 
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()} 
-            onClick={(e) => e.stopPropagation()} 
-            className="text-[#1DA1F2] hover:underline relative z-20 pointer-events-auto"
-          >
+          <a key={`${i}-${j}`} href={sub.startsWith('http') ? sub : `https://x.com/${sub}`} target="_blank" rel="noreferrer" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="text-[#1DA1F2] hover:underline relative z-20 pointer-events-auto">
             {sub}
           </a>
         );
@@ -106,7 +88,18 @@ interface BookmarkCardProps {
   isMinimalist?: boolean;
 }
 
-export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy, isMinimalist }: BookmarkCardProps) {
+export default function BookmarkCard({ 
+  bookmark, 
+  isDragged, 
+  onDragStart, 
+  onDragEnd, 
+  updateBookmark, 
+  deleteBookmark, 
+  forceOpenModal, 
+  onCloseForcedModal, 
+  folderHierarchy, 
+  isMinimalist 
+}: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -120,7 +113,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [touchEnd, setTouchEnd] = useState(0)
   
   const confirmDeleteRef = useRef<HTMLButtonElement>(null)
-  
   const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
@@ -129,6 +121,84 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [editSubCategory, setEditSubCategory] = useState(bookmark.sub_category || '')
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
   const [editContent, setEditContent] = useState(bookmark.content || '')
+
+  // --- Display Core Logic ---
+  const getYouTubeId = useCallback((url: string) => {
+    // Upgraded regex carefully captures the 11-character ID while stripping all tracking/stack variables (&pp=, ?si=, etc)
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([^?&/]+)/);
+    return match ? match[1].substring(0, 11) : '';
+  }, []);
+
+  const deriveDisplayType = useCallback((b: Bookmark) => {
+    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
+    if (b.url) {
+      const url = b.url.toLowerCase();
+      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
+      if (url.includes('instagram.com')) return 'instagram';
+      if (url.includes('tiktok.com')) return 'tiktok';
+      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+      if (url.includes('github.com')) return 'github';
+      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
+    }
+    return b.type || 'link';
+  }, []);
+
+  const displayType = deriveDisplayType(bookmark);
+  const isDirectImage = displayType === 'image' || bookmark.type === 'image';
+  const ytVideoId = getYouTubeId(bookmark.url || '');
+  const isYouTubeShort = (bookmark.url || '').toLowerCase().includes('/shorts/');
+  const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : null;
+
+  // X/Twitter specific extraction to invoke native X frames
+  const tweetId = displayType === 'twitter' ? bookmark.url?.match(/(?:twitter\.com|x\.com)\/[^/]+\/status\/(\d+)/)?.[1] : null;
+
+  // --- Strict Screenshot Loading System ---
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(bookmark.image_url || null)
+  const [isGeneratingScreenshot, setIsGeneratingScreenshot] = useState<boolean>(false)
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Instant Resolve Conditions (No WP needed)
+    if (bookmark.image_url) {
+      setResolvedImageUrl(bookmark.image_url);
+      return;
+    }
+    if (isDirectImage) {
+      setResolvedImageUrl(bookmark.url);
+      return;
+    }
+    if (ytHighResThumbnail) {
+      setResolvedImageUrl(ytHighResThumbnail);
+      return;
+    }
+    if (displayType === 'note' || displayType === 'twitter' || displayType === 'instagram' || displayType === 'tiktok') {
+      // Instagram & TikTok block scraping. X uses Native Embed. Do not fire WordPress.
+      return;
+    }
+
+    // Entering standard Link generation
+    setIsGeneratingScreenshot(true);
+
+    // Step 1: Fire Silent Ping with cache buster to force WP to create the image
+    const cacheBuster = Date.now();
+    const trigger = new Image();
+    trigger.src = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url || '')}?w=800&t=${cacheBuster}`;
+
+    // Step 2: Strict UI lock for 5 seconds. Guarantees "saving inntoit" is visible and WP finishes.
+    const timer = setTimeout(() => {
+      if (!isMounted) return;
+      const cleanWpUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url || '')}?w=800&t=${cacheBuster}`;
+      setResolvedImageUrl(cleanWpUrl);
+      setIsGeneratingScreenshot(false);
+      updateBookmark(bookmark.id, { image_url: cleanWpUrl }).catch(() => {});
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    }
+  }, [bookmark.url, bookmark.image_url, bookmark.id, isDirectImage, ytHighResThumbnail, displayType, updateBookmark])
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -192,13 +262,34 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     }
   }, [showDeleteConfirm])
 
-  const formatUrl = (rawUrl: string) => { const t = rawUrl.trim(); if (!t) return ''; return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t }
+  const formatUrl = (rawUrl: string) => { 
+    const t = rawUrl.trim(); 
+    if (!t) return ''; 
+    return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t 
+  }
 
   const handleAutoSave = async () => {
-    if (editTitle.trim() === (bookmark.title || '') && formatUrl(editUrl) === bookmark.url && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent === (bookmark.content || '')) return;
-    await updateBookmark(bookmark.id, { title: editTitle.trim() || '', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
+    if (
+      editTitle.trim() === (bookmark.title || '') && 
+      formatUrl(editUrl) === bookmark.url && 
+      editCategory.trim() === (bookmark.category || '') && 
+      editSubCategory.trim() === (bookmark.sub_category || '') && 
+      editDescription.trim() === (bookmark.description || '') && 
+      editContent === (bookmark.content || '')
+    ) return;
+
+    await updateBookmark(bookmark.id, { 
+      title: editTitle.trim() || '', 
+      url: formatUrl(editUrl), 
+      category: editCategory.trim() || 'Uncategorized', 
+      sub_category: editSubCategory.trim() || null, 
+      description: editDescription.trim() || null, 
+      content: editContent || null 
+    })
     
-    toast.success('Saved', { style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } })
+    toast.success('Saved', { 
+      style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } 
+    })
   }
 
   const handleCloseModal = () => { 
@@ -263,18 +354,20 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
-  const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
+  const getDomain = (link: string) => { 
+    try { 
+      const clean = link.split('#:~:text=')[0]; 
+      return new URL(clean).hostname.replace('www.', '') 
+    } catch { 
+      return 'source' 
+    } 
+  }
 
   const handleConfirmDelete = async () => { 
     if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
     await deleteBookmark(bookmark.id); 
     setShowDeleteConfirm(false); 
     handleCloseModal(); 
-  }
-
-  const getYouTubeId = (url: string) => {
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^?&/]{11})/);
-    return match ? match[1] : '';
   }
 
   const getTwitterAuthor = (url: string) => {
@@ -313,29 +406,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
-  const deriveDisplayType = (b: Bookmark) => {
-    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
-    if (b.url) {
-      const url = b.url.toLowerCase();
-      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-      if (url.includes('instagram.com')) return 'instagram';
-      if (url.includes('tiktok.com')) return 'tiktok';
-      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-      if (url.includes('github.com')) return 'github';
-      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
-    }
-    return b.type || 'link';
-  }
-  
-  const displayType = deriveDisplayType(bookmark);
-  const ytVideoId = getYouTubeId(bookmark.url);
-  const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
-  const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : null;
-
-  const previewImageUrl = bookmark.image_url || ytHighResThumbnail || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
+  const previewImageUrl = resolvedImageUrl || null;
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
-  const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
   
+  const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
+
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
@@ -378,53 +453,74 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <XIcon />
             </div>
             
-            <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
-              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
-            </div>
-            
-            {bookmark.image_url && (
-              <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
-                {isVideoMedia(bookmark.image_url) ? (
-                  <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
-                ) : (
-                  <>
-                    <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
-                       <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </>
-                )}
+            {/* Render Official X iframe if valid tweet, else text fallback */}
+            {tweetId ? (
+              <div className="pointer-events-auto relative z-20 w-full bg-white dark:bg-black rounded-xl overflow-hidden mt-2">
+                <iframe 
+                  src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${tweetId}`} 
+                  className="w-full border-none h-[400px]" 
+                  scrolling="yes"
+                />
               </div>
+            ) : (
+              <>
+                <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
+                  {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
+                </div>
+                {bookmark.image_url && (
+                  <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
+                    {isVideoMedia(bookmark.image_url) ? (
+                      <video src={bookmark.image_url || ''} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
+                    ) : (
+                      <>
+                        <img src={bookmark.image_url || ''} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
+                           <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
             )}
             
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
-              by {getTwitterAuthor(bookmark.url)}
+              by {getTwitterAuthor(bookmark.url || '')}
             </p>
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
-          <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-[#FAF9F5] dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] flex items-center justify-center">
             {displayType === 'instagram' ? (
               <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" />
             ) : (
               <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />
             )}
             
-            <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
+            {/* Graceful Fallback if backend didn't supply an explicit image (ignores WP scrapers entirely) */}
+            {bookmark.image_url ? (
+              <>
+                <img src={bookmark.image_url} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors z-10 pointer-events-none">
+                  <PlayCircleIcon className="w-10 h-10 sm:w-14 sm:h-14 text-white/90 drop-shadow-lg" />
+                </div>
+              </>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center opacity-60">
+                 {displayType === 'instagram' ? <InstagramIcon className="w-12 h-12 mb-3" /> : <TikTokIcon className="w-12 h-12 mb-3" />}
+                 <span className="text-[10px] font-sans uppercase tracking-widest text-[#171A17] dark:text-[#F3F0E9]">Media Protected</span>
+              </div>
+            )}
             
             <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
               {displayType === 'instagram' ? <InstagramIcon /> : <TikTokIcon />}
-            </div>
-            
-            <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors z-10 pointer-events-none">
-              <PlayCircleIcon className="w-10 h-10 sm:w-14 sm:h-14 text-white/90 drop-shadow-lg" />
             </div>
           </div>
 
         ) : displayType === 'youtube' ? (
           <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
-            <img src={ytHighResThumbnail || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+            <img src={ytHighResThumbnail || previewImageUrl || ''} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
             
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white">
               <YouTubeIcon className="text-[#FF0000]" />
@@ -437,7 +533,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
         ) : displayType === 'video' ? (
           <div className="w-full aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
-            <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
+            <video src={bookmark.url || ''} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
         ) : displayType === 'pdf' ? (
@@ -449,7 +545,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               <div className="absolute top-0 right-0 w-[24px] h-[24px] sm:w-[36px] sm:h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
-                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                   src={`${bookmark.url || ''}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
                    className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
                    title="PDF Preview"
                    scrolling="no"
@@ -460,9 +556,34 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
           </div>
           
+        ) : displayType === 'image' ? (
+          <div className="w-full flex relative overflow-hidden rounded-xl sm:rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
+            <img src={previewImageUrl || ''} alt={bookmark.title} className="w-full h-auto object-cover max-h-80" />
+          </div>
         ) : (
-          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815]">
-            <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+          /* STANDARD LINK PREVIEW WITH 5-SECOND WP BYPASS */
+          <div className="w-full aspect-[16/10] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col items-center justify-center">
+            {isGeneratingScreenshot ? (
+              <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-black/[0.02] dark:bg-white/[0.02]">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#4D6A51] dark:bg-[#8FAA91] animate-ping mb-3" />
+                <p className="font-serif text-xs sm:text-sm text-[#171A17]/70 dark:text-[#F3F0E9]/70 italic tracking-wide">
+                  saving inntoit for your knowledge...
+                </p>
+                <span className="text-[10px] font-sans text-black/30 dark:text-white/30 uppercase tracking-widest mt-2">
+                  {getDomain(bookmark.url || '')}
+                </span>
+              </div>
+            ) : (
+              <img 
+                src={previewImageUrl || `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`} 
+                alt={bookmark.title} 
+                className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" 
+                loading="lazy" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`
+                }} 
+              />
+            )}
           </div>
         )}
 
@@ -475,7 +596,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               </h4>
             )}
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
-              {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
+              {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url || '')}
             </p>
           </div>
         )}
@@ -524,24 +645,37 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                       <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                       
                       <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
-                        <div className="text-[15px] font-sans text-[#F3F0E9] leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
-                          {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
-                        </div>
                         
-                        {bookmark.image_url && (
-                          <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
-                            {isVideoMedia(bookmark.image_url) ? (
-                               <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
-                            ) : (
-                               <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
-                            )}
+                        {tweetId ? (
+                          <div className="pointer-events-auto relative z-20 w-full bg-white dark:bg-black rounded-xl overflow-hidden mt-2">
+                            <iframe 
+                              src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${tweetId}`} 
+                              className="w-full border-none h-[400px]" 
+                              scrolling="yes"
+                            />
                           </div>
+                        ) : (
+                          <>
+                            <div className="text-[15px] font-sans text-[#F3F0E9] leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
+                              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
+                            </div>
+                            
+                            {bookmark.image_url && (
+                              <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
+                                {isVideoMedia(bookmark.image_url) ? (
+                                   <video src={bookmark.image_url || ''} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
+                                ) : (
+                                   <img src={bookmark.image_url || ''} className="w-full h-auto object-contain max-h-[50vh] block" />
+                                )}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                       
                       <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-white/50">
                         <span className="text-[12px] font-sans">
-                          Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
+                          Post by {getTwitterAuthor(bookmark.url || '')} on {formatDate(bookmark.created_at)}
                         </span>
                         <XIcon />
                       </div>
@@ -559,11 +693,18 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                         <div className="text-[#171A17] dark:text-white"><InstaDotsIcon /></div>
                       </div>
 
-                      <div className="w-full bg-black relative shrink-0 flex items-center justify-center">
-                        {isVideoMedia(bookmark.image_url) ? (
-                           <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
+                      <div className="w-full bg-black relative shrink-0 flex items-center justify-center min-h-[200px]">
+                        {bookmark.image_url ? (
+                           isVideoMedia(bookmark.image_url) ? (
+                             <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
+                           ) : (
+                             <img src={bookmark.image_url || previewImageUrl || ''} className="w-full h-auto max-h-[600px] object-contain block" />
+                           )
                         ) : (
-                           <img src={bookmark.image_url || previewImageUrl} className="w-full h-auto max-h-[600px] object-contain block" />
+                           <div className="flex flex-col items-center justify-center p-8 opacity-50">
+                              {displayType === 'instagram' ? <InstagramIcon className="w-12 h-12 mb-4" /> : <TikTokIcon className="w-12 h-12 mb-4" />}
+                              <span className="text-white text-xs font-serif italic">Media Protected</span>
+                           </div>
                         )}
                       </div>
 
@@ -596,7 +737,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                 ) : displayType === 'youtube' ? (
                   <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                     <iframe 
-                      src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
+                      src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url || '')}`} 
                       className="w-full h-full border-none" 
                       allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                       allowFullScreen 
@@ -606,13 +747,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                 ) : displayType === 'tiktok' ? (
                   <div className="w-full aspect-[9/16] md:aspect-auto md:h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
-                    <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
+                    <img src={bookmark.image_url || previewImageUrl || ''} className="w-full h-full object-contain z-10" />
                     
                     <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
                        <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
                            This content plays at the original link. TikTok blocks us from embedding their media.
                            <div className="mt-3">
-                              <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
+                              <a href={bookmark.url || ''} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
                            </div>
                        </div>
                        <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
@@ -623,20 +764,20 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                 ) : displayType === 'video' ? (
                   <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                     <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
+                     <video src={bookmark.url || ''} controls autoPlay={true} className="w-full h-full object-contain" />
                   </div>
                 ) : displayType === 'pdf' ? (
                   <div className="w-full aspect-[3/4] md:h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                     <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
+                     <iframe src={bookmark.url || ''} className="w-full h-full border-none" title={bookmark.title} />
                   </div>
                 ) : displayType === 'image' ? (
                   <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => setIsFullscreenImage(true)}>
-                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                    <img src={previewImageUrl || ''} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
                   </div>
                 ) : (
                   <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full">
-                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
-                      <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                    <a href={bookmark.url || ''} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
+                      <img src={previewImageUrl || `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
                     </a>
                   </div>
                 )}
@@ -661,7 +802,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                       
                       {bookmark.url && !bookmark.url.includes('/note-') && (
                         <div className="mt-2 flex flex-col gap-2">
-                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
+                          <a href={bookmark.url || ''} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
                             <span>Read Source</span>
                             <ExternalLinkIcon />
                           </a>
@@ -799,7 +940,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           <button className="absolute top-4 right-4 md:top-6 md:right-6 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors z-50 cursor-pointer">
             <CloseIcon />
           </button>
-          <img src={previewImageUrl} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
+          <img src={previewImageUrl || ''} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
         </div>,
         document.body
       )}
