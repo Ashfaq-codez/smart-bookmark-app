@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
+import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
 
 const ALLOWED_ORIGINS = new Set([
   'https://smart-bookmark-app-lime.vercel.app',
@@ -18,10 +19,6 @@ function corsHeaders(origin: string | null) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, x-shortcut-token',
     'Access-Control-Allow-Credentials': 'true',
   };
-}
-
-function isPrivateIP(hostname: string): boolean {
-  return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|169\.254\.)/.test(hostname);
 }
 
 // BULLETPROOF NODE.JS HASHING
@@ -142,17 +139,46 @@ export async function POST(request: Request) {
 
       if (isLink) {
         const rawFlexiblePath = cleanUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('#')[0];
-        const flexiblePath = rawFlexiblePath.replace(/[,()]/g, '').replace(/\.(eq|neq|gt|lt|in|is|fts|plfts)/gi, '');
 
-        const { data } = await supabase
+        // Safe candidate URLs matching without PostgREST syntax injection risk
+        const candidates = Array.from(new Set([
+          cleanUrl,
+          cleanUrl.endsWith('/') ? cleanUrl.slice(0, -1) : `${cleanUrl}/`,
+          `https://${rawFlexiblePath}`,
+          `https://${rawFlexiblePath}/`,
+          `http://${rawFlexiblePath}`,
+          `http://${rawFlexiblePath}/`,
+          `https://www.${rawFlexiblePath}`,
+          `https://www.${rawFlexiblePath}/`,
+          `http://www.${rawFlexiblePath}`,
+          `http://www.${rawFlexiblePath}/`,
+        ]));
+
+        const { data: exactMatch } = await supabase
           .from('bookmarks')
           .select('id, title, url')
           .eq('user_id', userId)
           .in('type', ['link', 'twitter', 'instagram', 'youtube', 'github', 'linkedin'])
-          .or(`url.ilike.%${flexiblePath},url.ilike.%${flexiblePath}/,url.ilike.%${flexiblePath}#%,url.ilike.%${flexiblePath}/#%`)
+          .in('url', candidates)
           .limit(1)
           .maybeSingle();
-        existingRecord = data;
+
+        existingRecord = exactMatch;
+
+        // Fallback for URLs stored with fragment hashes (#...)
+        // Strictly sanitize path to prevent PostgREST syntax manipulation
+        if (!existingRecord && !/[,()"\\]/.test(rawFlexiblePath)) {
+          const safePath = rawFlexiblePath.replace(/[%_]/g, '\\$&');
+          const { data: fragmentMatch } = await supabase
+            .from('bookmarks')
+            .select('id, title, url')
+            .eq('user_id', userId)
+            .in('type', ['link', 'twitter', 'instagram', 'youtube', 'github', 'linkedin'])
+            .or(`url.ilike.%://${safePath}#%,url.ilike.%://${safePath}/#%`)
+            .limit(1)
+            .maybeSingle();
+          existingRecord = fragmentMatch;
+        }
       } else if (itemType === 'note' && finalContent) {
         const { data } = await supabase
           .from('bookmarks')
@@ -186,12 +212,11 @@ export async function POST(request: Request) {
 
     if (cleanUrl && isLink) {
       try {
-        const parsedUrl = new URL(cleanUrl);
-        if ((parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && !isPrivateIP(parsedUrl.hostname)) {
-          
+        const isSafe = await isSafeUrl(cleanUrl);
+        if (isSafe) {
           if (detectedType === 'twitter') {
             const vxUrl = cleanUrl.replace('twitter.com', 'api.vxtwitter.com').replace('x.com', 'api.vxtwitter.com');
-            const response = await fetch(vxUrl, { signal: AbortSignal.timeout(5000), redirect: 'manual' });
+            const response = await safeFetch(vxUrl, { signal: AbortSignal.timeout(5000) });
             
             if (response.ok) {
               const data = await response.json();
@@ -214,7 +239,10 @@ export async function POST(request: Request) {
             }
           } 
           else {
-            const response = await fetch(cleanUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000), redirect: 'manual' });
+            const response = await safeFetch(cleanUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0' },
+              signal: AbortSignal.timeout(3000)
+            });
             if (response.ok) {
               const html = await response.text();
               const $ = cheerio.load(html.substring(0, 512 * 1024));
