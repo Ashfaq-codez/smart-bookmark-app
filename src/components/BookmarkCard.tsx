@@ -45,6 +45,10 @@ const InstaDotsIcon = () => <svg aria-label="More Options" fill="currentColor" h
 const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   const l = url.toLowerCase();
+  
+  // Strictly block image thumbnails that happen to be hosted on video domains
+  if (l.match(/\.(jpe?g|png|gif|webp)$/i)) return false; 
+  
   return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('video.twimg.com') || l.includes('.m3u8');
 };
 

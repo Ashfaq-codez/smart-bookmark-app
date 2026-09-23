@@ -9,19 +9,34 @@ function extractExactUrl(target) {
   if (!target) return null;
 
   try {
-    // 1. YouTube: Right-clicking anywhere inside a video card (text, thumbnail, background)
-    const ytCard = target.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, ytd-reel-item-renderer');
+    // 1. YouTube: Right-clicking anywhere inside a video card (added playlist renderers)
+    const ytCard = target.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, ytd-reel-item-renderer, ytd-playlist-video-renderer, ytd-playlist-panel-video-renderer');
     if (ytCard) {
       const a = ytCard.querySelector('a#video-title-link, a#video-title, a#thumbnail');
       if (a?.href) {
+        try {
+          const urlObj = new URL(a.href);
+          urlObj.searchParams.delete('list'); // Strip playlist data so backend saves a clean video link
+          urlObj.searchParams.delete('index');
+          return { url: urlObj.toString(), type: 'youtube' };
+        } catch(e) {}
         return { url: a.href, type: 'youtube' };
       }
     }
 
     // 1b. YouTube: Right-clicking the playing video on the watch page
     if (window.location.pathname === '/watch' && target.closest('#movie_player, ytd-watch-flexy, video')) {
+      try {
+        const urlObj = new URL(window.location.href);
+        urlObj.searchParams.delete('list');
+        urlObj.searchParams.delete('index');
+        return { url: urlObj.toString(), type: 'youtube' };
+      } catch(e) {}
       return { url: window.location.href, type: 'youtube' };
     }
+
+    // Clean Twitter URLs to match iOS shortcut exactly (strips ?s= tracking parameters)
+    const cleanTwitterUrl = (url) => url.split('?')[0];
 
     // 2. Twitter / X: Right-clicking anywhere inside a Tweet article
     const tweet = target.closest('article[data-testid="tweet"]');
@@ -30,14 +45,14 @@ function extractExactUrl(target) {
       const time = tweet.querySelector('time');
       const timeLink = time ? time.closest('a') : null;
       if (timeLink?.href) {
-        return { url: timeLink.href, type: 'twitter' };
+        return { url: cleanTwitterUrl(timeLink.href), type: 'twitter' };
       }
 
       // Fallback: search for direct status link in case of promoted tweets
       const statusLinks = Array.from(tweet.querySelectorAll('a[href*="/status/"]'));
       const permalink = statusLinks.find(a => /\/status\/\d+$/.test(new URL(a.href).pathname));
       if (permalink?.href) {
-        return { url: permalink.href, type: 'twitter' };
+        return { url: cleanTwitterUrl(permalink.href), type: 'twitter' };
       }
     }
 
