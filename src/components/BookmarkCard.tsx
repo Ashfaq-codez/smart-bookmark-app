@@ -11,7 +11,6 @@ import TipTapEditor from './TipTapEditor'
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-const ExpandIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
 
@@ -107,18 +106,7 @@ interface BookmarkCardProps {
   isMinimalist?: boolean;
 }
 
-export default function BookmarkCard({ 
-  bookmark, 
-  isDragged, 
-  onDragStart, 
-  onDragEnd, 
-  updateBookmark, 
-  deleteBookmark, 
-  forceOpenModal, 
-  onCloseForcedModal, 
-  folderHierarchy, 
-  isMinimalist 
-}: BookmarkCardProps) {
+export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy, isMinimalist }: BookmarkCardProps) {
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -132,6 +120,7 @@ export default function BookmarkCard({
   const [touchEnd, setTouchEnd] = useState(0)
   
   const confirmDeleteRef = useRef<HTMLButtonElement>(null)
+  
   const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
@@ -141,94 +130,7 @@ export default function BookmarkCard({
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
   const [editContent, setEditContent] = useState(bookmark.content || '')
 
-  // Layout states
-  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(bookmark.image_url || null)
-  
-  const deriveDisplayType = useCallback((b: Bookmark) => {
-    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
-    if (b.url) {
-      const url = b.url.toLowerCase();
-      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-      if (url.includes('instagram.com')) return 'instagram';
-      if (url.includes('tiktok.com')) return 'tiktok';
-      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-      if (url.includes('github.com')) return 'github';
-      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
-    }
-    return b.type || 'link';
-  }, []);
-
-  const displayType = deriveDisplayType(bookmark);
-  const isDirectImage = displayType === 'image' || bookmark.type === 'image';
-  
-  // Set initial loading state ONLY if it is an external link requiring a screenshot
-  const [isGeneratingScreenshot, setIsGeneratingScreenshot] = useState<boolean>(!bookmark.image_url && displayType !== 'note' && !isDirectImage);
-
   useEffect(() => { setMounted(true) }, [])
-
-  // Screenshot polling utilizing WordPress mshots
-  useEffect(() => {
-    if (bookmark.image_url) {
-      setResolvedImageUrl(bookmark.image_url)
-      setIsGeneratingScreenshot(false)
-      return
-    }
-
-    if (isDirectImage) {
-      setResolvedImageUrl(bookmark.url);
-      setIsGeneratingScreenshot(false);
-      return;
-    }
-
-    if (displayType === 'note') {
-      setIsGeneratingScreenshot(false);
-      return;
-    }
-
-    let isMounted = true
-    let attempts = 0
-    const maxAttempts = 10 // Gives WordPress ~30 seconds to generate the screenshot
-
-    const checkScreenshot = () => {
-      if (!isMounted) return;
-
-      if (attempts >= maxAttempts) {
-        // Fallback: Bind to the permanent WordPress URL without a timestamp so it caches successfully
-        const finalUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url || '')}?w=800`;
-        setResolvedImageUrl(finalUrl);
-        setIsGeneratingScreenshot(false);
-        updateBookmark(bookmark.id, { image_url: finalUrl }).catch(() => {});
-        return;
-      }
-
-      attempts += 1
-      const testUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url || '')}?w=800&t=${Date.now()}`
-      const img = new Image()
-
-      img.onload = () => {
-        // A placeholder from WordPress is usually very small (e.g. 100x100 logo). Real screenshots are 800x600.
-        if (img.naturalWidth > 200 && img.naturalHeight > 150) {
-          if (isMounted) {
-            setResolvedImageUrl(testUrl)
-            setIsGeneratingScreenshot(false)
-            updateBookmark(bookmark.id, { image_url: testUrl }).catch(() => {})
-          }
-        } else {
-          setTimeout(checkScreenshot, 3000)
-        }
-      }
-
-      img.onerror = () => {
-        setTimeout(checkScreenshot, 3000)
-      }
-
-      img.src = testUrl
-    }
-
-    checkScreenshot()
-
-    return () => { isMounted = false }
-  }, [bookmark.url, bookmark.image_url, bookmark.id, isDirectImage, displayType, updateBookmark])
 
   useEffect(() => {
     if (!mounted) return;
@@ -290,34 +192,13 @@ export default function BookmarkCard({
     }
   }, [showDeleteConfirm])
 
-  const formatUrl = (rawUrl: string) => { 
-    const t = rawUrl.trim(); 
-    if (!t) return ''; 
-    return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t 
-  }
+  const formatUrl = (rawUrl: string) => { const t = rawUrl.trim(); if (!t) return ''; return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t }
 
   const handleAutoSave = async () => {
-    if (
-      editTitle.trim() === (bookmark.title || '') && 
-      formatUrl(editUrl) === bookmark.url && 
-      editCategory.trim() === (bookmark.category || '') && 
-      editSubCategory.trim() === (bookmark.sub_category || '') && 
-      editDescription.trim() === (bookmark.description || '') && 
-      editContent === (bookmark.content || '')
-    ) return;
-
-    await updateBookmark(bookmark.id, { 
-      title: editTitle.trim() || '', 
-      url: formatUrl(editUrl), 
-      category: editCategory.trim() || 'Uncategorized', 
-      sub_category: editSubCategory.trim() || null, 
-      description: editDescription.trim() || null, 
-      content: editContent || null 
-    })
+    if (editTitle.trim() === (bookmark.title || '') && formatUrl(editUrl) === bookmark.url && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent === (bookmark.content || '')) return;
+    await updateBookmark(bookmark.id, { title: editTitle.trim() || '', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
     
-    toast.success('Saved', { 
-      style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } 
-    })
+    toast.success('Saved', { style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } })
   }
 
   const handleCloseModal = () => { 
@@ -382,14 +263,7 @@ export default function BookmarkCard({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
-  const getDomain = (link: string) => { 
-    try { 
-      const clean = link.split('#:~:text=')[0]; 
-      return new URL(clean).hostname.replace('www.', '') 
-    } catch { 
-      return 'source' 
-    } 
-  }
+  const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
 
   const handleConfirmDelete = async () => { 
     if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
@@ -439,16 +313,29 @@ export default function BookmarkCard({
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
-  const ytVideoId = getYouTubeId(bookmark.url || '');
-  const isYouTubeShort = (bookmark.url || '').toLowerCase().includes('/shorts/');
+  const deriveDisplayType = (b: Bookmark) => {
+    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
+    if (b.url) {
+      const url = b.url.toLowerCase();
+      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
+      if (url.includes('instagram.com')) return 'instagram';
+      if (url.includes('tiktok.com')) return 'tiktok';
+      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+      if (url.includes('github.com')) return 'github';
+      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
+    }
+    return b.type || 'link';
+  }
+  
+  const displayType = deriveDisplayType(bookmark);
+  const ytVideoId = getYouTubeId(bookmark.url);
+  const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : null;
 
-  // Utilize resolvedImageUrl or fallbacks. Uploaded images naturally bypass this block.
-  const previewImageUrl = isDirectImage ? bookmark.url : (resolvedImageUrl || ytHighResThumbnail || null);
-  
+  const previewImageUrl = bookmark.image_url || ytHighResThumbnail || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
-
+  
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
   const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
@@ -498,10 +385,10 @@ export default function BookmarkCard({
             {bookmark.image_url && (
               <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                 {isVideoMedia(bookmark.image_url) ? (
-                  <video src={bookmark.image_url || ''} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
+                  <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
                 ) : (
                   <>
-                    <img src={bookmark.image_url || ''} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
+                    <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
                        <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -511,7 +398,7 @@ export default function BookmarkCard({
             )}
             
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
-              by {getTwitterAuthor(bookmark.url || '')}
+              by {getTwitterAuthor(bookmark.url)}
             </p>
           </div>
 
@@ -523,7 +410,7 @@ export default function BookmarkCard({
               <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />
             )}
             
-            <img src={bookmark.image_url || previewImageUrl || ''} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
+            <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
             
             <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
               {displayType === 'instagram' ? <InstagramIcon /> : <TikTokIcon />}
@@ -537,7 +424,7 @@ export default function BookmarkCard({
         ) : displayType === 'youtube' ? (
           <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
-            <img src={ytHighResThumbnail || previewImageUrl || ''} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+            <img src={ytHighResThumbnail || previewImageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
             
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white">
               <YouTubeIcon className="text-[#FF0000]" />
@@ -550,7 +437,7 @@ export default function BookmarkCard({
 
         ) : displayType === 'video' ? (
           <div className="w-full aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
-            <video src={bookmark.url || ''} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
+            <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
         ) : displayType === 'pdf' ? (
@@ -562,7 +449,7 @@ export default function BookmarkCard({
               <div className="absolute top-0 right-0 w-[24px] h-[24px] sm:w-[36px] sm:h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
               <div className="w-full h-full relative z-10 bg-white">
                  <iframe 
-                   src={`${bookmark.url || ''}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
                    className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
                    title="PDF Preview"
                    scrolling="no"
@@ -573,34 +460,9 @@ export default function BookmarkCard({
             </div>
           </div>
           
-        ) : displayType === 'image' ? (
-          <div className="w-full flex relative overflow-hidden rounded-xl sm:rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
-            <img src={previewImageUrl || ''} alt={bookmark.title} className="w-full h-auto object-cover max-h-80" />
-          </div>
         ) : (
-          /* STANDARD LINK PREVIEW */
-          <div className="w-full aspect-[16/10] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col items-center justify-center">
-            {isGeneratingScreenshot && !previewImageUrl ? (
-              <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-black/[0.02] dark:bg-white/[0.02]">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#4D6A51] dark:bg-[#8FAA91] animate-ping mb-3" />
-                <p className="font-serif text-xs sm:text-sm text-[#171A17]/70 dark:text-[#F3F0E9]/70 italic tracking-wide">
-                  saving inntoit for your knowledge...
-                </p>
-                <span className="text-[10px] font-sans text-black/30 dark:text-white/30 uppercase tracking-widest mt-2">
-                  {getDomain(bookmark.url || '')}
-                </span>
-              </div>
-            ) : (
-              <img 
-                src={previewImageUrl || `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`} 
-                alt={bookmark.title} 
-                className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" 
-                loading="lazy" 
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`
-                }} 
-              />
-            )}
+          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815]">
+            <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
           </div>
         )}
 
@@ -613,7 +475,7 @@ export default function BookmarkCard({
               </h4>
             )}
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
-              {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url || '')}
+              {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
             </p>
           </div>
         )}
@@ -669,9 +531,9 @@ export default function BookmarkCard({
                         {bookmark.image_url && (
                           <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
                             {isVideoMedia(bookmark.image_url) ? (
-                               <video src={bookmark.image_url || ''} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
+                               <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
                             ) : (
-                               <img src={bookmark.image_url || ''} className="w-full h-auto object-contain max-h-[50vh] block" />
+                               <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
                             )}
                           </div>
                         )}
@@ -679,7 +541,7 @@ export default function BookmarkCard({
                       
                       <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-white/50">
                         <span className="text-[12px] font-sans">
-                          Post by {getTwitterAuthor(bookmark.url || '')} on {formatDate(bookmark.created_at)}
+                          Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
                         </span>
                         <XIcon />
                       </div>
@@ -701,7 +563,7 @@ export default function BookmarkCard({
                         {isVideoMedia(bookmark.image_url) ? (
                            <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
                         ) : (
-                           <img src={bookmark.image_url || previewImageUrl || ''} className="w-full h-auto max-h-[600px] object-contain block" />
+                           <img src={bookmark.image_url || previewImageUrl} className="w-full h-auto max-h-[600px] object-contain block" />
                         )}
                       </div>
 
@@ -734,7 +596,7 @@ export default function BookmarkCard({
                 ) : displayType === 'youtube' ? (
                   <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
                     <iframe 
-                      src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url || '')}`} 
+                      src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
                       className="w-full h-full border-none" 
                       allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                       allowFullScreen 
@@ -744,13 +606,13 @@ export default function BookmarkCard({
 
                 ) : displayType === 'tiktok' ? (
                   <div className="w-full aspect-[9/16] md:aspect-auto md:h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
-                    <img src={bookmark.image_url || previewImageUrl || ''} className="w-full h-full object-contain z-10" />
+                    <img src={bookmark.image_url || previewImageUrl} className="w-full h-full object-contain z-10" />
                     
                     <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
                        <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
                            This content plays at the original link. TikTok blocks us from embedding their media.
                            <div className="mt-3">
-                              <a href={bookmark.url || ''} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
+                              <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
                            </div>
                        </div>
                        <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
@@ -761,29 +623,21 @@ export default function BookmarkCard({
 
                 ) : displayType === 'video' ? (
                   <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                     <video src={bookmark.url || ''} controls autoPlay={true} className="w-full h-full object-contain" />
+                     <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
                   </div>
                 ) : displayType === 'pdf' ? (
                   <div className="w-full aspect-[3/4] md:h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                     <iframe src={bookmark.url || ''} className="w-full h-full border-none" title={bookmark.title} />
+                     <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
                   </div>
                 ) : displayType === 'image' ? (
                   <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => setIsFullscreenImage(true)}>
-                    <img src={previewImageUrl || ''} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                    <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
                   </div>
                 ) : (
                   <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full">
-                    {previewImageUrl ? (
-                      <a href={bookmark.url || ''} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
-                        <img src={previewImageUrl || ''} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
-                      </a>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center p-8 text-center bg-black/5 dark:bg-white/5">
-                        <p className="font-serif text-sm text-[#171A17]/60 dark:text-[#F3F0E9]/60 italic">
-                          generating preview...
-                        </p>
-                      </div>
-                    )}
+                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
+                      <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                    </a>
                   </div>
                 )}
               </div>
@@ -807,7 +661,7 @@ export default function BookmarkCard({
                       
                       {bookmark.url && !bookmark.url.includes('/note-') && (
                         <div className="mt-2 flex flex-col gap-2">
-                          <a href={bookmark.url || ''} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
+                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
                             <span>Read Source</span>
                             <ExternalLinkIcon />
                           </a>
@@ -945,7 +799,7 @@ export default function BookmarkCard({
           <button className="absolute top-4 right-4 md:top-6 md:right-6 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors z-50 cursor-pointer">
             <CloseIcon />
           </button>
-          <img src={previewImageUrl || ''} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
+          <img src={previewImageUrl} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
         </div>,
         document.body
       )}
