@@ -388,9 +388,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
                 ) : (
                   <>
-                    <img src={bookmark.image_url} className="max-w-full w-auto mx-auto h-auto max-h-56 object-cover block" loading="lazy" />
+                    <img src={bookmark.image_url} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
-                      <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                       <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </>
                 )}
@@ -531,9 +531,9 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                         {bookmark.image_url && (
                           <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
                             {isVideoMedia(bookmark.image_url) ? (
-                              <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
+                               <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
                             ) : (
-                              <img src={bookmark.image_url} className="max-w-full w-auto mx-auto h-auto object-contain max-h-[50vh] block" />
+                               <img src={bookmark.image_url} className="w-full h-auto object-contain max-h-[50vh] block" />
                             )}
                           </div>
                         )}
