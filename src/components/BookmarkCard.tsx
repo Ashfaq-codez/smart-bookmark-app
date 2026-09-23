@@ -141,13 +141,12 @@ export default function BookmarkCard({
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
   const [editContent, setEditContent] = useState(bookmark.content || '')
 
-  // Live screenshot resolution states
   const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(bookmark.image_url || null)
   const [isGeneratingScreenshot, setIsGeneratingScreenshot] = useState<boolean>(!bookmark.image_url && bookmark.type === 'link')
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Dynamic screenshot polling: avoids the permanent black WordPress logo cache
+  // Dynamic screenshot polling with strict timeout fallback
   useEffect(() => {
     if (bookmark.image_url) {
       setResolvedImageUrl(bookmark.image_url)
@@ -161,16 +160,25 @@ export default function BookmarkCard({
 
     let isMounted = true
     let attempts = 0
-    const maxAttempts = 8
+    const maxAttempts = 6 // Reduced from 8 to fail faster
 
     const checkScreenshot = () => {
-      if (!isMounted || attempts >= maxAttempts) {
-        if (isMounted) setIsGeneratingScreenshot(false)
+      if (!isMounted) return;
+
+      if (attempts >= maxAttempts) {
+        setIsGeneratingScreenshot(false)
+        
+        // Timeout Fallback: Use Microlink for a guaranteed hero section screenshot
+        if (!resolvedImageUrl && bookmark.url) {
+          const fallbackUrl = `https://api.microlink.io/?url=${encodeURIComponent(bookmark.url)}&screenshot=true&meta=false&embed=screenshot.url`
+          setResolvedImageUrl(fallbackUrl)
+          updateBookmark(bookmark.id, { image_url: fallbackUrl }).catch(() => {})
+        }
         return
       }
 
       attempts += 1
-      const testUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800&t=${Date.now()}`
+      const testUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url || '')}?w=800&t=${Date.now()}`
       const img = new Image()
 
       img.onload = () => {
@@ -557,7 +565,7 @@ export default function BookmarkCard({
         ) : (
           /* STANDARD LINK PREVIEW */
           <div className="w-full aspect-[16/10] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col items-center justify-center">
-            {isGeneratingScreenshot || !previewImageUrl ? (
+            {isGeneratingScreenshot && !previewImageUrl ? (
               /* Custom Branded Inntoit Loading Placeholder */
               <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-black/[0.02] dark:bg-white/[0.02]">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#4D6A51] dark:bg-[#8FAA91] animate-ping mb-3" />
@@ -570,12 +578,12 @@ export default function BookmarkCard({
               </div>
             ) : (
               <img 
-                src={previewImageUrl || ''} 
+                src={previewImageUrl || `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`} 
                 alt={bookmark.title} 
                 className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" 
                 loading="lazy" 
-                onError={() => {
-                  setResolvedImageUrl(`https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`)
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url || '')}&background=random&size=600&font-size=0.1`
                 }} 
               />
             )}
@@ -677,7 +685,7 @@ export default function BookmarkCard({
 
                       <div className="w-full bg-black relative shrink-0 flex items-center justify-center">
                         {isVideoMedia(bookmark.image_url) ? (
-                           <video src={bookmark.image_url || ''} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
+                           <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[600px] object-contain block" />
                         ) : (
                            <img src={bookmark.image_url || previewImageUrl || ''} className="w-full h-auto max-h-[600px] object-contain block" />
                         )}
