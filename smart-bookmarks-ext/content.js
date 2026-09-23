@@ -8,75 +8,69 @@ document.addEventListener('contextmenu', (e) => {
 function extractExactUrl(target) {
   if (!target) return null;
 
+  // The Ultimate URL Cleaner: Strips tracking junk and playlist IDs
+  const cleanUrl = (rawUrl) => {
+    try {
+      const urlObj = new URL(rawUrl);
+      if (urlObj.hostname.includes('youtube.com')) {
+        urlObj.searchParams.delete('list');
+        urlObj.searchParams.delete('index');
+        urlObj.searchParams.delete('pp');
+      }
+      if (urlObj.hostname.includes('twitter.com') || urlObj.hostname.includes('x.com')) {
+        // Drops all ?s= tracking params to perfectly match your iOS shortcut behavior
+        return urlObj.origin + urlObj.pathname;
+      }
+      return urlObj.toString();
+    } catch(e) {
+      return rawUrl;
+    }
+  };
+
   try {
-    // 1. YouTube: Right-clicking anywhere inside a video card (added playlist renderers)
+    // 1. YouTube Video Cards
     const ytCard = target.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, ytd-reel-item-renderer, ytd-playlist-video-renderer, ytd-playlist-panel-video-renderer');
     if (ytCard) {
       const a = ytCard.querySelector('a#video-title-link, a#video-title, a#thumbnail');
-      if (a?.href) {
-        try {
-          const urlObj = new URL(a.href);
-          urlObj.searchParams.delete('list'); // Strip playlist data so backend saves a clean video link
-          urlObj.searchParams.delete('index');
-          return { url: urlObj.toString(), type: 'youtube' };
-        } catch(e) {}
-        return { url: a.href, type: 'youtube' };
-      }
+      if (a?.href) return { url: cleanUrl(a.href), type: 'youtube' };
     }
 
-    // 1b. YouTube: Right-clicking the playing video on the watch or shorts page
+    // 1b. YouTube Watch/Shorts Page
     if ((window.location.pathname.startsWith('/watch') || window.location.pathname.startsWith('/shorts')) && target.closest('#movie_player, ytd-watch-flexy, ytd-shorts, video')) {
-      try {
-        const urlObj = new URL(window.location.href);
-        urlObj.searchParams.delete('list');
-        urlObj.searchParams.delete('index');
-        return { url: urlObj.toString(), type: 'youtube' };
-      } catch(e) {}
-      return { url: window.location.href, type: 'youtube' };
+      return { url: cleanUrl(window.location.href), type: 'youtube' };
     }
 
-    // Clean Twitter URLs to match iOS shortcut exactly (strips ?s= tracking parameters)
-    const cleanTwitterUrl = (url) => url.split('?')[0];
-
-    // 2. Twitter / X: Right-clicking anywhere inside a Tweet article
+    // 2. Twitter / X Cards
     const tweet = target.closest('article[data-testid="tweet"]');
     if (tweet) {
-      // Find the permanent timestamp link for this exact tweet
       const time = tweet.querySelector('time');
       const timeLink = time ? time.closest('a') : null;
-      if (timeLink?.href) {
-        return { url: cleanTwitterUrl(timeLink.href), type: 'twitter' };
-      }
+      if (timeLink?.href) return { url: cleanUrl(timeLink.href), type: 'twitter' };
 
-      // Fallback: search for direct status link in case of promoted tweets
       const statusLinks = Array.from(tweet.querySelectorAll('a[href*="/status/"]'));
       const permalink = statusLinks.find(a => /\/status\/\d+$/.test(new URL(a.href).pathname));
-      if (permalink?.href) {
-        return { url: cleanTwitterUrl(permalink.href), type: 'twitter' };
-      }
+      if (permalink?.href) return { url: cleanUrl(permalink.href), type: 'twitter' };
     }
 
-    // 3. Instagram: Right-clicking a post, reel, or modal
+    // 3. Instagram
     const igArticle = target.closest('article, div[role="presentation"], div[role="dialog"]');
     if (igArticle) {
       const igLink = igArticle.querySelector('a[href*="/p/"], a[href*="/reel/"]');
-      if (igLink?.href) {
-        return { url: igLink.href, type: 'instagram' };
-      }
+      if (igLink?.href) return { url: cleanUrl(igLink.href), type: 'instagram' };
     }
 
-    // 4. Standard Links: Right-clicking a normal hyperlink
+    // 4. Standard Links
     const anchor = target.closest('a');
     if (anchor?.href && !anchor.href.startsWith('javascript:')) {
-      return { url: anchor.href };
+      return { url: cleanUrl(anchor.href) };
     }
 
-    // 5. Direct Media Elements (Strictly ignore internal blob: URLs)
+    // 5. Media (Ignore internal blobs)
     if (target.tagName === 'VIDEO' && target.src && !target.src.startsWith('blob:')) {
-        return { url: target.src, type: 'video' };
+        return { url: cleanUrl(target.src), type: 'video' };
     }
     if (target.tagName === 'IMG' && target.src && !target.src.startsWith('blob:')) {
-        return { url: target.src, type: 'image' };
+        return { url: cleanUrl(target.src), type: 'image' };
     }
 
   } catch (err) {

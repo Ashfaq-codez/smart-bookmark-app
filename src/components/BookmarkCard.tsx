@@ -49,13 +49,13 @@ const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   const l = url.toLowerCase();
   
-  // 1. Strictly block known thumbnails, Twitter image formats, and URLs with image query params
-  if (l.includes('.jpg') || l.includes('.jpeg') || l.includes('.png') || l.includes('.webp') || l.includes('format=jpg') || l.includes('format=png') || l.includes('thumb')) {
+  // 1. Strictly block ALL image domains and known thumbnails
+  if (l.includes('pbs.twimg.com') || l.match(/\.(jpe?g|png|gif|webp)/i) || l.includes('format=jpg') || l.includes('format=png') || l.includes('thumb')) {
     return false;
   }
   
-  // 2. Accept true video extensions
-  return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('.m3u8');
+  // 2. Only accept true video extensions
+  return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov');
 };
 
 const renderTwitterText = (text: string, isExpanded: boolean = false) => {
