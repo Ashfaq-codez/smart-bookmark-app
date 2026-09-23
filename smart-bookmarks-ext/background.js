@@ -17,12 +17,22 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   chrome.action.setBadgeBackgroundColor({ color: "#4D6A51" });
 
   let resolvedUrl = info.linkUrl || info.srcUrl || info.pageUrl || tab.url;
+  
+  // FIX: YouTube passes temporary 'blob:https...' links when right-clicking a video.
+  // We must immediately block it and fall back to the actual page URL.
+  if (resolvedUrl && resolvedUrl.startsWith('blob:')) {
+    resolvedUrl = info.linkUrl || info.pageUrl || tab.url;
+  }
+
   let capturedContent = info.selectionText || null;
   let detectedType = capturedContent ? 'note' : null;
 
   chrome.tabs.sendMessage(tab.id, { type: 'GET_CLICKED_CONTEXT' }, (response) => {
     if (!chrome.runtime.lastError && response?.url) {
-      resolvedUrl = response.url;
+      // Final safety check just in case the content script failed and returned a blob
+      if (!response.url.startsWith('blob:')) {
+        resolvedUrl = response.url;
+      }
       if (response.type) detectedType = response.type;
     }
 

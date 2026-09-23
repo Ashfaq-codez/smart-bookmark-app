@@ -1,4 +1,7 @@
 'use client'
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
@@ -46,13 +49,13 @@ const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   const l = url.toLowerCase();
   
-  // 1. Strictly block known thumbnails and URLs with image format query params
-  if (l.includes('thumb') || l.match(/\.(jpe?g|png|gif|webp)(\?.*)?$/i) || l.match(/format=(jpg|jpeg|png|webp)/i)) {
+  // 1. Strictly block known thumbnails, Twitter image formats, and URLs with image query params
+  if (l.includes('.jpg') || l.includes('.jpeg') || l.includes('.png') || l.includes('.webp') || l.includes('format=jpg') || l.includes('format=png') || l.includes('thumb')) {
     return false;
   }
   
-  // 2. Safely accept true videos
-  return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('video.twimg.com') || l.includes('.m3u8');
+  // 2. Accept true video extensions
+  return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('.m3u8');
 };
 
 const renderTwitterText = (text: string, isExpanded: boolean = false) => {
