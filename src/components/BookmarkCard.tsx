@@ -368,8 +368,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;
 
-  // IMPORTANT: For Instagram, if image_url is missing, we strictly bypass mshots to avoid taking screenshots of the login wall.
-  const previewImageUrl: string | undefined = (bookmark.image_url || ytHighResThumbnail || (displayType === 'instagram' ? undefined : `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800`)) || undefined;
+  // Generate preview image using direct image_url, YouTube thumbnail, or WordPress mshots still snapshot (supports Instagram, web links, etc.)
+  const previewImageUrl: string | undefined = (bookmark.image_url || ytHighResThumbnail || (bookmark.url ? `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800` : undefined)) || undefined;
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
   
