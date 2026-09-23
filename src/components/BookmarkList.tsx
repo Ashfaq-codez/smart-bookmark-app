@@ -351,7 +351,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       if (activeMediaType !== null) {
         const bookmarkType = bookmark.type || 'link';
         if (activeMediaType === 'socials') {
-          isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'linkedin' || bookmarkType === 'github';
+          isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'pinterest' || bookmarkType === 'linkedin' || bookmarkType === 'github';
         } else if (activeMediaType === 'videos') {
           isMediaTypeMatch = bookmarkType === 'video' || bookmarkType === 'youtube';
         } else if (activeMediaType === 'documents') {

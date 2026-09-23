@@ -1,9 +1,8 @@
 'use client'
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable jsx-a11y/alt-text */
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -37,6 +36,47 @@ const InstagramIcon = ({ className = "" }: { className?: string }) => (
 
 const YouTubeIcon = ({ className = "" }: { className?: string }) => <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
 const TikTokIcon = ({ className = "" }: { className?: string }) => <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
+const PinterestIcon = ({ className = "" }: { className?: string }) => (
+  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.291 1.199-.334 1.357-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/>
+  </svg>
+)
+
+const renderInstagramText = (text: string) => {
+  if (!text) return null;
+  const parts = text.split(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_.]+)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('#')) {
+      return (
+        <a 
+          key={i} 
+          href={`https://www.instagram.com/explore/tags/${part.slice(1)}/`} 
+          target="_blank" 
+          rel="noreferrer" 
+          onClick={(e) => e.stopPropagation()} 
+          className="text-[#00376B] dark:text-[#E0F1FF] hover:underline"
+        >
+          {part}
+        </a>
+      );
+    }
+    if (part.startsWith('@')) {
+      return (
+        <a 
+          key={i} 
+          href={`https://www.instagram.com/${part.slice(1)}/`} 
+          target="_blank" 
+          rel="noreferrer" 
+          onClick={(e) => e.stopPropagation()} 
+          className="text-[#00376B] dark:text-[#E0F1FF] hover:underline font-medium"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
 
 // Instagram Native Modal Icons
 const InstaHeartIcon = () => <svg aria-label="Like" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.438-.283-1.791-1.509-4.303-3.752C5.152 14.081 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.514 1.117 1.514s.277-.339 1.117-1.514a4.21 4.21 0 0 1 3.675-1.941z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></path></svg>
@@ -122,6 +162,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [isVisible, setIsVisible] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
+  const [igLiked, setIgLiked] = useState(false)
+  const [igSaved, setIgSaved] = useState(false)
+  const [showIgHeartAnim, setShowIgHeartAnim] = useState(false)
+  const [igCommentText, setIgCommentText] = useState('')
+  const [igComments, setIgComments] = useState<string[]>([])
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
@@ -292,48 +337,96 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return match ? match[1] : 'unknown';
   }
 
-  // Refined IG Meta Extractor: Cleanly extracts username, likes, and pure caption
+  // Refined IG Meta Extractor: Extract pure username, likes count, and actual post description/caption
   const getInstaMeta = (b: Bookmark) => {
     let username = 'instagram_user';
     let likes = '1,248';
     let caption = '';
 
-    const fullText = (b.description || '') + ' ' + (b.title || '');
+    const desc = (b.description || '').trim();
+    const title = (b.title || '').trim();
 
-    // Format: "15K likes, 122 comments - username on Instagram: 'Caption text here'"
-    if (fullText.includes(' on Instagram: ')) {
-      const parts = fullText.split(' on Instagram: ');
-      
-      // Meta is everything before " on Instagram: "
-      const metaPart = parts[0];
-      const userMatch = metaPart.match(/-\s+([^ ]+)\s*$/) || metaPart.match(/^([^ ]+)$/);
-      if (userMatch) username = userMatch[1];
-      
-      const likesMatch = metaPart.match(/([\d,KMB]+)\s+likes?/i);
-      if (likesMatch) likes = likesMatch[1];
-
-      // Caption is everything after
-      caption = parts.slice(1).join(' on Instagram: ').trim();
-    } else {
-       caption = b.description || b.title || '';
+    // 1. Extract Likes count from desc or title
+    const likesMatch = (desc + ' ' + title).match(/([\d,.]+[KMB]?)\s+likes?/i);
+    if (likesMatch) {
+      likes = likesMatch[1];
     }
 
-    // Strip wrapping quotes if they exist
-    if (caption.startsWith('"') && caption.endsWith('"')) {
-      caption = caption.substring(1, caption.length - 1);
+    // 2. Extract Username
+    const userMatchFromMeta = (desc + ' ' + title).match(/-\s+([a-zA-Z0-9_.]+)\s+on\s+Instagram/i) ||
+                              (desc + ' ' + title).match(/from\s+([a-zA-Z0-9_.]+)\s+\(@([a-zA-Z0-9_.]+)\)/i) ||
+                              (desc + ' ' + title).match(/^([a-zA-Z0-9_.]+)\s+on\s+Instagram/i);
+    if (userMatchFromMeta) {
+      username = userMatchFromMeta[2] || userMatchFromMeta[1];
     }
 
-    // Failsafe for username from URL
+    // URL fallback for username
     if (username === 'instagram_user' || username.includes(' ')) {
-       if (b.url) {
-          const urlMatch = b.url.match(/instagram\.com\/([^/]+)/);
-          if (urlMatch && !['p','reel','tv'].includes(urlMatch[1])) username = urlMatch[1];
-       }
+      if (b.url) {
+        try {
+          const u = new URL(b.url);
+          const segments = u.pathname.split('/').filter(Boolean);
+          if (segments.length >= 2 && !['p', 'reel', 'reels', 'tv', 'stories', 'explore'].includes(segments[0])) {
+            username = segments[0];
+          } else if (segments.length === 1 && !['p', 'reel', 'reels', 'tv', 'stories', 'explore'].includes(segments[0])) {
+            username = segments[0];
+          }
+        } catch {}
+      }
     }
-    if (username.length > 25) username = username.substring(0, 25);
+    if (username.length > 30) username = username.substring(0, 30);
 
-    // Clean up empty/generic captions
-    if (caption === 'Instagram' || caption.includes('Instagram photos and videos')) caption = '';
+    // 3. Extract actual post description / caption:
+    // Priority A: desc has " on Instagram: <caption in quotes or text>"
+    if (desc.includes(' on Instagram:')) {
+      const parts = desc.split(/ on Instagram:\s*/i);
+      if (parts[1]) {
+        caption = parts.slice(1).join(' on Instagram: ').trim();
+      }
+    } 
+    // Priority B: desc is already the actual post description (excluding follower bio boilerplate)
+    else if (desc && !desc.toLowerCase().includes('instagram photos and videos') && !desc.match(/^\d+[KMB]?\s+Followers/i)) {
+      caption = desc;
+    }
+
+    // Priority C: If desc was empty or bio, check if title contains the quoted caption
+    // e.g. "Username on Instagram: \"Actual caption here\""
+    if (!caption && title.includes(' on Instagram:')) {
+      const parts = title.split(/ on Instagram:\s*/i);
+      if (parts[1]) {
+        caption = parts.slice(1).join(' on Instagram: ').trim();
+      }
+    }
+
+    // Priority D: If still no caption, check if title or desc has text wrapped in double quotes (at least 6 chars)
+    if (!caption) {
+      const quoteMatch = desc.match(/"([^"]{6,})"/) || title.match(/"([^"]{6,})"/);
+      if (quoteMatch) {
+        caption = quoteMatch[1].trim();
+      }
+    }
+
+    // Priority E: Fallback to personal note in b.content if user added one
+    if (!caption && b.content && !b.content.startsWith('<') && b.content.trim()) {
+      caption = b.content.trim();
+    }
+
+    // Clean wrapping quotes
+    if (caption.startsWith('"') && caption.endsWith('"') && caption.length > 1) {
+      caption = caption.substring(1, caption.length - 1).trim();
+    }
+    // Clean HTML entities if any
+    caption = caption
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
+
+    // Discard if it's just the generic Instagram title
+    if (caption.toLowerCase() === 'instagram' || caption.toLowerCase().includes('instagram photos and videos')) {
+      caption = '';
+    }
 
     return { username, likes, caption };
   }
@@ -350,11 +443,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   }
 
   const deriveDisplayType = (b: Bookmark) => {
-    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
+    if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
     if (b.url) {
       const url = b.url.toLowerCase();
       if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
       if (url.includes('instagram.com')) return 'instagram';
+      if (url.includes('pinterest.com') || url.includes('pin.it')) return 'pinterest';
       if (url.includes('tiktok.com')) return 'tiktok';
       if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
       if (url.includes('github.com')) return 'github';
@@ -371,7 +465,28 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   // Generate preview image using direct image_url, YouTube thumbnail, or WordPress mshots still snapshot (supports Instagram, web links, etc.)
   const previewImageUrl: string | undefined = (bookmark.image_url || ytHighResThumbnail || (bookmark.url ? `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800` : undefined)) || undefined;
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
-  const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
+  const instaData = displayType === 'instagram' ? getInstaMeta({
+    ...bookmark,
+    title: editTitle,
+    description: editDescription,
+    content: editContent,
+  }) : null;
+
+  const displayedLikes = useMemo(() => {
+    if (!instaData) return '1,248';
+    if (!igLiked) return instaData.likes;
+    const rawNum = parseInt(instaData.likes.replace(/,/g, ''), 10);
+    if (!isNaN(rawNum)) {
+      return (rawNum + 1).toLocaleString();
+    }
+    return `${instaData.likes}`;
+  }, [instaData?.likes, igLiked]);
+
+  const handleIgDoubleTap = () => {
+    if (!igLiked) setIgLiked(true);
+    setShowIgHeartAnim(true);
+    setTimeout(() => setShowIgHeartAnim(false), 800);
+  };
   
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
   const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
@@ -480,6 +595,48 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
           </div>
 
+        ) : displayType === 'pinterest' ? (
+          <div className="w-full aspect-[2/3] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] group/pin">
+            {/* Pinterest Red Top Accent Line */}
+            <div className="absolute top-0 left-0 w-full h-[4px] bg-[#E60023] z-20" />
+            
+            {previewImageUrl ? (
+              <img 
+                src={previewImageUrl} 
+                alt={bookmark.title || "Pinterest Pin"} 
+                className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" 
+                loading="lazy" 
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-[#202020] text-[#E60023] gap-2">
+                <PinterestIcon className="w-12 h-12" />
+                <span className="text-xs font-semibold text-gray-500">Pinterest Pin</span>
+              </div>
+            )}
+            
+            {/* Badge top-left */}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1.5 shadow-sm bg-white text-[#E60023]">
+              <PinterestIcon className="w-4 h-4" />
+            </div>
+
+            {/* Hover Save pill top-right */}
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 opacity-0 group-hover/pin:opacity-100 transition-opacity duration-200">
+              <span className="bg-[#E60023] hover:bg-[#ad081b] text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-lg pointer-events-auto">
+                Save
+              </span>
+            </div>
+
+            {/* Bottom gradient overlay with source domain */}
+            <div className="absolute inset-x-0 bottom-0 pt-8 pb-3 px-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent flex items-center justify-between z-10">
+              <span className="text-white text-[11px] font-medium font-sans truncate drop-shadow-sm max-w-[80%]">
+                {getDomain(bookmark.url)}
+              </span>
+              <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                <ExternalLinkIcon />
+              </div>
+            </div>
+          </div>
+
         ) : displayType === 'video' ? (
           <div className="w-full aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
             <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
@@ -520,7 +677,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               </h4>
             )}
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
-              {displayType === 'pdf' ? 'PDF DOCUMENT' : getDomain(bookmark.url)}
+              {displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : getDomain(bookmark.url)}
             </p>
           </div>
         )}
@@ -603,23 +760,42 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                       <div className="flex items-center justify-between p-3 shrink-0">
                         <div className="flex items-center gap-3">
                           {/* IG Gradient Avatar */}
-                          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-gradient-to-tr from-yellow-400 to-fuchsia-600 p-[1.5px]">
+                          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 p-[1.5px]">
                             <div className="w-full h-full bg-white dark:bg-black rounded-full overflow-hidden border-2 border-white dark:border-black">
                               <img src={`https://ui-avatars.com/api/?name=${instaData.username}&background=random&color=fff&size=100`} alt={instaData.username} className="w-full h-full object-cover" />
                             </div>
                           </div>
-                          <span className="text-[14px] font-semibold font-sans text-[#262626] dark:text-[#F5F5F5] leading-tight">{instaData.username}</span>
+                          <a 
+                            href={`https://www.instagram.com/${instaData.username}/`} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="text-[14px] font-semibold font-sans text-[#262626] dark:text-[#F5F5F5] leading-tight hover:underline flex items-center gap-1.5"
+                          >
+                            <span>{instaData.username}</span>
+                            <span className="text-[#737373] dark:text-[#a8a8a8] font-normal text-xs">• Following</span>
+                          </a>
                         </div>
-                        <div className="text-[#262626] dark:text-[#F5F5F5]"><InstaDotsIcon /></div>
+                        <a 
+                          href={bookmark.url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          title="Open on Instagram" 
+                          className="text-[#262626] dark:text-[#F5F5F5] hover:opacity-60 transition-opacity p-1"
+                        >
+                          <InstaDotsIcon />
+                        </a>
                       </div>
 
                       {/* Edge-to-Edge Media */}
-                      <div className="w-full bg-[#FAFAFA] dark:bg-[#262626] relative shrink-0 flex items-center justify-center border-y border-black/[0.04] dark:border-[#262626] min-h-[300px]">
+                      <div 
+                        className="w-full bg-[#FAFAFA] dark:bg-[#262626] relative shrink-0 flex items-center justify-center border-y border-black/[0.04] dark:border-[#262626] min-h-[300px] select-none cursor-pointer"
+                        onDoubleClick={handleIgDoubleTap}
+                      >
                         {isVideoMedia(bookmark.image_url) ? (
                            <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[585px] object-contain block" />
                         ) : (
                            previewImageUrl ? (
-                             <img src={previewImageUrl} alt={bookmark.title || "Instagram post"} className="w-full h-auto max-h-[585px] object-contain block" />
+                             <img src={previewImageUrl} alt={instaData.caption || bookmark.title || "Instagram post"} className="w-full h-auto max-h-[585px] object-contain block" />
                            ) : (
                              <div className="flex flex-col items-center justify-center text-[#737373] dark:text-[#A8A8A8] gap-3 p-10">
                                 <InstagramIcon className="w-12 h-12 opacity-50" />
@@ -627,31 +803,100 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                              </div>
                            )
                         )}
+                        {showIgHeartAnim && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping duration-700">
+                            <svg className="w-24 h-24 text-white drop-shadow-2xl fill-white" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                          </div>
+                        )}
                       </div>
 
                       {/* IG Action Bar & Caption */}
                       <div className="px-4 pt-3 pb-4 flex flex-col gap-1.5 shrink-0 font-sans">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-4 text-[#262626] dark:text-[#F5F5F5]">
-                            <InstaHeartIcon />
-                            <InstaCommentIcon />
-                            <InstaShareIcon />
+                            <button 
+                              onClick={() => {
+                                setIgLiked(!igLiked);
+                                if (!igLiked) {
+                                  setShowIgHeartAnim(true);
+                                  setTimeout(() => setShowIgHeartAnim(false), 800);
+                                }
+                              }}
+                              className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none"
+                              aria-label="Like post"
+                            >
+                              {igLiked ? (
+                                <svg className="w-6 h-6 text-[#FF3040] fill-[#FF3040]" viewBox="0 0 24 24">
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                </svg>
+                              ) : (
+                                <InstaHeartIcon />
+                              )}
+                            </button>
+                            <button 
+                              onClick={() => document.getElementById(`ig-comment-${bookmark.id}`)?.focus()}
+                              className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none text-[#262626] dark:text-[#F5F5F5]"
+                              aria-label="Comment"
+                            >
+                              <InstaCommentIcon />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (bookmark.url) {
+                                  navigator.clipboard.writeText(bookmark.url);
+                                  toast.success('Instagram link copied!', { duration: 1500 });
+                                }
+                              }}
+                              className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none text-[#262626] dark:text-[#F5F5F5]"
+                              aria-label="Share post"
+                            >
+                              <InstaShareIcon />
+                            </button>
                           </div>
-                          <div className="text-[#262626] dark:text-[#F5F5F5]"><InstaSaveIcon /></div>
+                          <button 
+                            onClick={() => {
+                              setIgSaved(!igSaved);
+                              toast.success(igSaved ? 'Removed from saved' : 'Saved to collection', { duration: 1500 });
+                            }}
+                            className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none text-[#262626] dark:text-[#F5F5F5]"
+                            aria-label="Save post"
+                          >
+                            {igSaved ? (
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="20 21 12 13.44 4 21 4 3 20 3 20 21" />
+                              </svg>
+                            ) : (
+                              <InstaSaveIcon />
+                            )}
+                          </button>
                         </div>
                         
                         <div className="text-[14px] font-semibold text-[#262626] dark:text-[#F5F5F5]">
-                          {instaData.likes} likes
+                          {displayedLikes} likes
                         </div>
                         
                         {instaData.caption && (
-                          <div className="text-[14px] text-[#262626] dark:text-[#F5F5F5] whitespace-pre-wrap leading-snug mt-1">
-                            <span className="font-semibold mr-1.5">{instaData.username}</span>
-                            {instaData.caption}
+                          <div className="text-[14px] text-[#262626] dark:text-[#F5F5F5] leading-snug mt-1 break-words">
+                            <a 
+                              href={`https://www.instagram.com/${instaData.username}/`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="font-semibold mr-1.5 hover:underline text-[#262626] dark:text-[#F5F5F5]"
+                            >
+                              {instaData.username}
+                            </a>
+                            <span className="whitespace-pre-wrap">{renderInstagramText(instaData.caption)}</span>
                           </div>
                         )}
 
-                        <div className="text-[14px] text-[#737373] dark:text-[#A8A8A8] mt-1 cursor-pointer">
+                        {igComments.map((c, idx) => (
+                          <div key={idx} className="text-[14px] text-[#262626] dark:text-[#F5F5F5] leading-snug">
+                            <span className="font-semibold mr-1.5">you</span>
+                            <span>{c}</span>
+                          </div>
+                        ))}
+
+                        <div className="text-[14px] text-[#737373] dark:text-[#A8A8A8] mt-1 cursor-pointer hover:underline">
                           View all comments
                         </div>
                         
@@ -659,6 +904,137 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                           {formatDate(bookmark.created_at)}
                         </div>
                       </div>
+
+                      {/* Add comment row */}
+                      <div className="border-t border-[#efefef] dark:border-[#262626] px-4 py-3 flex items-center gap-3">
+                        <svg className="w-6 h-6 text-[#737373] dark:text-[#a8a8a8] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" strokeLinecap="round" />
+                        </svg>
+                        <input 
+                          id={`ig-comment-${bookmark.id}`}
+                          type="text" 
+                          value={igCommentText} 
+                          onChange={(e) => setIgCommentText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && igCommentText.trim()) {
+                              setIgComments([...igComments, igCommentText.trim()]);
+                              setIgCommentText('');
+                              toast.success('Comment added');
+                            }
+                          }}
+                          placeholder="Add a comment..." 
+                          className="flex-1 bg-transparent border-none outline-none text-[14px] text-[#262626] dark:text-[#F5F5F5] placeholder-[#737373] dark:placeholder-[#a8a8a8]"
+                        />
+                        {igCommentText.trim() && (
+                          <button 
+                            onClick={() => {
+                              setIgComments([...igComments, igCommentText.trim()]);
+                              setIgCommentText('');
+                              toast.success('Comment added');
+                            }}
+                            className="text-[#0095F6] hover:text-[#00376B] font-semibold text-[14px] cursor-pointer"
+                          >
+                            Post
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                ) : displayType === 'pinterest' ? (
+                  <div className="w-full flex bg-[#F7F7F7] dark:bg-[#0F1010] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar justify-center items-center">
+                    {/* Authentic Pinterest Pin Container */}
+                    <div className="w-full max-w-[480px] bg-white dark:bg-[#1E1F22] rounded-3xl shadow-2xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden flex flex-col m-auto">
+                      
+                      {/* Pin Top Navigation / Actions Bar */}
+                      <div className="flex items-center justify-between p-4 pb-2 shrink-0">
+                        <a 
+                          href={bookmark.url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="flex items-center gap-2 bg-[#E9E9E9] dark:bg-[#333] hover:bg-[#D8D8D8] dark:hover:bg-[#444] text-[#111] dark:text-white px-4 py-2 rounded-full text-xs font-semibold transition-colors"
+                        >
+                          <span>Visit</span>
+                          <ExternalLinkIcon />
+                        </a>
+                        
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              if (bookmark.url) {
+                                navigator.clipboard.writeText(bookmark.url);
+                                toast.success('Pin link copied!', { duration: 1500 });
+                              }
+                            }}
+                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors"
+                            title="Share"
+                          >
+                            <InstaShareIcon />
+                          </button>
+                          <a 
+                            href={bookmark.url} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="bg-[#E60023] hover:bg-[#ad081b] text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-md transition-colors flex items-center gap-1.5"
+                          >
+                            <PinterestIcon className="w-4 h-4 text-white" />
+                            <span>Save</span>
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Pin Media Container */}
+                      <div className="p-3 sm:p-4">
+                        <div 
+                          className="w-full bg-[#F0F0F0] dark:bg-[#141517] rounded-2xl overflow-hidden relative cursor-zoom-in group/media"
+                          onClick={() => setIsFullscreenImage(true)}
+                        >
+                          {previewImageUrl ? (
+                            <img 
+                              src={previewImageUrl} 
+                              alt={bookmark.title || "Pinterest Pin"} 
+                              className="w-full h-auto max-h-[55vh] object-contain rounded-2xl block m-auto group-hover/media:scale-[1.01] transition-transform duration-300" 
+                            />
+                          ) : (
+                            <div className="w-full aspect-[2/3] flex flex-col items-center justify-center text-[#E60023] gap-3">
+                              <PinterestIcon className="w-16 h-16" />
+                              <span className="text-sm font-semibold text-gray-500">Pinterest Pin Preview</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Pin Details Section */}
+                      <div className="px-5 pb-6 pt-1 flex flex-col gap-2 font-sans">
+                        <div className="text-[12px] font-medium text-gray-500 dark:text-gray-400">
+                          {getDomain(bookmark.url)}
+                        </div>
+
+                        {hasValidTitle && (
+                          <h3 className="text-xl sm:text-2xl font-bold text-[#111] dark:text-[#EFEFEF] leading-tight">
+                            {bookmark.title}
+                          </h3>
+                        )}
+
+                        {bookmark.description && (
+                          <p className="text-[14px] text-[#333] dark:text-[#CCCCCC] leading-relaxed mt-1">
+                            {bookmark.description}
+                          </p>
+                        )}
+
+                        {/* Attribution Footer */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+                          <div className="w-10 h-10 rounded-full bg-[#E60023] text-white flex items-center justify-center shrink-0 font-bold text-base shadow-sm">
+                            <PinterestIcon className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-[#111] dark:text-white">Saved from Pinterest</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Pinned on {formatDate(bookmark.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
@@ -801,7 +1177,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     {displayType !== 'note' && (
                       <div className="flex-1 flex flex-col min-h-[140px] gap-4">
                         <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">
-                          {['instagram', 'twitter', 'tiktok'].includes(displayType || '') ? 'Caption / Notes' : 'Personal Notes'}
+                          {['instagram', 'twitter', 'tiktok', 'pinterest'].includes(displayType || '') ? 'Caption / Notes' : 'Personal Notes'}
                         </label>
                         <textarea
                           value={editContent || ''}

@@ -59,6 +59,13 @@ function extractExactUrl(target) {
       if (igLink?.href) return { url: cleanUrl(igLink.href), type: 'instagram' };
     }
 
+    // 3b. Pinterest
+    const pinCard = target.closest('div[data-test-id="pin"], div[data-test-id="pinWrapper"]');
+    if (pinCard) {
+      const pinLink = pinCard.querySelector('a[href*="/pin/"]');
+      if (pinLink?.href) return { url: cleanUrl(pinLink.href), type: 'pinterest' };
+    }
+
     // 4. Standard Links
     const anchor = target.closest('a');
     if (anchor?.href && !anchor.href.startsWith('javascript:')) {

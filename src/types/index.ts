@@ -11,7 +11,7 @@ export type Bookmark = {
   image_url?: string | null;
   tags?: string[];
   // Expanded types to support native social media cards
-  type?: 'link' | 'note' | 'image' | 'video' | 'pdf' | 'file' | 'twitter' | 'instagram' | 'youtube' | 'github' | 'linkedin' | string;
+  type?: 'link' | 'note' | 'image' | 'video' | 'pdf' | 'file' | 'twitter' | 'instagram' | 'youtube' | 'pinterest' | 'github' | 'linkedin' | string;
   file_path?: string | null; 
   file_type?: string | null;
 };

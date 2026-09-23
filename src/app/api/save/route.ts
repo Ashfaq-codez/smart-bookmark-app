@@ -129,6 +129,7 @@ export async function POST(request: Request) {
         if (host.includes('twitter.com') || host.includes('x.com')) detectedType = 'twitter';
         else if (host.includes('instagram.com')) detectedType = 'instagram';
         else if (host.includes('youtube.com') || host.includes('youtu.be')) detectedType = 'youtube';
+        else if (host.includes('pinterest.com') || host.includes('pin.it')) detectedType = 'pinterest';
         else if (host.includes('github.com')) detectedType = 'github';
         else if (host.includes('linkedin.com')) detectedType = 'linkedin';
       } catch (e) {}
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
           .from('bookmarks')
           .select('id, title, url')
           .eq('user_id', userId)
-          .in('type', ['link', 'twitter', 'instagram', 'youtube', 'github', 'linkedin'])
+          .in('type', ['link', 'twitter', 'instagram', 'youtube', 'pinterest', 'github', 'linkedin'])
           .in('url', candidates)
           .limit(1)
           .maybeSingle();
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
             .from('bookmarks')
             .select('id, title, url')
             .eq('user_id', userId)
-            .in('type', ['link', 'twitter', 'instagram', 'youtube', 'github', 'linkedin'])
+            .in('type', ['link', 'twitter', 'instagram', 'youtube', 'pinterest', 'github', 'linkedin'])
             .or(`url.ilike.%://${safePath}#%,url.ilike.%://${safePath}/#%`)
             .limit(1)
             .maybeSingle();
@@ -248,8 +249,23 @@ export async function POST(request: Request) {
               const $ = cheerio.load(html.substring(0, 512 * 1024));
               const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
               finalTitle = customTitle || scrapedTitle || cleanUrl; 
-              finalDescription = finalDescription || $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || null;
-              let scrapedImg = $('meta[property="og:image"]').attr('content');
+              
+              if (detectedType === 'instagram') {
+                const igDesc = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content');
+                if (igDesc) {
+                  finalDescription = igDesc;
+                }
+                if (!finalDescription && finalTitle && finalTitle.includes(' on Instagram:')) {
+                  const match = finalTitle.match(/ on Instagram:\s*"?([^"]+)"?/i);
+                  if (match && match[1]) {
+                    finalDescription = match[1].trim();
+                  }
+                }
+              } else {
+                finalDescription = finalDescription || $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || null;
+              }
+
+              let scrapedImg = $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content');
               if (scrapedImg) {
                 try {
                   scrapedImg = new URL(scrapedImg, cleanUrl).href;
