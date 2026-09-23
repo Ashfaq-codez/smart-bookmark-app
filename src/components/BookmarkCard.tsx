@@ -46,9 +46,12 @@ const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   const l = url.toLowerCase();
   
-  // Strictly block image thumbnails that happen to be hosted on video domains
-  if (l.match(/\.(jpe?g|png|gif|webp)$/i)) return false; 
+  // 1. Strictly block known thumbnails and URLs with image format query params
+  if (l.includes('thumb') || l.match(/\.(jpe?g|png|gif|webp)(\?.*)?$/i) || l.match(/format=(jpg|jpeg|png|webp)/i)) {
+    return false;
+  }
   
+  // 2. Safely accept true videos
   return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('video.twimg.com') || l.includes('.m3u8');
 };
 

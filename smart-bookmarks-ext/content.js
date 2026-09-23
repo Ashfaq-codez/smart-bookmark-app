@@ -24,8 +24,8 @@ function extractExactUrl(target) {
       }
     }
 
-    // 1b. YouTube: Right-clicking the playing video on the watch page
-    if (window.location.pathname === '/watch' && target.closest('#movie_player, ytd-watch-flexy, video')) {
+    // 1b. YouTube: Right-clicking the playing video on the watch or shorts page
+    if ((window.location.pathname.startsWith('/watch') || window.location.pathname.startsWith('/shorts')) && target.closest('#movie_player, ytd-watch-flexy, ytd-shorts, video')) {
       try {
         const urlObj = new URL(window.location.href);
         urlObj.searchParams.delete('list');
@@ -71,9 +71,13 @@ function extractExactUrl(target) {
       return { url: anchor.href };
     }
 
-    // 5. Direct Media Elements
-    if (target.tagName === 'VIDEO' && target.src) return { url: target.src, type: 'video' };
-    if (target.tagName === 'IMG' && target.src) return { url: target.src, type: 'image' };
+    // 5. Direct Media Elements (Strictly ignore internal blob: URLs)
+    if (target.tagName === 'VIDEO' && target.src && !target.src.startsWith('blob:')) {
+        return { url: target.src, type: 'video' };
+    }
+    if (target.tagName === 'IMG' && target.src && !target.src.startsWith('blob:')) {
+        return { url: target.src, type: 'image' };
+    }
 
   } catch (err) {
     console.error("inntoit extraction error:", err);
