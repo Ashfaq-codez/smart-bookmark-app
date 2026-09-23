@@ -141,12 +141,32 @@ export default function BookmarkCard({
   const [editDescription, setEditDescription] = useState(bookmark.description || '')
   const [editContent, setEditContent] = useState(bookmark.content || '')
 
+  // Layout states
   const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(bookmark.image_url || null)
-  const [isGeneratingScreenshot, setIsGeneratingScreenshot] = useState<boolean>(!bookmark.image_url && bookmark.type === 'link')
+  
+  const deriveDisplayType = useCallback((b: Bookmark) => {
+    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
+    if (b.url) {
+      const url = b.url.toLowerCase();
+      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
+      if (url.includes('instagram.com')) return 'instagram';
+      if (url.includes('tiktok.com')) return 'tiktok';
+      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+      if (url.includes('github.com')) return 'github';
+      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
+    }
+    return b.type || 'link';
+  }, []);
+
+  const displayType = deriveDisplayType(bookmark);
+  const isDirectImage = displayType === 'image' || bookmark.type === 'image';
+  
+  // Set initial loading state ONLY if it is an external link requiring a screenshot
+  const [isGeneratingScreenshot, setIsGeneratingScreenshot] = useState<boolean>(!bookmark.image_url && displayType !== 'note' && !isDirectImage);
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Dynamic screenshot polling with strict timeout fallback
+  // Screenshot polling utilizing WordPress mshots
   useEffect(() => {
     if (bookmark.image_url) {
       setResolvedImageUrl(bookmark.image_url)
@@ -154,27 +174,31 @@ export default function BookmarkCard({
       return
     }
 
-    if (bookmark.type !== 'link' && bookmark.type !== undefined) {
-      return
+    if (isDirectImage) {
+      setResolvedImageUrl(bookmark.url);
+      setIsGeneratingScreenshot(false);
+      return;
+    }
+
+    if (displayType === 'note') {
+      setIsGeneratingScreenshot(false);
+      return;
     }
 
     let isMounted = true
     let attempts = 0
-    const maxAttempts = 6 // Reduced from 8 to fail faster
+    const maxAttempts = 10 // Gives WordPress ~30 seconds to generate the screenshot
 
     const checkScreenshot = () => {
       if (!isMounted) return;
 
       if (attempts >= maxAttempts) {
-        setIsGeneratingScreenshot(false)
-        
-        // Timeout Fallback: Use Microlink for a guaranteed hero section screenshot
-        if (!resolvedImageUrl && bookmark.url) {
-          const fallbackUrl = `https://api.microlink.io/?url=${encodeURIComponent(bookmark.url)}&screenshot=true&meta=false&embed=screenshot.url`
-          setResolvedImageUrl(fallbackUrl)
-          updateBookmark(bookmark.id, { image_url: fallbackUrl }).catch(() => {})
-        }
-        return
+        // Fallback: Bind to the permanent WordPress URL without a timestamp so it caches successfully
+        const finalUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url || '')}?w=800`;
+        setResolvedImageUrl(finalUrl);
+        setIsGeneratingScreenshot(false);
+        updateBookmark(bookmark.id, { image_url: finalUrl }).catch(() => {});
+        return;
       }
 
       attempts += 1
@@ -182,6 +206,7 @@ export default function BookmarkCard({
       const img = new Image()
 
       img.onload = () => {
+        // A placeholder from WordPress is usually very small (e.g. 100x100 logo). Real screenshots are 800x600.
         if (img.naturalWidth > 200 && img.naturalHeight > 150) {
           if (isMounted) {
             setResolvedImageUrl(testUrl)
@@ -203,7 +228,7 @@ export default function BookmarkCard({
     checkScreenshot()
 
     return () => { isMounted = false }
-  }, [bookmark.url, bookmark.image_url, bookmark.id, bookmark.type])
+  }, [bookmark.url, bookmark.image_url, bookmark.id, isDirectImage, displayType, updateBookmark])
 
   useEffect(() => {
     if (!mounted) return;
@@ -414,28 +439,14 @@ export default function BookmarkCard({
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
-  const deriveDisplayType = (b: Bookmark) => {
-    if (['twitter', 'instagram', 'youtube', 'tiktok', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
-    if (b.url) {
-      const url = b.url.toLowerCase();
-      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-      if (url.includes('instagram.com')) return 'instagram';
-      if (url.includes('tiktok.com')) return 'tiktok';
-      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-      if (url.includes('github.com')) return 'github';
-      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
-    }
-    return b.type || 'link';
-  }
-  
-  const displayType = deriveDisplayType(bookmark);
   const ytVideoId = getYouTubeId(bookmark.url || '');
   const isYouTubeShort = (bookmark.url || '').toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : null;
 
-  const previewImageUrl = resolvedImageUrl || ytHighResThumbnail || null;
-  const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
+  // Utilize resolvedImageUrl or fallbacks. Uploaded images naturally bypass this block.
+  const previewImageUrl = isDirectImage ? bookmark.url : (resolvedImageUrl || ytHighResThumbnail || null);
   
+  const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const instaData = displayType === 'instagram' ? getInstaMeta(bookmark) : null;
 
   const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
@@ -562,11 +573,14 @@ export default function BookmarkCard({
             </div>
           </div>
           
+        ) : displayType === 'image' ? (
+          <div className="w-full flex relative overflow-hidden rounded-xl sm:rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in" onClick={() => setIsFullscreenImage(true)}>
+            <img src={previewImageUrl || ''} alt={bookmark.title} className="w-full h-auto object-cover max-h-80" />
+          </div>
         ) : (
           /* STANDARD LINK PREVIEW */
           <div className="w-full aspect-[16/10] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col items-center justify-center">
             {isGeneratingScreenshot && !previewImageUrl ? (
-              /* Custom Branded Inntoit Loading Placeholder */
               <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-black/[0.02] dark:bg-white/[0.02]">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#4D6A51] dark:bg-[#8FAA91] animate-ping mb-3" />
                 <p className="font-serif text-xs sm:text-sm text-[#171A17]/70 dark:text-[#F3F0E9]/70 italic tracking-wide">
