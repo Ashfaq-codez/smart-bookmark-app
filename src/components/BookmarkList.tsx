@@ -23,41 +23,24 @@ const SortDescIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill=
 const SortAscIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 19h10"></path><path d="M11 15h7"></path><path d="M11 11h4"></path><path d="M4 10V3"></path><path d="M7 6l-3-3-3 3"></path></svg>
 const CalendarIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
 
+const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+const YouTubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+
 // --- New Grid Control & View Icons ---
 const Grid5Icon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <rect x="2" y="3" width="2.5" height="18" rx="0.5" />
-    <rect x="6.5" y="3" width="2.5" height="18" rx="0.5" />
-    <rect x="11" y="3" width="2.5" height="18" rx="0.5" />
-    <rect x="15.5" y="3" width="2.5" height="18" rx="0.5" />
-    <rect x="20" y="3" width="2.5" height="18" rx="0.5" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="3" width="2.5" height="18" rx="0.5" /><rect x="6.5" y="3" width="2.5" height="18" rx="0.5" /><rect x="11" y="3" width="2.5" height="18" rx="0.5" /><rect x="15.5" y="3" width="2.5" height="18" rx="0.5" /><rect x="20" y="3" width="2.5" height="18" rx="0.5" /></svg>
 )
 const Grid6Icon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <rect x="2" y="3" width="5.5" height="8" rx="1" />
-    <rect x="9.25" y="3" width="5.5" height="8" rx="1" />
-    <rect x="16.5" y="3" width="5.5" height="8" rx="1" />
-    <rect x="2" y="13" width="5.5" height="8" rx="1" />
-    <rect x="9.25" y="13" width="5.5" height="8" rx="1" />
-    <rect x="16.5" y="13" width="5.5" height="8" rx="1" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="3" width="5.5" height="8" rx="1" /><rect x="9.25" y="3" width="5.5" height="8" rx="1" /><rect x="16.5" y="3" width="5.5" height="8" rx="1" /><rect x="2" y="13" width="5.5" height="8" rx="1" /><rect x="9.25" y="13" width="5.5" height="8" rx="1" /><rect x="16.5" y="13" width="5.5" height="8" rx="1" /></svg>
 )
 const Grid9Icon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    {[0,1,2].map(col => [0,1,2].map(row => <rect key={`${row}-${col}`} x={2 + col*7.5} y={2 + row*7.5} width="5" height="5" rx="1" />))}
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">{[0,1,2].map(col => [0,1,2].map(row => <rect key={`${row}-${col}`} x={2 + col*7.5} y={2 + row*7.5} width="5" height="5" rx="1" />))}</svg>
 )
 const ViewMinimalIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
 )
 const ViewDetailedIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-    <line x1="3" y1="15" x2="21" y2="15"></line>
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="15" x2="21" y2="15"></line></svg>
 )
 
 const mediaTypeLabels: Record<string, string> = {
@@ -295,17 +278,26 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const handleQuickCapture = async () => {
     const tempDiv = document.createElement('div')
     
-    // FIX: Replace closing P tags and breaks with spaces before extracting text 
-    // to prevent Tiptap from merging URLs together into an invalid string
+    // Convert paragraph tags to spaces to correctly separate pasted lines
     tempDiv.innerHTML = inputValue.replace(/<\/p>|<br\s*\/?>/gi, ' ')
     
-    const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
+    // Strip invisible characters to ensure clean text
+    const cleanText = (tempDiv.textContent || tempDiv.innerText || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '')
     const hasMediaOrStructure = tempDiv.querySelector('img, hr, table, iframe') !== null;
 
-    if (!rawInput && !hasMediaOrStructure) return
-    const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i
-    const tokens = rawInput.split(/[\s,]+/).filter(Boolean)
-    const isAllUrls = tokens.length > 0 && tokens.every(t => urlRegex.test(t))
+    if (!cleanText && !hasMediaOrStructure) return
+    
+    const tokens = cleanText.split(/[\s,]+/).filter(Boolean)
+    
+    // Strict URL validator
+    const isUrl = (str: string) => {
+      try {
+        const url = new URL(str.startsWith('http') ? str : `https://${str}`);
+        return url.hostname.includes('.') && str.length > 4;
+      } catch { return false; }
+    }
+
+    const isAllUrls = tokens.length > 0 && tokens.every(isUrl)
 
     if (isAllUrls && tokens.length === 1) {
       const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(tokens[0]))
@@ -317,13 +309,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
     try {
       if (isAllUrls && tokens.length > 1) {
+        // Handle multi-link paste properly
         const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
         if (validNewTokens.length === 0) { toast.error('Already cataloged.'); setIsSaving(false); return }
-        await Promise.all(validNewTokens.map(token => fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token }) })))
+        
+        await Promise.all(validNewTokens.map(token => fetch('/api/save', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token }) 
+        })))
         toast.success(`Cataloged ${validNewTokens.length} items`)
+        
       } else {
-        const isSingleUrl = tokens.length === 1 && urlRegex.test(rawInput)
-        let finalUrl = rawInput
+        const isSingleUrl = tokens.length === 1 && isUrl(cleanText)
+        let finalUrl = cleanText
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
@@ -458,16 +457,16 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* Explicit placeholder override styling to contrast against inverted capture bar */}
+      {/* Explicit scoped placeholder override styling strictly for the inverted capture bar */}
       <style dangerouslySetInnerHTML={{__html: `
-        .tiptap p.is-editor-empty:first-child::before {
+        .capture-bar-wrapper .tiptap p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
           height: 0;
           pointer-events: none;
           color: rgba(255, 255, 255, 0.7) !important;
         }
-        .dark .tiptap p.is-editor-empty:first-child::before {
+        .dark .capture-bar-wrapper .tiptap p.is-editor-empty:first-child::before {
           color: rgba(23, 26, 23, 0.5) !important;
         }
       `}} />
@@ -660,7 +659,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </div>
 
-        {/* Tighter layout padding specifically for mobile viewing */}
+        {/* MAIN GRID VIEW OR EMPTY STATE */}
         <main className="flex-1 p-2 sm:p-8 pb-32 sm:pb-32">
           <div className="w-full flex flex-col items-start" ref={gridRef}>
             {isLoading ? (
@@ -671,6 +670,42 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   </div>
                 ))}
               </div>
+            ) : bookmarks.length === 0 ? (
+              
+              /* BEAUTIFUL EMPTY STATE DASHBOARD */
+              <div className="w-full flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-fade-in">
+                <div className="w-16 h-16 bg-[#4D6A51]/10 dark:bg-[#8FAA91]/10 text-[#4D6A51] dark:text-[#8FAA91] rounded-2xl flex items-center justify-center mb-6">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-serif text-[#171A17] dark:text-[#F3F0E9] mb-3">Your Space is Empty</h2>
+                <p className="text-[#171A17]/60 dark:text-white/60 max-w-md mx-auto mb-10 text-sm sm:text-base leading-relaxed">
+                  Start cataloging your mind. Paste links, write quick thoughts, or drop documents using the capture bar below.
+                </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl text-left">
+                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+                     <div className="w-8 h-8 rounded-full bg-[#1DA1F2]/10 text-[#1DA1F2] flex items-center justify-center mb-3"><XIcon /></div>
+                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Social Media</h3>
+                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Paste Twitter, Instagram, or TikTok links to generate native, playable previews.</p>
+                  </div>
+                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+                     <div className="w-8 h-8 rounded-full bg-[#FF0000]/10 text-[#FF0000] flex items-center justify-center mb-3"><YouTubeIcon /></div>
+                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Videos & Media</h3>
+                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Save YouTube videos or direct MP4 links to watch them instantly inside your dashboard.</p>
+                  </div>
+                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+                     <div className="w-8 h-8 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center mb-3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>
+                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Rich Notes</h3>
+                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Expand the capture bar to write journals, create to-do lists, and format rich text.</p>
+                  </div>
+                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+                     <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mb-3"><PaperclipIcon /></div>
+                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Files & Documents</h3>
+                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Upload PDFs, images, or documents to securely archive them in your personal space.</p>
+                  </div>
+                </div>
+              </div>
+
             ) : isGroupedByDate && groupedBookmarks ? (
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
                 const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
@@ -781,7 +816,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
            </div>
 
            {/* Editor Body */}
-           <div className={`flex-1 w-full relative flex flex-col justify-center min-h-0 ${isExpanded ? 'items-start' : 'items-center px-11'}`}>
+           <div className={`capture-bar-wrapper flex-1 w-full relative flex flex-col justify-center min-h-0 ${isExpanded ? 'items-start' : 'items-center px-11'}`}>
              <div className={`w-full custom-scrollbar transition-all duration-500 ${isExpanded ? 'h-full overflow-y-auto text-lg md:text-xl delay-75' : 'h-[24px] overflow-hidden text-[16px] sm:text-sm whitespace-nowrap'}`}>
                 <TipTapEditor 
                   value={inputValue} 

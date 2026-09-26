@@ -16,7 +16,7 @@ const H1Icon = () => <span className="font-bold text-xs tracking-wider">H1</span
 const H2Icon = () => <span className="font-bold text-xs tracking-wider">H2</span>
 const ListIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
 const TaskIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-const QuoteIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.5c0 1 0 1.5 0 2l-.5 1c0 1.5-2 2.5-2 5h0z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.5c0 1 0 1.5 0 2l-.5 1c0 1.5-2 2.5-2 5h0z"></path></svg>
+const QuoteIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1.5.5 1.5 1.5L5 16c0 1.5-2 2.5-2 5h0z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.5c0 1 0 1.5 0 2l-.5 1c0 1.5-2 2.5-2 5h0z"></path></svg>
 const CodeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
 const DividerIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 const TableIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line><line x1="15" y1="9" x2="15" y2="21"></line></svg>
@@ -99,7 +99,8 @@ export default function TipTapEditor({
       const textBefore = $head.parent.textBetween(0,$head.parentOffset, undefined, '\ufffc')
       const match = textBefore.match(/(?:^|\s)(\/([a-zA-Z]*))$/)
       
-      if (match) {
+      // ONLY trigger the slash menu if the editor is in expanded Focus Mode
+      if (match && isExpanded) {
         const coords = view.coordsAtPos(selection.from)
         setMenuCoords({ top: coords.top, bottom: coords.bottom, left: coords.left })
         setQuery(match[2])
@@ -112,7 +113,8 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-[#171A17] dark:text-[#F3F0E9] prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
+        // text-inherit allows it to dynamically swap colors based on where it renders
+        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-inherit prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
       }
     },
   })
