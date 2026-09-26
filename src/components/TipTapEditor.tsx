@@ -22,15 +22,22 @@ const DividerIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="
 const TableIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line><line x1="15" y1="9" x2="15" y2="21"></line></svg>
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
 
+const TOOLBAR_COMMANDS = [
+  { title: 'Heading 1', icon: <H1Icon />, command: ({ editor }: any) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+  { title: 'Heading 2', icon: <H2Icon />, command: ({ editor }: any) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+  { title: 'Bullet List', icon: <ListIcon />, command: ({ editor }: any) => editor.chain().focus().toggleBulletList().run() },
+  { title: 'Task List', icon: <TaskIcon />, command: ({ editor }: any) => editor.chain().focus().toggleTaskList().run() },
+  { title: 'Blockquote', icon: <QuoteIcon />, command: ({ editor }: any) => editor.chain().focus().toggleBlockquote().run() },
+  { title: 'Code Block', icon: <CodeIcon />, command: ({ editor }: any) => editor.chain().focus().toggleCodeBlock().run() },
+  { title: 'Table', icon: <TableIcon />, command: ({ editor }: any) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+  { title: 'Divider', icon: <DividerIcon />, command: ({ editor }: any) => editor.chain().focus().setHorizontalRule().run() },
+]
+
 const SLASH_COMMANDS = [
-  { title: 'Heading 1', icon: <H1Icon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run() } },
-  { title: 'Heading 2', icon: <H2Icon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run() } },
-  { title: 'Bullet List', icon: <ListIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleBulletList().run() } },
-  { title: 'Task List', icon: <TaskIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleTaskList().run() } },
-  { title: 'Blockquote', icon: <QuoteIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleBlockquote().run() } },
-  { title: 'Code Block', icon: <CodeIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).toggleCodeBlock().run() } },
-  { title: 'Table', icon: <TableIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() } },
-  { title: 'Divider', icon: <DividerIcon />, command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).setHorizontalRule().run() } },
+  ...TOOLBAR_COMMANDS.map(cmd => ({
+    ...cmd,
+    command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range); cmd.command({ editor }); }
+  }))
 ]
 
 export default function TipTapEditor({ 
@@ -106,7 +113,8 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose sm:prose-sm focus:outline-none max-w-none prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
+        // Tailwind text colors control the default appearance
+        class: `prose sm:prose-sm focus:outline-none max-w-none prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap ${isExpanded ? 'text-[#171A17] dark:text-[#F3F0E9]' : 'text-white dark:text-[#171A17]'}`,
       }
     },
   })
@@ -184,42 +192,7 @@ export default function TipTapEditor({
   }
 
   return (
-    <div className={`relative w-full h-full flex flex-col min-h-0 ${isExpanded ? 'editor-expanded' : 'editor-collapsed'}`} onKeyDown={handleKeyDown}>
-      
-      {/* Strict Nuclear CSS to absolutely bypass Tailwind Prose colors in all states */}
-      <style dangerouslySetInnerHTML={{__html: `
-        /* Expanded Modal - Light Mode Background (Needs Dark Text) */
-        .editor-expanded .tiptap, .editor-expanded .tiptap * {
-          color: #171A17 !important;
-        }
-        /* Expanded Modal - Dark Mode Background (Needs Light Text) */
-        .dark .editor-expanded .tiptap, .dark .editor-expanded .tiptap * {
-          color: #F3F0E9 !important;
-        }
-
-        /* Collapsed Capture Bar - Green Background (Needs White Text) */
-        .editor-collapsed .tiptap, .editor-collapsed .tiptap * {
-          color: #ffffff !important;
-        }
-        /* Collapsed Capture Bar - Light Beige Background (Needs Dark Text) */
-        .dark .editor-collapsed .tiptap, .dark .editor-collapsed .tiptap * {
-          color: #171A17 !important;
-        }
-        
-        /* Placeholder specific overrides so they don't get fully opaque */
-        .editor-expanded .tiptap p.is-editor-empty:first-child::before {
-          color: rgba(23, 26, 23, 0.4) !important;
-        }
-        .dark .editor-expanded .tiptap p.is-editor-empty:first-child::before {
-          color: rgba(243, 240, 233, 0.4) !important;
-        }
-        .editor-collapsed .tiptap p.is-editor-empty:first-child::before {
-          color: rgba(255, 255, 255, 0.7) !important;
-        }
-        .dark .editor-collapsed .tiptap p.is-editor-empty:first-child::before {
-          color: rgba(23, 26, 23, 0.5) !important;
-        }
-      `}} />
+    <div className={`relative w-full h-full flex flex-col min-h-0`} onKeyDown={handleKeyDown}>
 
       {/* Manual Table Deletion Floating Button */}
       {isTableActive && (
