@@ -277,7 +277,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const handleQuickCapture = async () => {
     const tempDiv = document.createElement('div')
     
-    // Aggressively replace block elements with spaces to prevent pasted URLs from merging into a single string
+    // Convert paragraph tags to spaces to correctly separate pasted lines
     tempDiv.innerHTML = inputValue.replace(/<\/(p|div|li|h[1-6])>|<br\s*\/?>/gi, ' ')
     
     // Extract text and strip invisible characters
@@ -288,15 +288,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
     if (!cleanText && !hasMediaOrStructure) return
     
-    // Strip common list markers (bullets, dashes, numbers) that browsers attach to copied lists
-    const textWithoutBullets = cleanText.replace(/(^|\s)(?:[\u2022\-\*]|\d+[\.\)])\s+/g, '$1')
+    // 1. Split text into chunks by spaces or newlines
+    const rawTokens = cleanText.split(/[\s,\n]+/).map(t => t.trim()).filter(t => t.length > 0)
     
-    // Split purely by spaces, newlines, or commas
-    const tokens = textWithoutBullets.split(/[\s,\n]+/).map(t => {
-      return t.replace(/^[\(\[\{\<]/, '').replace(/[\)\}\]\>\.\,\;]$/, '')
-    }).filter(t => t.length > 0)
+    // 2. Clean trailing/leading punctuation
+    const tokens = rawTokens.map(t => t.replace(/^[\(\[\{\<]/, '').replace(/[\)\}\]\>\.\,\;]$/, ''))
     
-    // Strict URL validator
+    // 3. THE FIX: Aggressively filter out Chrome numbers ("1.", "2)") and Safari bullets ("-", "•")
+    const meaningfulTokens = tokens.filter(t => {
+      const hasAlphanumeric = /[a-zA-Z0-9]/.test(t);
+      // If the token is *only* digits with optional punctuation, or *only* bullets, we ignore it
+      const isJustListMarker = /^(\d+[\.\)]?|[\u2022\-\*]+)$/.test(t);
+      return hasAlphanumeric && !isJustListMarker;
+    });
+    
+    // 4. Strict URL validator
     const isUrl = (str: string) => {
       try {
         if (str.length < 5 || !str.includes('.')) return false;
@@ -305,10 +311,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       } catch { return false; }
     }
 
-    // Consider it a "Bulk URL Save" if EVERY meaningful token is a URL
-    const meaningfulTokens = tokens.filter(t => /[a-zA-Z0-9]/.test(t))
+    // Check if ALL remaining text components are URLs
     const urlTokens = meaningfulTokens.filter(isUrl)
-    
     const isAllUrls = urlTokens.length > 0 && urlTokens.length === meaningfulTokens.length
 
     if (isAllUrls && urlTokens.length === 1) {
