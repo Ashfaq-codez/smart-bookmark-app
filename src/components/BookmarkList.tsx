@@ -294,7 +294,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const handleQuickCapture = async () => {
     const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = inputValue
+    
+    // FIX: Replace closing P tags and breaks with spaces before extracting text 
+    // to prevent Tiptap from merging URLs together into an invalid string
+    tempDiv.innerHTML = inputValue.replace(/<\/p>|<br\s*\/?>/gi, ' ')
+    
     const rawInput = (tempDiv.textContent || tempDiv.innerText || '').trim()
     const hasMediaOrStructure = tempDiv.querySelector('img, hr, table, iframe') !== null;
 
@@ -453,6 +457,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
+      
+      {/* Explicit placeholder override styling to contrast against inverted capture bar */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .tiptap p.is-editor-empty:first-child::before {
+          content: attr(data-placeholder);
+          float: left;
+          height: 0;
+          pointer-events: none;
+          color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .dark .tiptap p.is-editor-empty:first-child::before {
+          color: rgba(23, 26, 23, 0.5) !important;
+        }
+      `}} />
 
       {/* ─── SIDEBAR DRAWER (z-[200] ensures it is ALWAYS on top) ─── */}
       <div className={`fixed top-0 left-0 h-screen z-[200] bg-[#FBF9F4] dark:bg-[#151815] transition-all duration-300 flex flex-col border-r border-black/[0.04] dark:border-white/[0.04] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-[80vw] sm:w-[280px]' : '-translate-x-full lg:w-[72px]'}`}>

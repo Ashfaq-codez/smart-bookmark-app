@@ -905,7 +905,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                         </div>
                       </div>
 
-                      {/* Add comment row */}
+                      {/* Add comment row
                       <div className="border-t border-[#efefef] dark:border-[#262626] px-4 py-3 flex items-center gap-3">
                         <svg className="w-6 h-6 text-[#737373] dark:text-[#a8a8a8] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <circle cx="12" cy="12" r="10" />
@@ -938,7 +938,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                             Post
                           </button>
                         )}
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
