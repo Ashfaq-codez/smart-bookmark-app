@@ -99,6 +99,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   const [isGroupedByDate, setIsGroupedByDate] = useState(false)
   
+  // Layout Management State
   const [userColPreference, setUserColPreference] = useState<'auto' | 5 | 6 | 9>('auto')
   const [showGridMenu, setShowGridMenu] = useState(false)
   const [columnsCount, setColumnsCount] = useState(2)
@@ -277,22 +278,26 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const handleQuickCapture = async () => {
     const tempDiv = document.createElement('div')
     
-    // Convert paragraph tags to spaces to correctly separate pasted lines
-    tempDiv.innerHTML = inputValue.replace(/<\/p>|<br\s*\/?>/gi, ' ')
+    // Aggressively replace block elements with spaces to prevent pasted URLs from merging into a single string
+    tempDiv.innerHTML = inputValue.replace(/<\/(p|div|li|h[1-6])>|<br\s*\/?>/gi, ' ')
     
-    // Strip invisible characters to ensure clean text
-    const cleanText = (tempDiv.textContent || tempDiv.innerText || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Extract text and strip invisible characters
+    const rawText = (tempDiv.textContent || tempDiv.innerText || '')
+    const cleanText = rawText.replace(/[\u200B-\u200D\uFEFF]/g, '').trim()
+    
     const hasMediaOrStructure = tempDiv.querySelector('img, hr, table, iframe') !== null;
 
     if (!cleanText && !hasMediaOrStructure) return
     
-    const tokens = cleanText.split(/[\s,]+/).filter(Boolean)
+    // Split purely by spaces, newlines, or commas
+    const tokens = cleanText.split(/[\s,\n]+/).map(t => t.trim()).filter(t => t.length > 0)
     
     // Strict URL validator
     const isUrl = (str: string) => {
       try {
+        if (str.length < 5 || !str.includes('.')) return false;
         const url = new URL(str.startsWith('http') ? str : `https://${str}`);
-        return url.hostname.includes('.') && str.length > 4;
+        return url.hostname.includes('.') && url.hostname.length > 3;
       } catch { return false; }
     }
 
@@ -308,7 +313,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
     try {
       if (isAllUrls && tokens.length > 1) {
-        // Handle multi-link paste properly
+        // Correctly loops and handles multiple pasted URLs
         const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
         if (validNewTokens.length === 0) { toast.error('Already cataloged.'); setIsSaving(false); return }
         
@@ -456,11 +461,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* Explicit scoped styling to force text colors based strictly on the capture bar's inverted backgrounds */}
+      {/* Explicit scoped styling to force all HTML tags injected by Tiptap (a, span, p) to respect the inverted bar colors */}
       <style dangerouslySetInnerHTML={{__html: `
         /* Light Mode: Green Capture Bar -> White Text & Cursor */
         .capture-bar-wrapper .tiptap, 
         .capture-bar-wrapper .tiptap p, 
+        .capture-bar-wrapper .tiptap a, 
+        .capture-bar-wrapper .tiptap span, 
         .capture-bar-wrapper .tiptap h1, 
         .capture-bar-wrapper .tiptap h2, 
         .capture-bar-wrapper .tiptap li,
@@ -480,6 +487,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         /* Dark Mode: White Capture Bar -> Green Text & Cursor */
         .dark .capture-bar-wrapper .tiptap, 
         .dark .capture-bar-wrapper .tiptap p, 
+        .dark .capture-bar-wrapper .tiptap a, 
+        .dark .capture-bar-wrapper .tiptap span, 
         .dark .capture-bar-wrapper .tiptap h1, 
         .dark .capture-bar-wrapper .tiptap h2, 
         .dark .capture-bar-wrapper .tiptap li,
