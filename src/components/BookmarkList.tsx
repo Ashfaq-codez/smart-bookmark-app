@@ -99,7 +99,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   const [isGroupedByDate, setIsGroupedByDate] = useState(false)
   
-  // Layout Management State
   const [userColPreference, setUserColPreference] = useState<'auto' | 5 | 6 | 9>('auto')
   const [showGridMenu, setShowGridMenu] = useState(false)
   const [columnsCount, setColumnsCount] = useState(2)
@@ -457,8 +456,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* Explicit scoped placeholder override styling strictly for the inverted capture bar */}
+      {/* Explicit scoped styling to force text colors based strictly on the capture bar's inverted backgrounds */}
       <style dangerouslySetInnerHTML={{__html: `
+        /* Light Mode: Green Capture Bar -> White Text & Cursor */
+        .capture-bar-wrapper .tiptap, 
+        .capture-bar-wrapper .tiptap p, 
+        .capture-bar-wrapper .tiptap h1, 
+        .capture-bar-wrapper .tiptap h2, 
+        .capture-bar-wrapper .tiptap li,
+        .capture-bar-wrapper .tiptap strong,
+        .capture-bar-wrapper .tiptap blockquote {
+          color: #ffffff !important;
+          caret-color: #ffffff !important;
+        }
         .capture-bar-wrapper .tiptap p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
@@ -466,8 +476,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           pointer-events: none;
           color: rgba(255, 255, 255, 0.7) !important;
         }
+
+        /* Dark Mode: White Capture Bar -> Green Text & Cursor */
+        .dark .capture-bar-wrapper .tiptap, 
+        .dark .capture-bar-wrapper .tiptap p, 
+        .dark .capture-bar-wrapper .tiptap h1, 
+        .dark .capture-bar-wrapper .tiptap h2, 
+        .dark .capture-bar-wrapper .tiptap li,
+        .dark .capture-bar-wrapper .tiptap strong,
+        .dark .capture-bar-wrapper .tiptap blockquote {
+          color: #4D6A51 !important;
+          caret-color: #4D6A51 !important;
+        }
         .dark .capture-bar-wrapper .tiptap p.is-editor-empty:first-child::before {
-          color: rgba(23, 26, 23, 0.5) !important;
+          color: rgba(77, 106, 81, 0.5) !important;
         }
       `}} />
 
@@ -787,7 +809,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         {/* 2. The Capture Bar / Modal Editor */}
         <div 
           ref={captureBarRef}
-          className={`fixed z-[100] flex flex-col bg-[#4D6A51] dark:bg-[#FAF9F5] text-white dark:text-[#171A17] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
+          className={`fixed z-[100] flex flex-col bg-[#4D6A51] dark:bg-[#FAF9F5] text-white dark:text-[#4D6A51] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
             isExpanded 
               ? 'bottom-[50dvh] translate-y-1/2 left-1/2 -translate-x-1/2 w-[92vw] sm:w-[600px] md:w-[750px] h-[65dvh] rounded-[24px] p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/[0.08]' 
               : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/10 hover:shadow-xl hover:-translate-y-0.5'
@@ -795,12 +817,12 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         >
            {/* Top Header (Visible only in Focus Mode) */}
            <div className={`flex items-center justify-between w-full transition-opacity duration-300 shrink-0 ${isExpanded ? 'opacity-100 h-auto mb-4 sm:mb-6 delay-150' : 'opacity-0 h-0 hidden'}`}>
-             <span className="text-[11px] font-bold uppercase tracking-widest text-white/90 dark:text-[#171A17]/80 flex items-center gap-2">
+             <span className="text-[11px] font-bold uppercase tracking-widest text-white/90 dark:text-[#4D6A51]/80 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-white dark:bg-[#4D6A51] shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
                 New Quick Note
              </span>
              <div className="flex items-center gap-3">
-               <span className="text-[10px] font-sans text-white/80 dark:text-[#171A17]/70 uppercase tracking-widest hidden sm:block border border-white/20 dark:border-black/10 px-2 py-1 rounded-md">
+               <span className="text-[10px] font-sans text-white/80 dark:text-[#4D6A51]/70 uppercase tracking-widest hidden sm:block border border-white/20 dark:border-[#4D6A51]/20 px-2 py-1 rounded-md">
                  Press ⌘+Enter to save
                </span>
                <button 
@@ -808,7 +830,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                    setIsExpanded(false);
                    if (document.activeElement instanceof HTMLElement) document.activeElement.blur() 
                  }}
-                 className="text-xs sm:hidden font-bold uppercase tracking-widest text-white/80 dark:text-[#171A17]/80 hover:text-white"
+                 className="text-xs sm:hidden font-bold uppercase tracking-widest text-white/80 dark:text-[#4D6A51]/80 hover:text-white"
                >
                  Done
                </button>
@@ -829,7 +851,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
            </div>
 
            {/* Bottom Actions */}
-           <div className={`w-full shrink-0 flex items-center transition-all ${isExpanded ? 'justify-between mt-4 pt-4 border-t border-white/20 dark:border-black/10 opacity-100 delay-150' : 'absolute inset-0 pointer-events-none'}`}>
+           <div className={`w-full shrink-0 flex items-center transition-all ${isExpanded ? 'justify-between mt-4 pt-4 border-t border-white/20 dark:border-[#4D6A51]/20 opacity-100 delay-150' : 'absolute inset-0 pointer-events-none'}`}>
               
               {/* Paperclip Button */}
               <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute left-1.5 top-1/2 -translate-y-1/2'}`}>
@@ -837,7 +859,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className={`shrink-0 text-white/90 dark:text-[#171A17]/70 hover:text-white dark:hover:text-[#171A17] hover:bg-white/10 dark:hover:bg-black/5 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${isExpanded ? 'w-10 h-10 bg-white/10 dark:bg-black/5' : 'w-10 h-10'}`}
+                  className={`shrink-0 text-white/90 dark:text-[#4D6A51]/80 hover:text-white dark:hover:text-[#4D6A51] hover:bg-white/10 dark:hover:bg-[#4D6A51]/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${isExpanded ? 'w-10 h-10 bg-white/10 dark:bg-[#4D6A51]/5' : 'w-10 h-10'}`}
                 >
                   {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
                 </button>
@@ -848,7 +870,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 <button
                   onClick={handleQuickCapture}
                   disabled={isSaving || (!inputValue.replace(/<[^>]*>?/gm, '').trim() && !/<(img|hr|table)/i.test(inputValue))}
-                  className={`shrink-0 text-[#4D6A51] dark:text-white bg-white dark:bg-[#171A17] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 ${isExpanded ? 'w-10 h-10 shadow-lg' : 'w-10 h-10'}`}
+                  className={`shrink-0 text-[#4D6A51] dark:text-white bg-white dark:bg-[#4D6A51] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 ${isExpanded ? 'w-10 h-10 shadow-lg' : 'w-10 h-10'}`}
                 >
                   <SendIcon />
                 </button>

@@ -113,8 +113,7 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        // Tailwind text colors control the default appearance
-        class: `prose sm:prose-sm focus:outline-none max-w-none prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap ${isExpanded ? 'text-[#171A17] dark:text-[#F3F0E9]' : 'text-white dark:text-[#e6ede6]'}`,
+        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
       }
     },
   })
@@ -211,10 +210,10 @@ export default function TipTapEditor({
 
       <EditorContent editor={editor} className={`flex-1 w-full overflow-visible md:overflow-y-auto custom-scrollbar ${isExpanded ? 'p-4 md:p-6' : ''}`} />
       
-      {/* The Slash Menu (Now strictly portal-rendered and decoupled from editor colors) */}
+      {/* The Slash Menu */}
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(
         <div 
-          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto text-[#171A17] dark:text-[#234319]"
+          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto text-[#171A17] dark:text-[#F3F0E9]"
           style={getPortalPosition()}
         >
           <div className="px-3 pb-2 mb-2 text-[10px] uppercase tracking-wider text-[#A0A6A0] border-b border-black/[0.04] dark:border-white/[0.04] sticky top-0 bg-[#FBF9F4] dark:bg-[#1A1D1A] z-10">
