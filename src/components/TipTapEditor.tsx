@@ -106,7 +106,7 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose sm:prose-sm dark:prose-invert focus:outline-none max-w-none prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
+        class: 'prose sm:prose-sm focus:outline-none max-w-none prose-p:m-0 prose-p:leading-relaxed min-h-[24px] outline-none !text-[16px] sm:!text-sm tiptap',
       }
     },
   })
@@ -186,19 +186,38 @@ export default function TipTapEditor({
   return (
     <div className={`relative w-full h-full flex flex-col min-h-0 ${isExpanded ? 'editor-expanded' : 'editor-collapsed'}`} onKeyDown={handleKeyDown}>
       
-      {/* Strict CSS rules to force correct text colors independently of Tailwind typography plugin */}
+      {/* Strict Nuclear CSS to absolutely bypass Tailwind Prose colors in all states */}
       <style dangerouslySetInnerHTML={{__html: `
-        .editor-expanded .tiptap, .editor-expanded .tiptap p, .editor-expanded .tiptap h1, .editor-expanded .tiptap h2, .editor-expanded .tiptap li {
+        /* Expanded Modal - Light Mode Background (Needs Dark Text) */
+        .editor-expanded .tiptap, .editor-expanded .tiptap * {
           color: #171A17 !important;
         }
-        .dark .editor-expanded .tiptap, .dark .editor-expanded .tiptap p, .dark .editor-expanded .tiptap h1, .dark .editor-expanded .tiptap h2, .dark .editor-expanded .tiptap li {
+        /* Expanded Modal - Dark Mode Background (Needs Light Text) */
+        .dark .editor-expanded .tiptap, .dark .editor-expanded .tiptap * {
           color: #F3F0E9 !important;
         }
-        .editor-collapsed .tiptap, .editor-collapsed .tiptap p {
+
+        /* Collapsed Capture Bar - Green Background (Needs White Text) */
+        .editor-collapsed .tiptap, .editor-collapsed .tiptap * {
           color: #ffffff !important;
         }
-        .dark .editor-collapsed .tiptap, .dark .editor-collapsed .tiptap p {
+        /* Collapsed Capture Bar - Light Beige Background (Needs Dark Text) */
+        .dark .editor-collapsed .tiptap, .dark .editor-collapsed .tiptap * {
           color: #171A17 !important;
+        }
+        
+        /* Placeholder specific overrides so they don't get fully opaque */
+        .editor-expanded .tiptap p.is-editor-empty:first-child::before {
+          color: rgba(23, 26, 23, 0.4) !important;
+        }
+        .dark .editor-expanded .tiptap p.is-editor-empty:first-child::before {
+          color: rgba(243, 240, 233, 0.4) !important;
+        }
+        .editor-collapsed .tiptap p.is-editor-empty:first-child::before {
+          color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .dark .editor-collapsed .tiptap p.is-editor-empty:first-child::before {
+          color: rgba(23, 26, 23, 0.5) !important;
         }
       `}} />
 
@@ -219,9 +238,10 @@ export default function TipTapEditor({
 
       <EditorContent editor={editor} className={`flex-1 w-full overflow-visible md:overflow-y-auto custom-scrollbar ${isExpanded ? 'p-4 md:p-6' : ''}`} />
       
+      {/* The Slash Menu (Now strictly portal-rendered and decoupled from editor colors) */}
       {mounted && menuOpen && filteredCommands.length > 0 && createPortal(
         <div 
-          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-xl rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto"
+          className="fixed z-[9999] w-64 bg-[#FBF9F4] dark:bg-[#1A1D1A] border border-black/[0.08] dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.15)] rounded-xl py-2 flex flex-col overflow-hidden max-h-[40vh] custom-scrollbar overflow-y-auto text-[#171A17] dark:text-[#F3F0E9]"
           style={getPortalPosition()}
         >
           <div className="px-3 pb-2 mb-2 text-[10px] uppercase tracking-wider text-[#A0A6A0] border-b border-black/[0.04] dark:border-white/[0.04] sticky top-0 bg-[#FBF9F4] dark:bg-[#1A1D1A] z-10">
