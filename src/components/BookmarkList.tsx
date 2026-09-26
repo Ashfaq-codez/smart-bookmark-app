@@ -276,33 +276,27 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const handleQuickCapture = async () => {
     const tempDiv = document.createElement('div')
-    
-    // Convert paragraph tags to spaces to correctly separate pasted lines
     tempDiv.innerHTML = inputValue.replace(/<\/(p|div|li|h[1-6])>|<br\s*\/?>/gi, ' ')
     
-    // Extract text and strip invisible characters
+    // 1. EXTRACT EXPLICIT HTML LINKS (e.g. Pasted from Safari/Chrome History)
+    const extractedUrls: string[] = []
+    tempDiv.querySelectorAll('a').forEach(a => {
+      if (a.href && a.href.startsWith('http')) {
+        extractedUrls.push(a.href)
+      }
+    })
+
     const rawText = (tempDiv.textContent || tempDiv.innerText || '')
     const cleanText = rawText.replace(/[\u200B-\u200D\uFEFF]/g, '').trim()
-    
     const hasMediaOrStructure = tempDiv.querySelector('img, hr, table, iframe') !== null;
 
     if (!cleanText && !hasMediaOrStructure) return
     
-    // 1. Split text into chunks by spaces or newlines
-    const rawTokens = cleanText.split(/[\s,\n]+/).map(t => t.trim()).filter(t => t.length > 0)
+    // 2. EXTRACT RAW TEXT LINKS
+    const tokens = cleanText.split(/[\s,\n]+/).map(t => {
+      return t.replace(/^[\(\[\{\<]/, '').replace(/[\)\}\]\>\.\,\;]$/, '')
+    }).filter(Boolean)
     
-    // 2. Clean trailing/leading punctuation
-    const tokens = rawTokens.map(t => t.replace(/^[\(\[\{\<]/, '').replace(/[\)\}\]\>\.\,\;]$/, ''))
-    
-    // 3. THE FIX: Aggressively filter out Chrome numbers ("1.", "2)") and Safari bullets ("-", "•")
-    const meaningfulTokens = tokens.filter(t => {
-      const hasAlphanumeric = /[a-zA-Z0-9]/.test(t);
-      // If the token is *only* digits with optional punctuation, or *only* bullets, we ignore it
-      const isJustListMarker = /^(\d+[\.\)]?|[\u2022\-\*]+)$/.test(t);
-      return hasAlphanumeric && !isJustListMarker;
-    });
-    
-    // 4. Strict URL validator
     const isUrl = (str: string) => {
       try {
         if (str.length < 5 || !str.includes('.')) return false;
@@ -311,12 +305,31 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       } catch { return false; }
     }
 
-    // Check if ALL remaining text components are URLs
-    const urlTokens = meaningfulTokens.filter(isUrl)
-    const isAllUrls = urlTokens.length > 0 && urlTokens.length === meaningfulTokens.length
+    const rawUrlTokens = tokens.filter(isUrl)
+    
+    // Merge explicit HTML links and raw text links into one array
+    const allUrls = Array.from(new Set([...extractedUrls, ...rawUrlTokens]))
 
-    if (isAllUrls && urlTokens.length === 1) {
-      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(urlTokens[0]))
+    // 3. INTENT DETECTION: Did they paste a list of links, or write a genuine note?
+    // We clone the input, physically delete all the <a> tags, and see what text is left over.
+    const clone = tempDiv.cloneNode(true) as HTMLDivElement
+    clone.querySelectorAll('a').forEach(a => a.remove())
+    let leftoverText = (clone.textContent || '').replace(/[\u200B-\u200D\uFEFF]/g, '')
+    
+    // Strip out the raw URL strings from the leftover text too
+    rawUrlTokens.forEach(url => { leftoverText = leftoverText.replace(url, '') })
+    
+    // Strip out bullets (•, -) and ordered numbers (1., 2)) added by browsers
+    leftoverText = leftoverText.replace(/(^|\s)(?:[\u2022\-\*]|\d+[\.\)])\s+/g, '')
+    // Finally, strip ALL spaces and punctuation to see the pure remaining word count
+    leftoverText = leftoverText.replace(/[\s,\.\-\u2022\*\n\r]/g, '').trim()
+
+    // If there are valid URLs, no complex HTML structure, AND almost no leftover words 
+    // (meaning the entire block was just URLs + their anchor titles + bullets), it's a Bulk URL Save.
+    const isBulkLinkSave = allUrls.length > 0 && leftoverText.length < 30 && !hasMediaOrStructure
+
+    if (isBulkLinkSave && allUrls.length === 1) {
+      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(allUrls[0]))
       if (existing) { setDuplicateMatch(existing); return }
     }
 
@@ -324,8 +337,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const existingUrls = new Set(bookmarks.map(b => normalizeUrl(b.url)))
 
     try {
-      if (isAllUrls && urlTokens.length > 1) {
-        const validNewTokens = urlTokens.filter(token => !existingUrls.has(normalizeUrl(token)))
+      if (isBulkLinkSave && allUrls.length > 1) {
+        // --- BULK PASTE MODE ---
+        const validNewTokens = allUrls.filter(token => !existingUrls.has(normalizeUrl(token)))
         if (validNewTokens.length === 0) { toast.error('Already cataloged.'); setIsSaving(false); return }
         
         await Promise.all(validNewTokens.map(token => fetch('/api/save', { 
@@ -336,8 +350,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         toast.success(`Cataloged ${validNewTokens.length} items`)
         
       } else {
-        const isSingleUrl = urlTokens.length === 1 && isAllUrls
-        let finalUrl = isSingleUrl ? urlTokens[0] : cleanText
+        // --- SINGLE PASTE OR NOTE MODE ---
+        const isSingleUrl = isBulkLinkSave && allUrls.length === 1
+        let finalUrl = isSingleUrl ? allUrls[0] : cleanText
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
