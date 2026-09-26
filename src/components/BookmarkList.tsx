@@ -99,7 +99,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   const [isGroupedByDate, setIsGroupedByDate] = useState(false)
   
-  // Layout Management State
   const [userColPreference, setUserColPreference] = useState<'auto' | 5 | 6 | 9>('auto')
   const [showGridMenu, setShowGridMenu] = useState(false)
   const [columnsCount, setColumnsCount] = useState(2)
@@ -289,8 +288,13 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
     if (!cleanText && !hasMediaOrStructure) return
     
+    // Strip common list markers (bullets, dashes, numbers) that browsers attach to copied lists
+    const textWithoutBullets = cleanText.replace(/(^|\s)(?:[\u2022\-\*]|\d+[\.\)])\s+/g, '$1')
+    
     // Split purely by spaces, newlines, or commas
-    const tokens = cleanText.split(/[\s,\n]+/).map(t => t.trim()).filter(t => t.length > 0)
+    const tokens = textWithoutBullets.split(/[\s,\n]+/).map(t => {
+      return t.replace(/^[\(\[\{\<]/, '').replace(/[\)\}\]\>\.\,\;]$/, '')
+    }).filter(t => t.length > 0)
     
     // Strict URL validator
     const isUrl = (str: string) => {
@@ -301,10 +305,14 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       } catch { return false; }
     }
 
-    const isAllUrls = tokens.length > 0 && tokens.every(isUrl)
+    // Consider it a "Bulk URL Save" if EVERY meaningful token is a URL
+    const meaningfulTokens = tokens.filter(t => /[a-zA-Z0-9]/.test(t))
+    const urlTokens = meaningfulTokens.filter(isUrl)
+    
+    const isAllUrls = urlTokens.length > 0 && urlTokens.length === meaningfulTokens.length
 
-    if (isAllUrls && tokens.length === 1) {
-      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(tokens[0]))
+    if (isAllUrls && urlTokens.length === 1) {
+      const existing = bookmarks.find(b => (b.type === 'link' || !b.type) && normalizeUrl(b.url) === normalizeUrl(urlTokens[0]))
       if (existing) { setDuplicateMatch(existing); return }
     }
 
@@ -312,9 +320,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     const existingUrls = new Set(bookmarks.map(b => normalizeUrl(b.url)))
 
     try {
-      if (isAllUrls && tokens.length > 1) {
-        // Correctly loops and handles multiple pasted URLs
-        const validNewTokens = tokens.filter(token => !existingUrls.has(normalizeUrl(token)))
+      if (isAllUrls && urlTokens.length > 1) {
+        const validNewTokens = urlTokens.filter(token => !existingUrls.has(normalizeUrl(token)))
         if (validNewTokens.length === 0) { toast.error('Already cataloged.'); setIsSaving(false); return }
         
         await Promise.all(validNewTokens.map(token => fetch('/api/save', { 
@@ -325,8 +332,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         toast.success(`Cataloged ${validNewTokens.length} items`)
         
       } else {
-        const isSingleUrl = tokens.length === 1 && isUrl(cleanText)
-        let finalUrl = cleanText
+        const isSingleUrl = urlTokens.length === 1 && isAllUrls
+        let finalUrl = isSingleUrl ? urlTokens[0] : cleanText
         if (isSingleUrl) finalUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : 'https://' + finalUrl
         
         const payload = isSingleUrl ? { url: finalUrl } : { url: window.location.origin + '/note-' + Date.now(), content: inputValue, type: 'note' }
@@ -461,18 +468,15 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
-      {/* Explicit scoped styling to force all HTML tags injected by Tiptap (a, span, p) to respect the inverted bar colors */}
+      {/* 
+        UNIVERSAL CSS NUKE
+        Forces every single element inside the capture bar (including pasted spans, links, and headers) 
+        to perfectly contrast with the green/white background.
+      */}
       <style dangerouslySetInnerHTML={{__html: `
         /* Light Mode: Green Capture Bar -> White Text & Cursor */
         .capture-bar-wrapper .tiptap, 
-        .capture-bar-wrapper .tiptap p, 
-        .capture-bar-wrapper .tiptap a, 
-        .capture-bar-wrapper .tiptap span, 
-        .capture-bar-wrapper .tiptap h1, 
-        .capture-bar-wrapper .tiptap h2, 
-        .capture-bar-wrapper .tiptap li,
-        .capture-bar-wrapper .tiptap strong,
-        .capture-bar-wrapper .tiptap blockquote {
+        .capture-bar-wrapper .tiptap * {
           color: #ffffff !important;
           caret-color: #ffffff !important;
         }
@@ -486,14 +490,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
         /* Dark Mode: White Capture Bar -> Green Text & Cursor */
         .dark .capture-bar-wrapper .tiptap, 
-        .dark .capture-bar-wrapper .tiptap p, 
-        .dark .capture-bar-wrapper .tiptap a, 
-        .dark .capture-bar-wrapper .tiptap span, 
-        .dark .capture-bar-wrapper .tiptap h1, 
-        .dark .capture-bar-wrapper .tiptap h2, 
-        .dark .capture-bar-wrapper .tiptap li,
-        .dark .capture-bar-wrapper .tiptap strong,
-        .dark .capture-bar-wrapper .tiptap blockquote {
+        .dark .capture-bar-wrapper .tiptap * {
           color: #4D6A51 !important;
           caret-color: #4D6A51 !important;
         }
