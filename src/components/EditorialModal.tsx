@@ -68,15 +68,33 @@ export default function EditorialModal({
     setTouchStart(0); setTouchEnd(0);
   }
 
+  // 1. Auto-focus the Confirm button when the dialog appears
+  useEffect(() => {
+    if (showDeleteConfirm && confirmDeleteRef.current) {
+      confirmDeleteRef.current.focus()
+    }
+  }, [showDeleteConfirm])
+
+  // 2. Global Keydown Handler
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Handle Escape to close modal or cancel delete
       if (e.key === 'Escape') {
         e.preventDefault()
         if (showDeleteConfirm) return setShowDeleteConfirm(false)
         await handleAutoSave()
         onClose()
       }
+      
+      // Handle Enter to safely confirm deletion
+      if (e.key === 'Enter' && showDeleteConfirm) {
+        e.preventDefault()
+        setShowDeleteConfirm(false)
+        onDelete(bookmark.id)
+        onClose()
+      }
     }
+    
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showDeleteConfirm, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
