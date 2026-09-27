@@ -436,6 +436,11 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     setFallbackStep((bookmark.image_url || ytHighResThumbnail) ? 0 : 1);
   }, [bookmark.image_url, ytHighResThumbnail]);
 
+ // --- THE NEW VISUAL-FIRST PREVIEW CASCADE ---
+  // Step 0: DB Image (New saves) or YouTube Thumb
+  // Step 1: Thum.io Screenshot (Prioritize beautiful full-page live screenshots first)
+  // Step 2: Microlink OG Proxy (Fallback to Open Graph icon if screenshot fails/blocked)
+  // Step 3: Returns undefined -> Triggers the gorgeous Favicon/Google fallback UI
   const previewImageUrl = useMemo(() => {
     if (displayType === 'google') return undefined;
 
@@ -443,11 +448,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       return ytHighResThumbnail || bookmark.image_url || undefined;
     }
     if (fallbackStep === 1 && bookmark.url) {
-      return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
-    }
-    if (fallbackStep === 2 && bookmark.url) {
+      // Prioritize full-page screenshot first
+      // Prevent whole-page screenshots for IG/TikTok to avoid login walls
       if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
       return `https://image.thum.io/get/width/800/crop/600/noanimate/${bookmark.url}`;
+    }
+    if (fallbackStep === 2 && bookmark.url) {
+      // Fallback to OG Image metadata
+      return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
     }
     
     return undefined;
