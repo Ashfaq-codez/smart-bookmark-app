@@ -259,10 +259,15 @@ export default function BookmarkCard({
                <div className="absolute top-0 left-0 w-full h-[3px] z-20" style={{ backgroundColor: getPlatformMeta(bookmark.url).color }} />
             )}
 
-            {/* Dynamic Official Platform Logo Badge (Hides entirely if Favicon fails) */}
+            {/* Dynamic Official Platform Logo Badge (Hides entirely if Logo fails) */}
             {!faviconError && (
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
-                 <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Platform Logo" className="w-full h-full object-contain rounded-sm" onError={() => setFaviconError(true)} />
+                 <img 
+                   src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} 
+                   alt="Platform Logo" 
+                   className="w-full h-full object-contain rounded-sm" 
+                   onError={() => setFaviconError(true)} 
+                 />
               </div>
             )}
 
@@ -280,7 +285,12 @@ export default function BookmarkCard({
                     {getDomain(bookmark.url).substring(0, 1)}
                  </div>
                  {!faviconError && (
-                    <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" onError={() => setFaviconError(true)} />
+                    <img 
+                      src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} 
+                      alt="Favicon" 
+                      className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" 
+                      onError={() => setFaviconError(true)} 
+                    />
                  )}
                  <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
               </div>
