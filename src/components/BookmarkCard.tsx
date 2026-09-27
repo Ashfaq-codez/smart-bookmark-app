@@ -2,165 +2,18 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
-import toast from 'react-hot-toast'
-import TipTapEditor from './TipTapEditor'
-
-// Base UI Icons
-const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
-const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-const SearchIcon = ({ className = "" }: { className?: string }) => <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
-
-// Social Brand Icons
-const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
-
-const InstagramIcon = ({ className = "" }: { className?: string }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#ig-gradient)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <defs>
-      <linearGradient id="ig-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#FCAF45" />
-        <stop offset="50%" stopColor="#FD1D1D" />
-        <stop offset="100%" stopColor="#833AB4" />
-      </linearGradient>
-    </defs>
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-  </svg>
-)
-
-const YouTubeIcon = ({ className = "" }: { className?: string }) => <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-const TikTokIcon = ({ className = "" }: { className?: string }) => <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.12-3.44-3.17-3.61-5.46-.11-1.43.15-2.88.85-4.1 1.25-2.18 3.65-3.5 6.13-3.32.06 1.35.03 2.7.04 4.05-1.2-.2-2.48.06-3.41.87-.91.79-1.32 2.05-1.07 3.22.25 1.18 1.12 2.15 2.25 2.47 1.05.3 2.23.09 3.09-.59.85-.68 1.34-1.74 1.4-2.82.09-3.79.05-7.59.07-11.38Z"/></svg>
-const PinterestIcon = ({ className = "" }: { className?: string }) => (
-  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.291 1.199-.334 1.357-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/>
-  </svg>
-)
-
-const renderInstagramText = (text: string) => {
-  if (!text) return null;
-  const parts = text.split(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_.]+)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('#')) {
-      return (
-        <a 
-          key={i} 
-          href={`https://www.instagram.com/explore/tags/${part.slice(1)}/`} 
-          target="_blank" 
-          rel="noreferrer" 
-          onClick={(e) => e.stopPropagation()} 
-          className="text-[#00376B] dark:text-[#E0F1FF] hover:underline"
-        >
-          {part}
-        </a>
-      );
-    }
-    if (part.startsWith('@')) {
-      return (
-        <a 
-          key={i} 
-          href={`https://www.instagram.com/${part.slice(1)}/`} 
-          target="_blank" 
-          rel="noreferrer" 
-          onClick={(e) => e.stopPropagation()} 
-          className="text-[#00376B] dark:text-[#E0F1FF] hover:underline font-medium"
-        >
-          {part}
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-};
-
-// Instagram Native Modal Icons
-const InstaHeartIcon = () => <svg aria-label="Like" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.438-.283-1.791-1.509-4.303-3.752C5.152 14.081 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.514 1.117 1.514s.277-.339 1.117-1.514a4.21 4.21 0 0 1 3.675-1.941z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></path></svg>
-const InstaCommentIcon = () => <svg aria-label="Comment" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></path></svg>
-const InstaShareIcon = () => <svg aria-label="Share Post" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><line fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" x1="22" x2="9.218" y1="3" y2="10.083"></line><polygon fill="none" points="11.698 20.334 22 3.001 2 3.001 9.218 10.084 11.698 20.334" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></polygon></svg>
-const InstaSaveIcon = () => <svg aria-label="Save" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><polygon fill="none" points="20 21 12 13.44 4 21 4 3 20 3 20 21" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></polygon></svg>
-const InstaDotsIcon = () => <svg aria-label="More Options" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><circle cx="12" cy="12" r="1.5"></circle><circle cx="6" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>
-
-const isVideoMedia = (url?: string | null) => {
-  if (!url) return false;
-  const l = url.toLowerCase();
-  
-  if (l.includes('.jpg') || l.includes('.jpeg') || l.includes('.png') || l.includes('.webp') || l.includes('format=jpg') || l.includes('format=png') || l.includes('thumb')) {
-    return false;
-  }
-  
-  return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('.m3u8');
-};
-
-const isGoogleSearchUrl = (url?: string) => {
-  if (!url) return false;
-  try {
-    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
-    return (u.hostname === 'google.com' || u.hostname === 'www.google.com' || u.hostname.endsWith('.google.com') || u.hostname.includes('google.co.')) && (u.pathname.includes('/search') || u.searchParams.has('q'));
-  } catch {
-    return false;
-  }
-};
-
-const getGoogleQuery = (url?: string) => {
-  if (!url) return '';
-  try {
-    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
-    const q = u.searchParams.get('q');
-    return q ? decodeURIComponent(q).replace(/\+/g, ' ') : '';
-  } catch {
-    return '';
-  }
-};
-
-const renderTwitterText = (text: string, isExpanded: boolean = false) => {
-  if (!text) return null;
-  
-  const parts = text.split(/(https?:\/\/(?:twitter\.com|x\.com)\/\w+\/status\/\d+(?:\?[^\s]*)?)/g);
-  
-  return parts.map((part, i) => {
-    const quoteMatch = part.match(/https?:\/\/(?:twitter\.com|x\.com)\/(\w+)\/status\/(\d+)/);
-    
-    if (quoteMatch) {
-      return (
-        <div key={i} className="mt-3 mb-1 w-full rounded-xl overflow-hidden border border-black/[0.04] dark:border-white/[0.04] bg-gray-50 dark:bg-black pointer-events-auto relative z-20" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-           <iframe 
-             src={`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=dark&id=${quoteMatch[2]}`} 
-             className={`w-full border-none bg-transparent ${isExpanded ? 'h-[350px] overflow-y-auto custom-scrollbar' : 'h-[200px]'}`} 
-             title="Nested X Post"
-             scrolling={isExpanded ? "yes" : "no"}
-           />
-        </div>
-      );
-    }
-
-    const subParts = part.split(/(https?:\/\/[^\s]+|@\w+|#\w+)/g);
-    return subParts.map((sub, j) => {
-      if (sub.match(/^(https?:\/\/[^\s]+|@\w+|#\w+)$/)) {
-        return (
-          <a 
-            key={`${i}-${j}`} 
-            href={sub.startsWith('http') ? sub : `https://x.com/${sub}`} 
-            target="_blank" 
-            rel="noreferrer" 
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()} 
-            onClick={(e) => e.stopPropagation()} 
-            className="text-[#1DA1F2] hover:underline relative z-20 pointer-events-auto"
-          >
-            {sub}
-          </a>
-        );
-      }
-      return <span key={`${i}-${j}`}>{sub}</span>;
-    });
-  });
-};
+import { 
+  ExternalLinkIcon, CloseIcon, PlayCircleIcon, InfoIcon, 
+  XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon 
+} from './BookmarkIcons';
+import { 
+  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText 
+} from '@/utils/bookmarkHelpers';
+import EditorialModal from './EditorialModal'
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -176,41 +29,25 @@ interface BookmarkCardProps {
   isMinimalist?: boolean;
 }
 
-export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragEnd, updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, folderHierarchy, isMinimalist }: BookmarkCardProps) {
+export default function BookmarkCard({ 
+  bookmark, isDragged, onDragStart, onDragEnd, 
+  updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, 
+  folderHierarchy, isMinimalist 
+}: BookmarkCardProps) {
+  
   const [mounted, setMounted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
-  const [igLiked, setIgLiked] = useState(false)
-  const [igSaved, setIgSaved] = useState(false)
-  const [showIgHeartAnim, setShowIgHeartAnim] = useState(false)
-  const [igComments, setIgComments] = useState<string[]>([])
-  
-  const [showCatDropdown, setShowCatDropdown] = useState(false)
-  const [showSubDropdown, setShowSubDropdown] = useState(false)
-  
-  const [touchStart, setTouchStart] = useState(0)
-  const [touchEnd, setTouchEnd] = useState(0)
-  
-  const confirmDeleteRef = useRef<HTMLButtonElement>(null)
+  const [fullscreenImageUrl, setFullscreenImageUrl] = useState('')
   const supabase = createClient()
-
-  const [editTitle, setEditTitle] = useState(bookmark.title || '')
-  const [editUrl, setEditUrl] = useState(bookmark.url || '')
-  const [editCategory, setEditCategory] = useState(bookmark.category || '')
-  const [editSubCategory, setEditSubCategory] = useState(bookmark.sub_category || '')
-  const [editDescription, setEditDescription] = useState(bookmark.description || '')
-  const [editContent, setEditContent] = useState(bookmark.content || '')
 
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (!mounted) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('b') === String(bookmark.id)) {
-      setIsModalOpen(true);
-    }
+    if (params.get('b') === String(bookmark.id)) setIsModalOpen(true);
 
     const handlePopState = () => {
       const currentParams = new URLSearchParams(window.location.search);
@@ -235,9 +72,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     setIsModalOpen(true);
   }, [bookmark.id]);
 
-  useEffect(() => { 
-    if (forceOpenModal) openModal(); 
-  }, [forceOpenModal, openModal]);
+  useEffect(() => { if (forceOpenModal) openModal(); }, [forceOpenModal, openModal]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -250,35 +85,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return () => { document.body.style.overflow = '' }
   }, [isModalOpen])
 
-  useEffect(() => {
-    setEditTitle(bookmark.title || '')
-    setEditUrl(bookmark.url || '')
-    setEditCategory(bookmark.category || '')
-    setEditSubCategory(bookmark.sub_category || '')
-    setEditDescription(bookmark.description || '')
-    setEditContent(bookmark.content || '')
-  }, [bookmark])
-
-  useEffect(() => {
-    if (showDeleteConfirm && confirmDeleteRef.current) {
-      confirmDeleteRef.current.focus()
-    }
-  }, [showDeleteConfirm])
-
-  const formatUrl = (rawUrl: string) => { const t = rawUrl.trim(); if (!t) return ''; return !t.startsWith('http://') && !t.startsWith('https://') ? 'https://' + t : t }
-
-  const handleAutoSave = async () => {
-    if (editTitle.trim() === (bookmark.title || '') && formatUrl(editUrl) === bookmark.url && editCategory.trim() === (bookmark.category || '') && editSubCategory.trim() === (bookmark.sub_category || '') && editDescription.trim() === (bookmark.description || '') && editContent === (bookmark.content || '')) return;
-    await updateBookmark(bookmark.id, { title: editTitle.trim() || '', url: formatUrl(editUrl), category: editCategory.trim() || 'Uncategorized', sub_category: editSubCategory.trim() || null, description: editDescription.trim() || null, content: editContent || null })
-    
-    toast.success('Saved', { style: { background: '#4D6A51', color: 'white', border: 'none', borderRadius: '12px' } })
-  }
-
   const handleCloseModal = () => { 
     setIsVisible(false) 
     setTimeout(() => {
       setIsModalOpen(false)
-      setShowDeleteConfirm(false)
       setIsFullscreenImage(false)
       if (onCloseForcedModal) onCloseForcedModal()
     }, 300) 
@@ -290,139 +100,14 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
       window.history.pushState({}, '', newUrl);
     }
   }
-  
-  const handleCloseWithSave = async () => {
-    await handleAutoSave()
-    handleCloseModal()
-  }
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientY)
-    setTouchEnd(0)
+  const handleDelete = async (id: number) => {
+    if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
+    await deleteBookmark(id);
+    handleCloseModal();
   }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientY)
-  }
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-    const distance = touchEnd - touchStart
-    if (distance > 45) {
-      handleCloseWithSave()
-    }
-    setTouchStart(0)
-    setTouchEnd(0)
-  }
-
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (!isModalOpen) return
-      
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        if (isFullscreenImage) {
-          setIsFullscreenImage(false)
-          return
-        }
-        if (showDeleteConfirm) {
-          setShowDeleteConfirm(false)
-          return
-        }
-        await handleCloseWithSave()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, showDeleteConfirm, isFullscreenImage, editTitle, editUrl, editCategory, editSubCategory, editDescription, editContent])
 
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
-
-  const handleConfirmDelete = async () => { 
-    if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
-    await deleteBookmark(bookmark.id); 
-    setShowDeleteConfirm(false); 
-    handleCloseModal(); 
-  }
-
-  const getYouTubeId = (url: string) => {
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^?&/]{11})/);
-    return match ? match[1] : '';
-  }
-
-  const getTwitterAuthor = (url: string) => {
-    const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)/);
-    return match ? match[1] : 'unknown';
-  }
-
-  const getInstaMeta = (b: Bookmark) => {
-    let username = 'instagram_user';
-    let likes = '1,248';
-    let caption = '';
-
-    const fullText = (b.description || '') + ' ' + (b.title || '');
-
-    if (fullText.includes(' on Instagram:')) {
-      const parts = fullText.split(' on Instagram:');
-      const metaPart = parts[0];
-      
-      const userMatch = metaPart.match(/-\s+([a-zA-Z0-9_.]+)\s*$/) || metaPart.match(/^([a-zA-Z0-9_.]+)$/);
-      if (userMatch) username = userMatch[1].trim();
-      
-      const likesMatch = metaPart.match(/([\d,KMB]+)\s+likes?/i);
-      if (likesMatch) likes = likesMatch[1];
-
-      caption = parts.slice(1).join(' on Instagram:').trim();
-      
-      if ((caption.startsWith('"') && caption.endsWith('"')) || (caption.startsWith("'") && caption.endsWith("'"))) {
-        caption = caption.substring(1, caption.length - 1).trim();
-      }
-    } else {
-      caption = (b.description && b.description !== b.title) ? b.description : '';
-    }
-
-    if (caption.toLowerCase() === 'instagram' || caption.toLowerCase().includes('instagram photos and videos') || caption.includes('Create an account')) {
-      caption = '';
-    }
-
-    if (username === 'instagram_user' && b.url) {
-      const urlMatch = b.url.match(/instagram\.com\/([^/]+)/);
-      if (urlMatch && !['p','reel','reels','tv','explore'].includes(urlMatch[1])) {
-        username = urlMatch[1];
-      }
-    }
-    
-    if (username.length > 30) username = username.substring(0, 30);
-
-    return { username, likes, caption };
-  }
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return '';
-    const d = new Date(dateString);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
-
-  const deriveDisplayType = (b: Bookmark) => {
-    if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
-    if (b.url) {
-      if (isGoogleSearchUrl(b.url)) return 'google';
-      const url = b.url.toLowerCase();
-      if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-      if (url.includes('instagram.com')) return 'instagram';
-      if (url.includes('pinterest.com') || url.includes('pin.it')) return 'pinterest';
-      if (url.includes('tiktok.com')) return 'tiktok';
-      if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-      if (url.includes('github.com')) return 'github';
-      if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
-    }
-    return b.type || 'link';
-  }
   
   const displayType = deriveDisplayType(bookmark);
   const ytVideoId = getYouTubeId(bookmark.url);
@@ -436,129 +121,53 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     setFallbackStep((bookmark.image_url || ytHighResThumbnail) ? 0 : 1);
   }, [bookmark.image_url, ytHighResThumbnail]);
 
- // --- THE STABLE PREVIEW CASCADE ---
-  // Step 0: DB Image (New saves) or YouTube Thumb
-  // Step 1: Microlink OG Proxy (Highly reliable metadata image, avoids loading screens)
-  // Step 2: Thum.io Screenshot (Fallback to live screenshot only if OG is missing)
-  // Step 3: Returns undefined -> Triggers the gorgeous Favicon/Google fallback UI
   const previewImageUrl = useMemo(() => {
     if (displayType === 'google') return undefined;
-
-    if (fallbackStep === 0) {
-      return ytHighResThumbnail || bookmark.image_url || undefined;
-    }
-    if (fallbackStep === 1 && bookmark.url) {
-      // Prioritize the official, stable Open Graph image first
-      return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
-    }
+    if (fallbackStep === 0) return ytHighResThumbnail || bookmark.image_url || undefined;
+    if (fallbackStep === 1 && bookmark.url) return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
     if (fallbackStep === 2 && bookmark.url) {
-      // Prevent whole-page screenshots for IG/TikTok to avoid login walls
       if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
       return `https://image.thum.io/get/width/800/crop/600/noanimate/${bookmark.url}`;
     }
-    
     return undefined;
   }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 
-
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
-  const instaData = displayType === 'instagram' ? getInstaMeta({
-    ...bookmark,
-    title: editTitle,
-    description: editDescription,
-    content: editContent,
-  }) : null;
-
-  const displayedLikes = useMemo(() => {
-    if (!instaData) return '1,248';
-    if (!igLiked) return instaData.likes;
-    const rawNum = parseInt(instaData.likes.replace(/,/g, ''), 10);
-    if (!isNaN(rawNum)) {
-      return (rawNum + 1).toLocaleString();
-    }
-    return `${instaData.likes}`;
-  }, [instaData?.likes, igLiked]);
-
-  const handleIgDoubleTap = () => {
-    if (!igLiked) setIgLiked(true);
-    setShowIgHeartAnim(true);
-    setTimeout(() => setShowIgHeartAnim(false), 800);
-  };
-  
-  const availableCats = folderHierarchy ? Object.keys(folderHierarchy).filter(c => c !== 'All') : []
-  const filteredCats = availableCats.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()))
-  const availableSubs = (folderHierarchy && editCategory && folderHierarchy[editCategory]) ? folderHierarchy[editCategory] : []
-  const filteredSubs = availableSubs.filter(s => s.toLowerCase().includes(editSubCategory.toLowerCase()))
-
   const plainTextLength = bookmark.content ? bookmark.content.replace(/<[^>]*>?/gm, '').trim().length : 0;
   const isLongNote = plainTextLength > 250;
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.3); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(156, 163, 175, 0.5); }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(75, 85, 99, 0.5); }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(75, 85, 99, 0.8); }
-      `}} />
-
-      <div 
-        draggable 
-        onDragStart={(e) => onDragStart(e, bookmark.id)} 
-        onDragEnd={onDragEnd} 
-        onClick={openModal} 
-        className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}
-      >
+      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={openModal} className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
         
         {displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative overflow-hidden max-h-[260px] sm:max-h-[340px]">
             <div className="tiptap prose prose-sm sm:prose-base dark:prose-invert max-w-none font-serif text-[#171A17] dark:text-[#F3F0E9] break-words w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
-            {isLongNote && (
-              <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-[#151815] to-transparent pointer-events-none" />
-            )}
+            {isLongNote && <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-[#151815] to-transparent pointer-events-none" />}
           </div>
           
         ) : displayType === 'twitter' ? (
           <div className="w-full bg-white dark:bg-[#1C1D21] rounded-xl sm:rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-transparent relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
-            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1">
-              <XIcon />
-            </div>
-            
+            <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1"><XIcon /></div>
             <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
               {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
             </div>
-            
             {bookmark.image_url && (
               <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                 {isVideoMedia(bookmark.image_url) ? (
                   <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-56 object-cover block" />
                 ) : (
-                  <>
-                    <img src={bookmark.image_url || undefined} alt={bookmark.title || "Post media"} className="w-full h-auto max-h-56 object-cover block" loading="lazy" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors">
-                       <PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </>
+                  <><img src={bookmark.image_url || undefined} alt={bookmark.title || "Post media"} className="w-full h-auto max-h-56 object-cover block" loading="lazy" /><div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors"><PlayCircleIcon className="w-12 h-12 text-white/90 drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity" /></div></>
                 )}
               </div>
             )}
-            
-            <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">
-              by {getTwitterAuthor(bookmark.url)}
-            </p>
+            <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">by {getTwitterAuthor(bookmark.url)}</p>
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
           <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
-            {displayType === 'instagram' ? (
-              <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" />
-            ) : (
-              <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />
-            )}
-            
+            {displayType === 'instagram' ? <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" /> : <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />}
             {previewImageUrl ? (
                 <img src={previewImageUrl} alt={bookmark.title || "Post thumbnail"} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
@@ -566,84 +175,38 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     {displayType === 'instagram' ? <InstagramIcon className="w-12 h-12 text-black/20 dark:text-white/20" /> : <TikTokIcon className="w-12 h-12 text-black/20 dark:text-white/20" />}
                 </div>
             )}
-            
             <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
               {displayType === 'instagram' ? <InstagramIcon /> : <TikTokIcon />}
             </div>
-            
-            {previewImageUrl && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors z-10 pointer-events-none">
-                  <PlayCircleIcon className="w-10 h-10 sm:w-14 sm:h-14 text-white/90 drop-shadow-lg" />
-                </div>
-            )}
+            {previewImageUrl && <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors z-10 pointer-events-none"><PlayCircleIcon className="w-10 h-10 sm:w-14 sm:h-14 text-white/90 drop-shadow-lg" /></div>}
           </div>
 
         ) : displayType === 'youtube' ? (
           <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
             <img src={previewImageUrl} alt={bookmark.title || "YouTube thumbnail"} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" onError={() => setFallbackStep(prev => prev + 1)} />
-            
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white">
-              <YouTubeIcon className="text-[#FF0000]" />
-            </div>
-
-            <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10 pointer-events-none">
-              <PlayCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" />
-            </div>
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white"><YouTubeIcon className="text-[#FF0000]" /></div>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10 pointer-events-none"><PlayCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" /></div>
           </div>
 
         ) : displayType === 'google' ? (
           <div className="w-full aspect-[4/3] sm:aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#F8F9FA] dark:bg-[#202124] flex flex-col items-center justify-center p-6 gap-6">
-             {/* Google Authentic Logo SVG */}
-             <svg viewBox="0 0 272 92" width="92" height="30" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.86 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/><path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/><path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/><path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.96-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.5-.01z"/></svg>
-             
-             {/* Search Bar mockup */}
-             <div className="w-[85%] max-w-[300px] h-10 rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-[0_1px_6px_rgba(32,33,36,0.28)] flex items-center px-4 gap-2.5 overflow-hidden">
-                <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 text-[#9aa0a6] shrink-0"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
-                <span className="text-sm text-[#202124] dark:text-[#e8eaed] truncate pb-0.5">{getGoogleQuery(bookmark.url) || 'Search...'}</span>
+             <div className="w-[85%] max-w-[300px] h-10 rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-[0_1px_6px_rgba(32,33,36,0.28)] flex items-center px-4 gap-2.5 overflow-hidden mt-10">
+                <span className="text-sm text-[#202124] dark:text-[#e8eaed] truncate pb-0.5">Google Search</span>
              </div>
           </div>
 
         ) : displayType === 'pinterest' ? (
           <div className="w-full aspect-[2/3] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] group/pin">
-            {/* Pinterest Red Top Accent Line */}
             <div className="absolute top-0 left-0 w-full h-[4px] bg-[#E60023] z-20" />
-            
             {previewImageUrl ? (
-              <img 
-                src={previewImageUrl} 
-                alt={bookmark.title || "Pinterest Pin"} 
-                className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" 
-                loading="lazy" 
-                onError={() => setFallbackStep(prev => prev + 1)}
-              />
+              <img src={previewImageUrl} alt={bookmark.title || "Pinterest Pin"} className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-[#202020] text-[#E60023] gap-2">
-                <PinterestIcon className="w-12 h-12" />
-                <span className="text-xs font-semibold text-gray-500">Pinterest Pin</span>
-              </div>
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-[#202020] text-[#E60023] gap-2"><PinterestIcon className="w-12 h-12" /></div>
             )}
-            
-            {/* Badge top-left */}
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1.5 shadow-sm bg-white text-[#E60023]">
-              <PinterestIcon className="w-4 h-4" />
-            </div>
-
-            {/* Hover Save pill top-right */}
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 opacity-0 group-hover/pin:opacity-100 transition-opacity duration-200">
-              <span className="bg-[#E60023] hover:bg-[#ad081b] text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-lg pointer-events-auto">
-                Save
-              </span>
-            </div>
-
-            {/* Bottom gradient overlay with source domain */}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1.5 shadow-sm bg-white text-[#E60023]"><PinterestIcon className="w-4 h-4" /></div>
             <div className="absolute inset-x-0 bottom-0 pt-8 pb-3 px-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent flex items-center justify-between z-10">
-              <span className="text-white text-[11px] font-medium font-sans truncate drop-shadow-sm max-w-[80%]">
-                {getDomain(bookmark.url)}
-              </span>
-              <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
-                <ExternalLinkIcon />
-              </div>
+              <span className="text-white text-[11px] font-medium font-sans truncate drop-shadow-sm max-w-[80%]">{getDomain(bookmark.url)}</span>
             </div>
           </div>
 
@@ -654,20 +217,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           
         ) : displayType === 'pdf' ? (
           <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center p-3 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5">
-            <div 
-              className="w-full h-full bg-[#FAF9F5] shadow-xl relative flex flex-col items-center justify-center overflow-hidden"
-              style={{ clipPath: 'polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 0 100%)' }}
-            >
+            <div className="w-full h-full bg-[#FAF9F5] shadow-xl relative flex flex-col items-center justify-center overflow-hidden" style={{ clipPath: 'polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 0 100%)' }}>
               <div className="absolute top-0 right-0 w-[24px] h-[24px] sm:w-[36px] sm:h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
               <div className="w-full h-full relative z-10 bg-white">
-                 <iframe 
-                   src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                   className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" 
-                   title="PDF Preview"
-                   scrolling="no"
-                   tabIndex={-1}
-                 />
-                 <div className="absolute inset-0 z-20 bg-transparent" />
+                 <iframe src={`${bookmark.url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-none pointer-events-none bg-white" title="PDF Preview" scrolling="no" tabIndex={-1} />
               </div>
             </div>
           </div>
@@ -675,20 +228,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         ) : (
           <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
             {previewImageUrl ? (
-              <img 
-                src={previewImageUrl} 
-                alt={bookmark.title || "Link preview"} 
-                className="w-full h-auto max-h-64 object-cover block group-hover/fallback:scale-[1.03] transition-transform duration-700 ease-out bg-white dark:bg-[#151815]" 
-                loading="lazy" 
-                onError={() => setFallbackStep(prev => prev + 1)} 
-              />
+              <img src={previewImageUrl} alt={bookmark.title || "Link preview"} className="w-full h-auto max-h-64 object-cover block group-hover/fallback:scale-[1.03] transition-transform duration-700 ease-out bg-white dark:bg-[#151815]" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
               <div className="w-full aspect-[4/3] sm:aspect-video flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815] relative overflow-hidden group-hover/fallback:opacity-90 transition-opacity">
-                 {/* Large blurred background initial for design */}
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">
-                    {getDomain(bookmark.url).substring(0, 1)}
-                 </div>
-                 {/* High-res Site Favicon */}
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">{getDomain(bookmark.url).substring(0, 1)}</div>
                  <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
                  <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
               </div>
@@ -696,13 +239,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
         )}
 
-        {/* Minimalist View hides this meta section */}
         {!isMinimalist && displayType !== 'note' && displayType !== 'twitter' && (
           <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1 pb-1 sm:pb-0">
             {hasValidTitle && displayType !== 'instagram' && (
-              <h4 className="text-[13px] sm:text-[14px] font-semibold font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-2 leading-snug w-full">
-                {bookmark.title}
-              </h4>
+              <h4 className="text-[13px] sm:text-[14px] font-semibold font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-2 leading-snug w-full">{bookmark.title}</h4>
             )}
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
               {displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : displayType === 'google' ? 'GOOGLE SEARCH' : getDomain(bookmark.url)}
@@ -711,553 +251,19 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         )}
       </div>
 
-      {mounted && isModalOpen && createPortal(
-        <div className={`fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-10 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleCloseWithSave}>
-          
-          <div 
-            className={`relative w-full h-[100dvh] md:h-[90vh] flex flex-col md:flex-row bg-[#FAF9F5] dark:bg-[#0F120F] border-0 md:border border-black/[0.04] dark:border-white/[0.04] shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:shadow-2xl rounded-none md:rounded-3xl overflow-hidden transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-full md:translate-y-0 md:scale-95'}`} 
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-
-            {/* Drag Handle Top Bar on Mobile */}
-            <div 
-              className="absolute top-0 left-0 w-full h-12 z-[60] md:hidden flex items-start justify-center pt-3 touch-none"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <div className="w-12 h-1.5 bg-black/10 dark:bg-white/20 rounded-full pointer-events-none" />
-            </div>
-
-            <button onClick={handleCloseWithSave} className="absolute top-4 right-4 z-[100] p-2 text-[#171A17]/50 dark:text-white/50 hover:text-[#171A17] dark:hover:text-white transition-all cursor-pointer items-center justify-center bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-full shadow-sm hover:bg-black/10 dark:hover:bg-white/10">
-              <CloseIcon />
-            </button>
-
-            {/* Seamless Mobile Scroll Wrapper */}
-            <div className="flex-1 w-full h-full overflow-y-auto md:overflow-hidden flex flex-col md:flex-row custom-scrollbar pt-12 md:pt-0">
-
-              {/* LEFT PANE (Preview / Editor) */}
-              <div className={`w-full md:w-[60%] flex flex-col shrink-0 md:shrink border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F]' : 'bg-white dark:bg-[#1A1D1A]'} md:h-full md:overflow-hidden`}>
-                
-                {displayType === 'note' ? (
-                  <div className="w-full flex flex-col relative bg-[#FAF9F5] dark:bg-[#0F120F] h-auto min-h-[50dvh] md:h-full">
-                     <TipTapEditor
-                       value={editContent || ''}
-                       onChange={setEditContent}
-                       onBlur={handleAutoSave}
-                       isExpanded={true} 
-                     />
-                  </div>
-                ) : displayType === 'twitter' ? (
-                  <div className="w-full flex bg-[#151618] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar">
-                    <div className="w-full max-w-[500px] bg-[#1C1E23] rounded-3xl flex flex-col shadow-2xl relative overflow-hidden border border-white/5 m-auto z-20 pointer-events-auto">
-                      <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
-                      
-                      <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
-                        <div className="text-[15px] font-sans text-[#F3F0E9] leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
-                          {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
-                        </div>
-                        
-                        {bookmark.image_url && (
-                          <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">
-                            {isVideoMedia(bookmark.image_url) ? (
-                               <video src={bookmark.image_url} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto object-contain max-h-[50vh] block" />
-                            ) : (
-                               <img src={bookmark.image_url || undefined} alt={bookmark.title || "Post attachment"} className="w-full h-auto object-contain max-h-[50vh] block" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="px-6 md:px-8 py-4 bg-[#181A1F] border-t border-white/5 flex items-center justify-between text-white/50">
-                        <span className="text-[12px] font-sans">
-                          Post by {getTwitterAuthor(bookmark.url)} on {formatDate(bookmark.created_at)}
-                        </span>
-                        <XIcon />
-                      </div>
-                    </div>
-                  </div>
-
-                ) : displayType === 'instagram' && instaData ? (
-                  <div className="w-full flex bg-[#FAFAFA] dark:bg-[#000000] p-0 md:p-4 py-8 md:h-full md:overflow-y-auto custom-scrollbar justify-center">
-                    
-                    {/* Authentic Instagram Post Container */}
-                    <div className="w-full md:max-w-[470px] bg-white dark:bg-[#000000] md:border border-black/[0.08] dark:border-[#262626] md:rounded-[3px] flex flex-col m-auto md:my-auto">
-                      
-                      {/* IG Header */}
-                      <div className="flex items-center justify-between p-3 shrink-0">
-                        <div className="flex items-center gap-3">
-                          {/* IG Gradient Avatar */}
-                          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 p-[1.5px]">
-                            <div className="w-full h-full bg-white dark:bg-black rounded-full overflow-hidden border-2 border-white dark:border-black">
-                              <img src={`https://ui-avatars.com/api/?name=${instaData.username}&background=random&color=fff&size=100`} alt={instaData.username} className="w-full h-full object-cover" />
-                            </div>
-                          </div>
-                          <a 
-                            href={`https://www.instagram.com/${instaData.username}/`} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="text-[14px] font-semibold font-sans text-[#262626] dark:text-[#F5F5F5] leading-tight hover:underline flex items-center gap-1.5"
-                          >
-                            <span>{instaData.username}</span>
-                            <span className="text-[#737373] dark:text-[#a8a8a8] font-normal text-xs">• Following</span>
-                          </a>
-                        </div>
-                        <a 
-                          href={bookmark.url} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          title="Open on Instagram" 
-                          className="text-[#262626] dark:text-[#F5F5F5] hover:opacity-60 transition-opacity p-1"
-                        >
-                          <InstaDotsIcon />
-                        </a>
-                      </div>
-
-                      {/* Edge-to-Edge Media */}
-                      <div 
-                        className="w-full bg-[#FAFAFA] dark:bg-[#262626] relative shrink-0 flex items-center justify-center border-y border-black/[0.04] dark:border-[#262626] min-h-[300px] select-none cursor-pointer"
-                        onDoubleClick={handleIgDoubleTap}
-                      >
-                        {isVideoMedia(bookmark.image_url) ? (
-                           <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[585px] object-contain block" />
-                        ) : (
-                           previewImageUrl ? (
-                             <img src={previewImageUrl} alt={instaData.caption || bookmark.title || "Instagram post"} className="w-full h-auto max-h-[585px] object-contain block" onError={() => setFallbackStep(prev => prev + 1)} />
-                           ) : (
-                             <div className="flex flex-col items-center justify-center text-[#737373] dark:text-[#A8A8A8] gap-3 p-10">
-                                <InstagramIcon className="w-12 h-12 opacity-50" />
-                                <span className="text-sm font-medium">Image protected by Instagram</span>
-                             </div>
-                           )
-                        )}
-                        {showIgHeartAnim && (
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping duration-700">
-                            <svg className="w-24 h-24 text-white drop-shadow-2xl fill-white" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* IG Action Bar & Caption */}
-                      <div className="px-4 pt-3 pb-4 flex flex-col gap-1.5 shrink-0 font-sans">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-4 text-[#262626] dark:text-[#F5F5F5]">
-                            <button 
-                              onClick={() => {
-                                setIgLiked(!igLiked);
-                                if (!igLiked) {
-                                  setShowIgHeartAnim(true);
-                                  setTimeout(() => setShowIgHeartAnim(false), 800);
-                                }
-                              }}
-                              className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none"
-                              aria-label="Like post"
-                            >
-                              {igLiked ? (
-                                <svg className="w-6 h-6 text-[#FF3040] fill-[#FF3040]" viewBox="0 0 24 24">
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                </svg>
-                              ) : (
-                                <InstaHeartIcon />
-                              )}
-                            </button>
-                            <button 
-                              onClick={() => document.getElementById(`ig-comment-${bookmark.id}`)?.focus()}
-                              className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none text-[#262626] dark:text-[#F5F5F5]"
-                              aria-label="Comment"
-                            >
-                              <InstaCommentIcon />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                if (bookmark.url) {
-                                  navigator.clipboard.writeText(bookmark.url);
-                                  toast.success('Instagram link copied!', { duration: 1500 });
-                                }
-                              }}
-                              className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none text-[#262626] dark:text-[#F5F5F5]"
-                              aria-label="Share post"
-                            >
-                              <InstaShareIcon />
-                            </button>
-                          </div>
-                          <button 
-                            onClick={() => {
-                              setIgSaved(!igSaved);
-                              toast.success(igSaved ? 'Removed from saved' : 'Saved to collection', { duration: 1500 });
-                            }}
-                            className="hover:opacity-60 transition-opacity cursor-pointer focus:outline-none text-[#262626] dark:text-[#F5F5F5]"
-                            aria-label="Save post"
-                          >
-                            {igSaved ? (
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="20 21 12 13.44 4 21 4 3 20 3 20 21" />
-                              </svg>
-                            ) : (
-                              <InstaSaveIcon />
-                            )}
-                          </button>
-                        </div>
-                        
-                        <div className="text-[14px] font-semibold text-[#262626] dark:text-[#F5F5F5]">
-                          {displayedLikes} likes
-                        </div>
-                        
-                        {instaData.caption && (
-                          <div className="text-[14px] text-[#262626] dark:text-[#F5F5F5] leading-snug mt-1 break-words">
-                            <a 
-                              href={`https://www.instagram.com/${instaData.username}/`} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="font-semibold mr-1.5 hover:underline text-[#262626] dark:text-[#F5F5F5]"
-                            >
-                              {instaData.username}
-                            </a>
-                            <span className="whitespace-pre-wrap">{renderInstagramText(instaData.caption)}</span>
-                          </div>
-                        )}
-
-                        {igComments.map((c, idx) => (
-                          <div key={idx} className="text-[14px] text-[#262626] dark:text-[#F5F5F5] leading-snug">
-                            <span className="font-semibold mr-1.5">you</span>
-                            <span>{c}</span>
-                          </div>
-                        ))}
-
-                        <div className="text-[14px] text-[#737373] dark:text-[#A8A8A8] mt-1 cursor-pointer hover:underline">
-                          View all comments
-                        </div>
-                        
-                        <div className="text-[10px] text-[#737373] dark:text-[#A8A8A8] uppercase mt-1 tracking-wide font-normal">
-                          {formatDate(bookmark.created_at)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                ) : displayType === 'pinterest' ? (
-                  <div className="w-full flex bg-[#F7F7F7] dark:bg-[#0F1010] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar justify-center items-center">
-                    {/* Authentic Pinterest Pin Container */}
-                    <div className="w-full max-w-[480px] bg-white dark:bg-[#1E1F22] rounded-3xl shadow-2xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden flex flex-col m-auto">
-                      
-                      {/* Pin Top Navigation / Actions Bar */}
-                      <div className="flex items-center justify-between p-4 pb-2 shrink-0">
-                        <a 
-                          href={bookmark.url} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="flex items-center gap-2 bg-[#E9E9E9] dark:bg-[#333] hover:bg-[#D8D8D8] dark:hover:bg-[#444] text-[#111] dark:text-white px-4 py-2 rounded-full text-xs font-semibold transition-colors"
-                        >
-                          <span>Visit</span>
-                          <ExternalLinkIcon />
-                        </a>
-                        
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => {
-                              if (bookmark.url) {
-                                navigator.clipboard.writeText(bookmark.url);
-                                toast.success('Pin link copied!', { duration: 1500 });
-                              }
-                            }}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors"
-                            title="Share"
-                          >
-                            <InstaShareIcon />
-                          </button>
-                          <a 
-                            href={bookmark.url} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="bg-[#E60023] hover:bg-[#ad081b] text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-md transition-colors flex items-center gap-1.5"
-                          >
-                            <PinterestIcon className="w-4 h-4 text-white" />
-                            <span>Save</span>
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Pin Media Container */}
-                      <div className="p-3 sm:p-4">
-                        <div 
-                          className="w-full bg-[#F0F0F0] dark:bg-[#141517] rounded-2xl overflow-hidden relative cursor-zoom-in group/media"
-                          onClick={() => setIsFullscreenImage(true)}
-                        >
-                          {previewImageUrl ? (
-                            <img 
-                              src={previewImageUrl} 
-                              alt={bookmark.title || "Pinterest Pin"} 
-                              className="w-full h-auto max-h-[55vh] object-contain rounded-2xl block m-auto group-hover/media:scale-[1.01] transition-transform duration-300" 
-                              onError={() => setFallbackStep(prev => prev + 1)}
-                            />
-                          ) : (
-                            <div className="w-full aspect-[2/3] flex flex-col items-center justify-center text-[#E60023] gap-3">
-                              <PinterestIcon className="w-16 h-16" />
-                              <span className="text-sm font-semibold text-gray-500">Pinterest Pin Preview</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Pin Details Section */}
-                      <div className="px-5 pb-6 pt-1 flex flex-col gap-2 font-sans">
-                        <div className="text-[12px] font-medium text-gray-500 dark:text-gray-400">
-                          {getDomain(bookmark.url)}
-                        </div>
-
-                        {hasValidTitle && (
-                          <h3 className="text-xl sm:text-2xl font-bold text-[#111] dark:text-[#EFEFEF] leading-tight">
-                            {bookmark.title}
-                          </h3>
-                        )}
-
-                        {bookmark.description && (
-                          <p className="text-[14px] text-[#333] dark:text-[#CCCCCC] leading-relaxed mt-1">
-                            {bookmark.description}
-                          </p>
-                        )}
-
-                        {/* Attribution Footer */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
-                          <div className="w-10 h-10 rounded-full bg-[#E60023] text-white flex items-center justify-center shrink-0 font-bold text-base shadow-sm">
-                            <PinterestIcon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-[#111] dark:text-white">Saved from Pinterest</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">Pinned on {formatDate(bookmark.created_at)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-
-                ) : displayType === 'youtube' ? (
-                  <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                    <iframe 
-                      src={`https://www.youtube.com/embed/${getYouTubeId(bookmark.url)}`} 
-                      className="w-full h-full border-none" 
-                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                      allowFullScreen 
-                      title="YouTube Video"
-                    />
-                  </div>
-
-                ) : displayType === 'google' ? (
-                  <div className="w-full flex bg-[#F8F9FA] dark:bg-[#202124] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar justify-center items-center">
-                    <div className="w-full max-w-[500px] flex flex-col items-center gap-8">
-                       <svg viewBox="0 0 272 92" width="150" height="50" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.86 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/><path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/><path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/><path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.96-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.5-.01z"/></svg>
-                       <div className="w-full rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-md flex items-center px-6 py-3.5 gap-4">
-                          <SearchIcon className="text-[#9aa0a6] w-5 h-5 shrink-0" />
-                          <span className="text-base text-[#202124] dark:text-[#e8eaed] truncate">{getGoogleQuery(bookmark.url) || 'Google Search'}</span>
-                       </div>
-                       <a href={bookmark.url} target="_blank" rel="noreferrer" className="px-6 py-2.5 bg-[#f8f9fa] dark:bg-[#303134] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] border border-[#f8f9fa] dark:border-[#303134] text-[#3c4043] dark:text-[#e8eaed] rounded text-sm font-medium transition-colors">
-                          Open Search Results
-                       </a>
-                    </div>
-                  </div>
-
-                ) : displayType === 'tiktok' ? (
-                  <div className="w-full aspect-[9/16] md:aspect-auto md:h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
-                    <img src={previewImageUrl} alt={bookmark.title || "TikTok preview"} className="w-full h-full object-contain z-10" onError={() => setFallbackStep(prev => prev + 1)} />
-                    
-                    <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
-                       <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
-                           This content plays at the original link. TikTok blocks us from embedding their media.
-                           <div className="mt-3">
-                              <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-blue-400 font-bold hover:underline pointer-events-auto">Watch Original</a>
-                           </div>
-                       </div>
-                       <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white cursor-pointer hover:bg-black/60 transition shadow-sm">
-                          <InfoIcon className="w-5 h-5" />
-                       </div>
-                    </div>
-                  </div>
-
-                ) : displayType === 'video' ? (
-                  <div className="w-full aspect-video md:h-full bg-[#050505] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                     <video src={bookmark.url} controls autoPlay={true} className="w-full h-full object-contain" />
-                  </div>
-                ) : displayType === 'pdf' ? (
-                  <div className="w-full aspect-[3/4] md:h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center relative overflow-hidden transition-colors duration-500">
-                     <iframe src={bookmark.url} className="w-full h-full border-none" title={bookmark.title} />
-                  </div>
-                ) : displayType === 'image' ? (
-                  <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => setIsFullscreenImage(true)}>
-                    <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" onError={() => setFallbackStep(prev => prev + 1)} />
-                  </div>
-                ) : (
-                  <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full justify-center items-center">
-                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
-                      {previewImageUrl ? (
-                        <img 
-                          src={previewImageUrl} 
-                          alt={bookmark.title || "Link preview"} 
-                          className="w-full h-auto object-cover md:h-full md:object-contain bg-white dark:bg-[#151815]" 
-                          onError={() => setFallbackStep(prev => prev + 1)} 
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815]">
-                           <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-24 h-24 rounded-2xl shadow-xl mb-6 bg-white p-2" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
-                           <span className="text-xl font-bold text-[#171A17] dark:text-[#F3F0E9] text-center px-4">{getDomain(bookmark.url)}</span>
-                           <span className="text-sm font-medium text-[#4D6A51] dark:text-[#8FAA91] mt-2 underline">Visit Website</span>
-                        </div>
-                      )}
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* RIGHT PANE (Meta) */}
-              <div className={`w-full md:w-[40%] flex flex-col shrink-0 md:shrink bg-[#FAF9F5] dark:bg-[#151815] transition-colors duration-500 md:h-full md:overflow-y-auto custom-scrollbar pb-16 md:pb-12`}>
-                <div className="px-6 md:px-10 py-8 md:py-10 flex flex-col min-h-full">
-                  
-                  <div className="flex flex-col gap-10 md:gap-12 flex-1 mt-4 md:mt-0">
-                    
-                    <div className="flex flex-col gap-3 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
-                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Title</label>
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onBlur={handleAutoSave}
-                        placeholder="Enter Title"
-                        className="w-full bg-transparent border-none outline-none text-xl md:text-2xl font-serif font-medium text-[#171A17] dark:text-[#F3F0E9] transition-colors rounded-none placeholder-[#171A17]/30 dark:placeholder-white/30"
-                      />
-                      
-                      {bookmark.url && !bookmark.url.includes('/note-') && (
-                        <div className="mt-2 flex flex-col gap-2">
-                          <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-sans text-[#4D6A51] dark:text-[#8FAA91] hover:opacity-70 uppercase tracking-widest transition-opacity w-max font-semibold">
-                            <span>Read Source</span>
-                            <ExternalLinkIcon />
-                          </a>
-                          <span className="text-[11px] font-sans text-[#171A17]/40 dark:text-white/40 truncate max-w-full select-all mt-1">
-                            {bookmark.url}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
-                      <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Folder Structure</label>
-                      <div className="flex flex-col gap-4">
-                        
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={editCategory}
-                            onChange={(e) => { setEditCategory(e.target.value); setShowCatDropdown(true); }}
-                            onFocus={() => setShowCatDropdown(true)}
-                            onBlur={() => { setTimeout(() => setShowCatDropdown(false), 200); handleAutoSave(); }}
-                            placeholder="Main Folder"
-                            className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
-                          />
-                          {showCatDropdown && filteredCats.length > 0 && (
-                            <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
-                              {filteredCats.map(c => (
-                                <li 
-                                  key={c} 
-                                  onMouseDown={(e) => { e.preventDefault(); setEditCategory(c); setShowCatDropdown(false); }}
-                                  className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
-                                >
-                                  {c}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={editSubCategory}
-                            onChange={(e) => { setEditSubCategory(e.target.value); setShowSubDropdown(true); }}
-                            onFocus={() => setShowSubDropdown(true)}
-                            onBlur={() => { setTimeout(() => setShowSubDropdown(false), 200); handleAutoSave(); }}
-                            placeholder="Subfolder"
-                            className="w-full text-sm font-sans px-5 py-3.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none focus:bg-white/60 dark:focus:bg-white/10 transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 text-[#171A17] dark:text-[#F3F0E9]"
-                          />
-                          {showSubDropdown && filteredSubs.length > 0 && (
-                            <ul className="absolute z-50 w-full mt-2 max-h-48 custom-scrollbar overflow-y-auto bg-white/90 dark:bg-[#1A1D1A]/90 backdrop-blur-xl border border-black/[0.04] dark:border-white/[0.04] shadow-lg rounded-2xl py-2">
-                              {filteredSubs.map(s => (
-                                <li 
-                                  key={s} 
-                                  onMouseDown={(e) => { e.preventDefault(); setEditSubCategory(s); setShowSubDropdown(false); }}
-                                  className="px-5 py-2.5 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-[#FAF9F5] dark:hover:bg-[#202520] cursor-pointer transition-colors"
-                                >
-                                  {s}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-
-                      </div>
-                    </div>
-
-                    {displayType !== 'note' && (
-                      <div className="flex-1 flex flex-col min-h-[140px] gap-4">
-                        <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">
-                          {['instagram', 'twitter', 'tiktok', 'pinterest'].includes(displayType || '') ? 'Caption / Notes' : 'Personal Notes'}
-                        </label>
-                        <textarea
-                          value={editContent || ''}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          onBlur={handleAutoSave}
-                          placeholder="Add personal notes..."
-                          className="w-full flex-1 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] p-5 text-base font-serif text-[#171A17] dark:text-[#F3F0E9] outline-none focus:bg-white/60 dark:focus:bg-white/10 resize-none transition-all rounded-2xl placeholder-black/40 dark:placeholder-white/40 custom-scrollbar overflow-y-auto"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-3 pt-6 border-t border-black/[0.04] dark:border-white/[0.04] mt-8">
-                    <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
-                       Saved {formatDateTime(bookmark.created_at)}
-                    </div>
-                    <button 
-                      onClick={() => setShowDeleteConfirm(true)} 
-                      className="text-[#171A17]/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-semibold transition-colors flex items-center gap-2 cursor-pointer w-max"
-                    >
-                      <TrashIcon /> Delete Entry
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            {showDeleteConfirm && (
-              <div className="absolute inset-0 z-[100000] flex items-center justify-center p-4 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md transition-colors duration-500" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="w-full max-w-sm bg-white dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] flex flex-col shadow-2xl rounded-3xl">
-                  <div className="p-8 flex flex-col gap-5 text-center">
-                    <h3 className="text-2xl font-serif text-[#171A17] dark:text-[#F3F0E9] leading-none">
-                      Delete this entry?
-                    </h3>
-                    <p className="text-sm font-sans text-[#171A17]/60 dark:text-white/60">This action is permanent and cannot be undone.</p>
-                    <div className="flex flex-col gap-2 mt-2">
-                      <button 
-                        ref={confirmDeleteRef}
-                        onClick={handleConfirmDelete} 
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmDelete() }}
-                        className="w-full py-3 bg-[#D93025] text-white font-sans font-semibold text-xs tracking-widest uppercase hover:bg-[#B32015] transition-all rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D93025]"
-                      >
-                        Confirm
-                      </button>
-                      <button 
-                        onClick={() => setShowDeleteConfirm(false)} 
-                        className="w-full py-3 bg-black/5 dark:bg-white/5 text-[#171A17] dark:text-[#F3F0E9] font-sans font-semibold text-xs tracking-widest uppercase hover:bg-black/10 dark:hover:bg-white/10 transition-all rounded-2xl"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body
+      {mounted && isModalOpen && (
+        <EditorialModal 
+          bookmark={bookmark} 
+          isVisible={isVisible} 
+          displayType={displayType || 'link'} 
+          previewImageUrl={previewImageUrl} 
+          folderHierarchy={folderHierarchy} 
+          onClose={handleCloseModal} 
+          onSave={updateBookmark} 
+          onDelete={handleDelete} 
+          onFullscreenImage={(url) => { setFullscreenImageUrl(url); setIsFullscreenImage(true); }}
+          getDomain={getDomain}
+        />
       )}
 
       {mounted && isFullscreenImage && createPortal(
@@ -1265,7 +271,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           <button className="absolute top-4 right-4 md:top-6 md:right-6 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors z-50 cursor-pointer">
             <CloseIcon />
           </button>
-          <img src={previewImageUrl} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
+          <img src={fullscreenImageUrl || previewImageUrl} alt={bookmark.title} className="max-w-[90vw] max-h-[90vh] object-contain shadow-2xl" />
         </div>,
         document.body
       )}
