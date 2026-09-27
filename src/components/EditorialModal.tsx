@@ -12,7 +12,7 @@ import {
 import { 
   isVideoMedia, getGoogleQuery, getYouTubeId, getTwitterAuthor, 
   formatDate, formatDateTime, getInstaMeta, renderInstagramText, renderTwitterText,
-  getPlatformMeta, getUniversalEmbedUrl
+  getPlatformMeta, getUniversalEmbedUrl 
 } from '@/utils/bookmarkHelpers';
 
 interface EditorialModalProps {

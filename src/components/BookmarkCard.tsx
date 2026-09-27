@@ -8,10 +8,10 @@ import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
 import { 
   CloseIcon, PlayCircleIcon, InfoIcon, 
-  XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon 
+  XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon, SearchIcon 
 } from './BookmarkIcons';
 import { 
-  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta 
+  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta, getGoogleQuery 
 } from '@/utils/bookmarkHelpers';
 import EditorialModal from './EditorialModal'
 
@@ -40,6 +40,7 @@ export default function BookmarkCard({
   const [isVisible, setIsVisible] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
   const [fullscreenImageUrl, setFullscreenImageUrl] = useState('')
+  const [faviconError, setFaviconError] = useState(false);
   const supabase = createClient()
 
   useEffect(() => { setMounted(true) }, [])
@@ -207,9 +208,13 @@ export default function BookmarkCard({
           </div>
 
         ) : displayType === 'google' ? (
-          <div className="w-full aspect-[4/3] sm:aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#F8F9FA] dark:bg-[#202124] flex flex-col items-center justify-center p-6 gap-6">
-             <div className="w-[85%] max-w-[300px] h-10 rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-[0_1px_6px_rgba(32,33,36,0.28)] flex items-center px-4 gap-2.5 overflow-hidden mt-10">
-                <span className="text-sm text-[#202124] dark:text-[#e8eaed] truncate pb-0.5">Google Search</span>
+          <div className="w-full aspect-[4/3] sm:aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#F8F9FA] dark:bg-[#202124] flex flex-col items-center justify-center p-6 gap-4 group/google cursor-pointer hover:bg-[#f1f3f4] dark:hover:bg-[#303134] transition-colors" onClick={() => window.open(bookmark.url, '_blank')}>
+             {/* Google Authentic Logo SVG */}
+             <svg viewBox="0 0 272 92" width="75" height="24" xmlns="http://www.w3.org/2000/svg" className="opacity-90 group-hover/google:opacity-100 transition-opacity"><path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.86 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/><path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/><path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/><path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.96-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.5-.01z"/></svg>
+             {/* Search Bar mockup */}
+             <div className="w-full max-w-[200px] h-8 rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-[0_1px_3px_rgba(32,33,36,0.1)] flex items-center px-3 gap-2 overflow-hidden">
+                <SearchIcon className="w-3.5 h-3.5 text-[#9aa0a6] shrink-0" />
+                <span className="text-[11px] text-[#202124] dark:text-[#e8eaed] truncate pb-0.5">{getGoogleQuery(bookmark.url) || 'Search...'}</span>
              </div>
           </div>
 
@@ -243,7 +248,7 @@ export default function BookmarkCard({
           </div>
           
         ) : displayType === 'image' ? (
-          <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full" onClick={() => setIsFullscreenImage(true)}>
+          <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => setIsFullscreenImage(true)}>
             <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" onError={() => setFallbackStep(prev => prev + 1)} />
           </div>
         ) : (
@@ -254,10 +259,12 @@ export default function BookmarkCard({
                <div className="absolute top-0 left-0 w-full h-[3px] z-20" style={{ backgroundColor: getPlatformMeta(bookmark.url).color }} />
             )}
 
-            {/* Dynamic Official Platform Logo Badge */}
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
-               <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Platform Logo" className="w-full h-full object-contain rounded-sm" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
-            </div>
+            {/* Dynamic Official Platform Logo Badge (Hides entirely if Favicon fails) */}
+            {!faviconError && (
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
+                 <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Platform Logo" className="w-full h-full object-contain rounded-sm" onError={() => setFaviconError(true)} />
+              </div>
+            )}
 
             {previewImageUrl ? (
               <img 
@@ -272,7 +279,9 @@ export default function BookmarkCard({
                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">
                     {getDomain(bookmark.url).substring(0, 1)}
                  </div>
-                 <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                 {!faviconError && (
+                    <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" onError={() => setFaviconError(true)} />
+                 )}
                  <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
               </div>
             )}
