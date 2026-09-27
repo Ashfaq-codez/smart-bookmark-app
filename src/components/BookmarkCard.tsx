@@ -7,11 +7,11 @@ import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
 import { 
-  ExternalLinkIcon, CloseIcon, PlayCircleIcon, InfoIcon, 
+  CloseIcon, PlayCircleIcon, InfoIcon, 
   XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon 
 } from './BookmarkIcons';
 import { 
-  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText 
+  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta 
 } from '@/utils/bookmarkHelpers';
 import EditorialModal from './EditorialModal'
 
@@ -123,12 +123,20 @@ export default function BookmarkCard({
 
   const previewImageUrl = useMemo(() => {
     if (displayType === 'google') return undefined;
-    if (fallbackStep === 0) return ytHighResThumbnail || bookmark.image_url || undefined;
-    if (fallbackStep === 1 && bookmark.url) return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
+
+    if (fallbackStep === 0) {
+      return ytHighResThumbnail || bookmark.image_url || undefined;
+    }
+    if (fallbackStep === 1 && bookmark.url) {
+      // Prioritize the official, stable Open Graph image first
+      return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
+    }
     if (fallbackStep === 2 && bookmark.url) {
+      // Prevent whole-page screenshots for IG/TikTok to avoid login walls
       if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
       return `https://image.thum.io/get/width/800/crop/600/noanimate/${bookmark.url}`;
     }
+    
     return undefined;
   }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 
@@ -138,6 +146,15 @@ export default function BookmarkCard({
 
   return (
     <>
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.3); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(156, 163, 175, 0.5); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(75, 85, 99, 0.5); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(75, 85, 99, 0.8); }
+      `}} />
+
       <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={openModal} className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
         
         {displayType === 'note' ? (
@@ -225,13 +242,36 @@ export default function BookmarkCard({
             </div>
           </div>
           
+        ) : displayType === 'image' ? (
+          <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full" onClick={() => setIsFullscreenImage(true)}>
+            <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" onError={() => setFallbackStep(prev => prev + 1)} />
+          </div>
         ) : (
           <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
+            
+            {/* Dynamic Brand Accent Line */}
+            {getPlatformMeta(bookmark.url).color !== 'transparent' && (
+               <div className="absolute top-0 left-0 w-full h-[3px] z-20" style={{ backgroundColor: getPlatformMeta(bookmark.url).color }} />
+            )}
+
+            {/* Dynamic Official Platform Logo Badge */}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
+               <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Platform Logo" className="w-full h-full object-contain rounded-sm" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+            </div>
+
             {previewImageUrl ? (
-              <img src={previewImageUrl} alt={bookmark.title || "Link preview"} className="w-full h-auto max-h-64 object-cover block group-hover/fallback:scale-[1.03] transition-transform duration-700 ease-out bg-white dark:bg-[#151815]" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
+              <img 
+                src={previewImageUrl} 
+                alt={bookmark.title || "Link preview"} 
+                className="w-full h-auto max-h-64 object-cover block group-hover/fallback:scale-[1.03] transition-transform duration-700 ease-out bg-white dark:bg-[#151815]" 
+                loading="lazy" 
+                onError={() => setFallbackStep(prev => prev + 1)} 
+              />
             ) : (
               <div className="w-full aspect-[4/3] sm:aspect-video flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815] relative overflow-hidden group-hover/fallback:opacity-90 transition-opacity">
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">{getDomain(bookmark.url).substring(0, 1)}</div>
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">
+                    {getDomain(bookmark.url).substring(0, 1)}
+                 </div>
                  <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
                  <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
               </div>

@@ -11,7 +11,8 @@ import {
 } from './BookmarkIcons';
 import { 
   isVideoMedia, getGoogleQuery, getYouTubeId, getTwitterAuthor, 
-  formatDate, formatDateTime, getInstaMeta, renderInstagramText, renderTwitterText 
+  formatDate, formatDateTime, getInstaMeta, renderInstagramText, renderTwitterText,
+  getPlatformMeta, getUniversalEmbedUrl
 } from '@/utils/bookmarkHelpers';
 
 interface EditorialModalProps {
@@ -303,6 +304,12 @@ export default function EditorialModal({
             ) : displayType === 'image' ? (
               <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => {if(previewImageUrl) onFullscreenImage(previewImageUrl)}}>
                 <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" />
+              </div>
+            ) : getUniversalEmbedUrl(bookmark.url) ? (
+              <div className="w-full h-full bg-[#FAF9F5] dark:bg-[#0F120F] flex items-center justify-center p-0 md:p-8">
+                <div className="w-full h-full md:max-h-[85vh] max-w-[800px] bg-white dark:bg-[#151815] md:rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.08] overflow-hidden">
+                   <iframe src={getUniversalEmbedUrl(bookmark.url)!} className="w-full h-full border-none" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                </div>
               </div>
             ) : (
               <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full justify-center items-center">

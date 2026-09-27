@@ -124,3 +124,48 @@ export const renderTwitterText = (text: string, isExpanded: boolean = false) => 
     });
   });
 };
+
+// ADD THESE TO THE BOTTOM OF src/utils/bookmarkHelpers.tsx
+
+export const getPlatformMeta = (url: string) => {
+  if (!url) return { name: 'Website', color: 'transparent' };
+  try {
+    const host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace('www.', '');
+    if (host.includes('spotify.com')) return { name: 'Spotify', color: '#1DB954' };
+    if (host.includes('reddit.com')) return { name: 'Reddit', color: '#FF4500' };
+    if (host.includes('figma.com')) return { name: 'Figma', color: '#F24E1E' };
+    if (host.includes('vimeo.com')) return { name: 'Vimeo', color: '#1AB7EA' };
+    if (host.includes('codepen.io')) return { name: 'CodePen', color: '#000000' };
+    if (host.includes('soundcloud.com')) return { name: 'SoundCloud', color: '#FF3300' };
+    if (host.includes('github.com')) return { name: 'GitHub', color: '#24292e' };
+    if (host.includes('codesandbox.io')) return { name: 'CodeSandbox', color: '#151515' };
+    if (host.includes('linkedin.com')) return { name: 'LinkedIn', color: '#0A66C2' };
+    if (host.includes('dribbble.com')) return { name: 'Dribbble', color: '#EA4C89' };
+    if (host.includes('behance.net')) return { name: 'Behance', color: '#1769FF' };
+    if (host.includes('notion.so') || host.includes('notion.site')) return { name: 'Notion', color: '#000000' };
+    return { name: host, color: 'transparent' };
+  } catch {
+    return { name: 'Website', color: 'transparent' };
+  }
+}
+
+export const getUniversalEmbedUrl = (url: string): string | null => {
+  if (!url) return null;
+  try {
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const host = u.hostname.replace('www.', '');
+
+    if (host === 'open.spotify.com') return url.replace(/\/(track|album|playlist|episode|show)\//, '/embed/$1/');
+    if (host === 'vimeo.com') {
+      const match = u.pathname.match(/^\/(\d+)$/);
+      if (match) return `https://player.vimeo.com/video/${match[1]}`;
+    }
+    if (host === 'figma.com') return `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(url)}`;
+    if (host === 'codepen.io') return url.replace('/pen/', '/embed/preview/');
+    if (host === 'reddit.com') return `${url.replace(/\/$/, '')}/embed`;
+    if (host === 'soundcloud.com') return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&visual=true`;
+    if (host === 'codesandbox.io') return url.replace('/s/', '/embed/');
+    
+    return null; // Return null if no interactive embed exists, which triggers standard fallback
+  } catch { return null; }
+}
