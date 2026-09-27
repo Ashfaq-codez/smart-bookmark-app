@@ -90,16 +90,13 @@ const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
   const l = url.toLowerCase();
   
-  // 1. Strictly block known thumbnails, Twitter image formats, and URLs with image query params
   if (l.includes('.jpg') || l.includes('.jpeg') || l.includes('.png') || l.includes('.webp') || l.includes('format=jpg') || l.includes('format=png') || l.includes('thumb')) {
     return false;
   }
   
-  // 2. Accept true video extensions
   return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('.m3u8');
 };
 
-// Google Detectors
 const isGoogleSearchUrl = (url?: string) => {
   if (!url) return false;
   try {
@@ -188,10 +185,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [igLiked, setIgLiked] = useState(false)
   const [igSaved, setIgSaved] = useState(false)
   const [showIgHeartAnim, setShowIgHeartAnim] = useState(false)
-  const [igCommentText, setIgCommentText] = useState('')
   const [igComments, setIgComments] = useState<string[]>([])
-  
-  const [imgError, setImgError] = useState(false) // Core Fix for ui-avatars issue
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
@@ -200,7 +194,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [touchEnd, setTouchEnd] = useState(0)
   
   const confirmDeleteRef = useRef<HTMLButtonElement>(null)
-  
   const supabase = createClient()
 
   const [editTitle, setEditTitle] = useState(bookmark.title || '')
@@ -362,96 +355,44 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
     return match ? match[1] : 'unknown';
   }
 
-  // Refined IG Meta Extractor: Extract pure username, likes count, and actual post description/caption
   const getInstaMeta = (b: Bookmark) => {
     let username = 'instagram_user';
     let likes = '1,248';
     let caption = '';
 
-    const desc = (b.description || '').trim();
-    const title = (b.title || '').trim();
+    const fullText = (b.description || '') + ' ' + (b.title || '');
 
-    // 1. Extract Likes count from desc or title
-    const likesMatch = (desc + ' ' + title).match(/([\d,.]+[KMB]?)\s+likes?/i);
-    if (likesMatch) {
-      likes = likesMatch[1];
-    }
+    if (fullText.includes(' on Instagram:')) {
+      const parts = fullText.split(' on Instagram:');
+      const metaPart = parts[0];
+      
+      const userMatch = metaPart.match(/-\s+([a-zA-Z0-9_.]+)\s*$/) || metaPart.match(/^([a-zA-Z0-9_.]+)$/);
+      if (userMatch) username = userMatch[1].trim();
+      
+      const likesMatch = metaPart.match(/([\d,KMB]+)\s+likes?/i);
+      if (likesMatch) likes = likesMatch[1];
 
-    // 2. Extract Username
-    const userMatchFromMeta = (desc + ' ' + title).match(/-\s+([a-zA-Z0-9_.]+)\s+on\s+Instagram/i) ||
-                              (desc + ' ' + title).match(/from\s+([a-zA-Z0-9_.]+)\s+\(@([a-zA-Z0-9_.]+)\)/i) ||
-                              (desc + ' ' + title).match(/^([a-zA-Z0-9_.]+)\s+on\s+Instagram/i);
-    if (userMatchFromMeta) {
-      username = userMatchFromMeta[2] || userMatchFromMeta[1];
-    }
-
-    // URL fallback for username
-    if (username === 'instagram_user' || username.includes(' ')) {
-      if (b.url) {
-        try {
-          const u = new URL(b.url);
-          const segments = u.pathname.split('/').filter(Boolean);
-          if (segments.length >= 2 && !['p', 'reel', 'reels', 'tv', 'stories', 'explore'].includes(segments[0])) {
-            username = segments[0];
-          } else if (segments.length === 1 && !['p', 'reel', 'reels', 'tv', 'stories', 'explore'].includes(segments[0])) {
-            username = segments[0];
-          }
-        } catch {}
+      caption = parts.slice(1).join(' on Instagram:').trim();
+      
+      if ((caption.startsWith('"') && caption.endsWith('"')) || (caption.startsWith("'") && caption.endsWith("'"))) {
+        caption = caption.substring(1, caption.length - 1).trim();
       }
-    }
-    if (username.length > 30) username = username.substring(0, 30);
-
-    // 3. Extract actual post description / caption:
-    // Priority A: desc has " on Instagram: <caption in quotes or text>"
-    if (desc.includes(' on Instagram:')) {
-      const parts = desc.split(/ on Instagram:\s*/i);
-      if (parts[1]) {
-        caption = parts.slice(1).join(' on Instagram: ').trim();
-      }
-    } 
-    // Priority B: desc is already the actual post description (excluding follower bio boilerplate)
-    else if (desc && !desc.toLowerCase().includes('instagram photos and videos') && !desc.match(/^\d+[KMB]?\s+Followers/i)) {
-      caption = desc;
+    } else {
+      caption = (b.description && b.description !== b.title) ? b.description : '';
     }
 
-    // Priority C: If desc was empty or bio, check if title contains the quoted caption
-    // e.g. "Username on Instagram: \"Actual caption here\""
-    if (!caption && title.includes(' on Instagram:')) {
-      const parts = title.split(/ on Instagram:\s*/i);
-      if (parts[1]) {
-        caption = parts.slice(1).join(' on Instagram: ').trim();
-      }
-    }
-
-    // Priority D: If still no caption, check if title or desc has text wrapped in double quotes (at least 6 chars)
-    if (!caption) {
-      const quoteMatch = desc.match(/"([^"]{6,})"/) || title.match(/"([^"]{6,})"/);
-      if (quoteMatch) {
-        caption = quoteMatch[1].trim();
-      }
-    }
-
-    // Priority E: Fallback to personal note in b.content if user added one
-    if (!caption && b.content && !b.content.startsWith('<') && b.content.trim()) {
-      caption = b.content.trim();
-    }
-
-    // Clean wrapping quotes
-    if (caption.startsWith('"') && caption.endsWith('"') && caption.length > 1) {
-      caption = caption.substring(1, caption.length - 1).trim();
-    }
-    // Clean HTML entities if any
-    caption = caption
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/&#39;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
-
-    // Discard if it's just the generic Instagram title
-    if (caption.toLowerCase() === 'instagram' || caption.toLowerCase().includes('instagram photos and videos')) {
+    if (caption.toLowerCase() === 'instagram' || caption.toLowerCase().includes('instagram photos and videos') || caption.includes('Create an account')) {
       caption = '';
     }
+
+    if (username === 'instagram_user' && b.url) {
+      const urlMatch = b.url.match(/instagram\.com\/([^/]+)/);
+      if (urlMatch && !['p','reel','reels','tv','explore'].includes(urlMatch[1])) {
+        username = urlMatch[1];
+      }
+    }
+    
+    if (username.length > 30) username = username.substring(0, 30);
 
     return { username, likes, caption };
   }
@@ -488,8 +429,31 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;
 
-  // Generate preview image using direct image_url, YouTube thumbnail, or WordPress mshots still snapshot (supports Instagram, web links, etc.)
-  const previewImageUrl: string | undefined = (bookmark.image_url || ytHighResThumbnail || (bookmark.url && displayType !== 'google' ? `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800` : undefined)) || undefined;
+  const initialStep = (bookmark.image_url || ytHighResThumbnail) ? 0 : 1;
+  const [fallbackStep, setFallbackStep] = useState(initialStep);
+
+  useEffect(() => {
+    setFallbackStep((bookmark.image_url || ytHighResThumbnail) ? 0 : 1);
+  }, [bookmark.image_url, ytHighResThumbnail]);
+
+  const previewImageUrl = useMemo(() => {
+    if (displayType === 'google') return undefined;
+
+    if (fallbackStep === 0) {
+      return ytHighResThumbnail || bookmark.image_url || undefined;
+    }
+    if (fallbackStep === 1 && bookmark.url) {
+      return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
+    }
+    if (fallbackStep === 2 && bookmark.url) {
+      if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
+      return `https://image.thum.io/get/width/800/crop/600/noanimate/${bookmark.url}`;
+    }
+    
+    return undefined;
+  }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
+
+
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const instaData = displayType === 'instagram' ? getInstaMeta({
     ...bookmark,
@@ -589,10 +553,10 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             )}
             
             {previewImageUrl ? (
-                <img src={previewImageUrl} alt={bookmark.title || "Post thumbnail"} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" />
+                <img src={previewImageUrl} alt={bookmark.title || "Post thumbnail"} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-[#262626]">
-                    <InstagramIcon className="w-12 h-12 text-black/20 dark:text-white/20" />
+                    {displayType === 'instagram' ? <InstagramIcon className="w-12 h-12 text-black/20 dark:text-white/20" /> : <TikTokIcon className="w-12 h-12 text-black/20 dark:text-white/20" />}
                 </div>
             )}
             
@@ -610,7 +574,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
         ) : displayType === 'youtube' ? (
           <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
-            <img src={ytHighResThumbnail || previewImageUrl} alt={bookmark.title || "YouTube thumbnail"} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+            <img src={previewImageUrl} alt={bookmark.title || "YouTube thumbnail"} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" onError={() => setFallbackStep(prev => prev + 1)} />
             
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white">
               <YouTubeIcon className="text-[#FF0000]" />
@@ -638,13 +602,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             {/* Pinterest Red Top Accent Line */}
             <div className="absolute top-0 left-0 w-full h-[4px] bg-[#E60023] z-20" />
             
-            {previewImageUrl && !imgError ? (
+            {previewImageUrl ? (
               <img 
                 src={previewImageUrl} 
                 alt={bookmark.title || "Pinterest Pin"} 
                 className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" 
                 loading="lazy" 
-                onError={() => setImgError(true)}
+                onError={() => setFallbackStep(prev => prev + 1)}
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-[#202020] text-[#E60023] gap-2">
@@ -703,13 +667,13 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           
         ) : (
           <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
-            {previewImageUrl && !imgError ? (
+            {previewImageUrl ? (
               <img 
                 src={previewImageUrl} 
                 alt={bookmark.title || "Link preview"} 
                 className="w-full h-auto max-h-64 object-cover block group-hover/fallback:scale-[1.03] transition-transform duration-700 ease-out bg-white dark:bg-[#151815]" 
                 loading="lazy" 
-                onError={() => setImgError(true)} 
+                onError={() => setFallbackStep(prev => prev + 1)} 
               />
             ) : (
               <div className="w-full aspect-[4/3] sm:aspect-video flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815] relative overflow-hidden group-hover/fallback:opacity-90 transition-opacity">
@@ -852,7 +816,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                            <video src={bookmark.image_url!} autoPlay={true} muted={true} playsInline={true} loop={true} className="w-full h-auto max-h-[585px] object-contain block" />
                         ) : (
                            previewImageUrl ? (
-                             <img src={previewImageUrl} alt={instaData.caption || bookmark.title || "Instagram post"} className="w-full h-auto max-h-[585px] object-contain block" />
+                             <img src={previewImageUrl} alt={instaData.caption || bookmark.title || "Instagram post"} className="w-full h-auto max-h-[585px] object-contain block" onError={() => setFallbackStep(prev => prev + 1)} />
                            ) : (
                              <div className="flex flex-col items-center justify-center text-[#737373] dark:text-[#A8A8A8] gap-3 p-10">
                                 <InstagramIcon className="w-12 h-12 opacity-50" />
@@ -1012,12 +976,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                           className="w-full bg-[#F0F0F0] dark:bg-[#141517] rounded-2xl overflow-hidden relative cursor-zoom-in group/media"
                           onClick={() => setIsFullscreenImage(true)}
                         >
-                          {previewImageUrl && !imgError ? (
+                          {previewImageUrl ? (
                             <img 
                               src={previewImageUrl} 
                               alt={bookmark.title || "Pinterest Pin"} 
                               className="w-full h-auto max-h-[55vh] object-contain rounded-2xl block m-auto group-hover/media:scale-[1.01] transition-transform duration-300" 
-                              onError={() => setImgError(true)}
+                              onError={() => setFallbackStep(prev => prev + 1)}
                             />
                           ) : (
                             <div className="w-full aspect-[2/3] flex flex-col items-center justify-center text-[#E60023] gap-3">
@@ -1088,7 +1052,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
 
                 ) : displayType === 'tiktok' ? (
                   <div className="w-full aspect-[9/16] md:aspect-auto md:h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
-                    <img src={bookmark.image_url || previewImageUrl} alt={bookmark.title || "TikTok preview"} className="w-full h-full object-contain z-10" />
+                    <img src={previewImageUrl} alt={bookmark.title || "TikTok preview"} className="w-full h-full object-contain z-10" onError={() => setFallbackStep(prev => prev + 1)} />
                     
                     <div className="absolute bottom-4 left-4 z-20 group/info flex flex-col items-start gap-2">
                        <div className="opacity-0 group-hover/info:opacity-100 transition-opacity bg-black/80 backdrop-blur-md text-white text-[12px] p-4 rounded-2xl max-w-[260px] shadow-lg pointer-events-none border border-white/10">
@@ -1113,17 +1077,17 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                   </div>
                 ) : displayType === 'image' ? (
                   <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 cursor-zoom-in md:h-full" onClick={() => setIsFullscreenImage(true)}>
-                    <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                    <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" onError={() => setFallbackStep(prev => prev + 1)} />
                   </div>
                 ) : (
                   <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full justify-center items-center">
                     <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
-                      {previewImageUrl && !imgError ? (
+                      {previewImageUrl ? (
                         <img 
                           src={previewImageUrl} 
                           alt={bookmark.title || "Link preview"} 
                           className="w-full h-auto object-cover md:h-full md:object-contain bg-white dark:bg-[#151815]" 
-                          onError={() => setImgError(true)} 
+                          onError={() => setFallbackStep(prev => prev + 1)} 
                         />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815]">
