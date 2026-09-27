@@ -15,6 +15,7 @@ const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" f
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
 const PlayCircleIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 const InfoIcon = ({ className = "" }: { className?: string }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+const SearchIcon = ({ className = "" }: { className?: string }) => <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
 
 // Social Brand Icons
 const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
@@ -98,6 +99,28 @@ const isVideoMedia = (url?: string | null) => {
   return l.includes('.mp4') || l.includes('.webm') || l.includes('.mov') || l.includes('.m3u8');
 };
 
+// Google Detectors
+const isGoogleSearchUrl = (url?: string) => {
+  if (!url) return false;
+  try {
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return (u.hostname === 'google.com' || u.hostname === 'www.google.com' || u.hostname.endsWith('.google.com') || u.hostname.includes('google.co.')) && (u.pathname.includes('/search') || u.searchParams.has('q'));
+  } catch {
+    return false;
+  }
+};
+
+const getGoogleQuery = (url?: string) => {
+  if (!url) return '';
+  try {
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const q = u.searchParams.get('q');
+    return q ? decodeURIComponent(q).replace(/\+/g, ' ') : '';
+  } catch {
+    return '';
+  }
+};
+
 const renderTwitterText = (text: string, isExpanded: boolean = false) => {
   if (!text) return null;
   
@@ -167,6 +190,8 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const [showIgHeartAnim, setShowIgHeartAnim] = useState(false)
   const [igCommentText, setIgCommentText] = useState('')
   const [igComments, setIgComments] = useState<string[]>([])
+  
+  const [imgError, setImgError] = useState(false) // Core Fix for ui-avatars issue
   
   const [showCatDropdown, setShowCatDropdown] = useState(false)
   const [showSubDropdown, setShowSubDropdown] = useState(false)
@@ -445,6 +470,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const deriveDisplayType = (b: Bookmark) => {
     if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
     if (b.url) {
+      if (isGoogleSearchUrl(b.url)) return 'google';
       const url = b.url.toLowerCase();
       if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
       if (url.includes('instagram.com')) return 'instagram';
@@ -463,7 +489,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;
 
   // Generate preview image using direct image_url, YouTube thumbnail, or WordPress mshots still snapshot (supports Instagram, web links, etc.)
-  const previewImageUrl: string | undefined = (bookmark.image_url || ytHighResThumbnail || (bookmark.url ? `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800` : undefined)) || undefined;
+  const previewImageUrl: string | undefined = (bookmark.image_url || ytHighResThumbnail || (bookmark.url && displayType !== 'google' ? `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=800` : undefined)) || undefined;
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const instaData = displayType === 'instagram' ? getInstaMeta({
     ...bookmark,
@@ -595,17 +621,30 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
             </div>
           </div>
 
+        ) : displayType === 'google' ? (
+          <div className="w-full aspect-[4/3] sm:aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#F8F9FA] dark:bg-[#202124] flex flex-col items-center justify-center p-6 gap-6">
+             {/* Google Authentic Logo SVG */}
+             <svg viewBox="0 0 272 92" width="92" height="30" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.86 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/><path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/><path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/><path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.96-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.5-.01z"/></svg>
+             
+             {/* Search Bar mockup */}
+             <div className="w-[85%] max-w-[300px] h-10 rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-[0_1px_6px_rgba(32,33,36,0.28)] flex items-center px-4 gap-2.5 overflow-hidden">
+                <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 text-[#9aa0a6] shrink-0"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+                <span className="text-sm text-[#202124] dark:text-[#e8eaed] truncate pb-0.5">{getGoogleQuery(bookmark.url) || 'Search...'}</span>
+             </div>
+          </div>
+
         ) : displayType === 'pinterest' ? (
           <div className="w-full aspect-[2/3] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] group/pin">
             {/* Pinterest Red Top Accent Line */}
             <div className="absolute top-0 left-0 w-full h-[4px] bg-[#E60023] z-20" />
             
-            {previewImageUrl ? (
+            {previewImageUrl && !imgError ? (
               <img 
                 src={previewImageUrl} 
                 alt={bookmark.title || "Pinterest Pin"} 
                 className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" 
                 loading="lazy" 
+                onError={() => setImgError(true)}
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-[#202020] text-[#E60023] gap-2">
@@ -663,8 +702,26 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
           </div>
           
         ) : (
-          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815]">
-            <img src={previewImageUrl} alt={bookmark.title} className="w-full h-auto max-h-64 object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={(e) => { ;(e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${getDomain(bookmark.url)}&background=random&size=600&font-size=0.1` }} />
+          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
+            {previewImageUrl && !imgError ? (
+              <img 
+                src={previewImageUrl} 
+                alt={bookmark.title || "Link preview"} 
+                className="w-full h-auto max-h-64 object-cover block group-hover/fallback:scale-[1.03] transition-transform duration-700 ease-out bg-white dark:bg-[#151815]" 
+                loading="lazy" 
+                onError={() => setImgError(true)} 
+              />
+            ) : (
+              <div className="w-full aspect-[4/3] sm:aspect-video flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815] relative overflow-hidden group-hover/fallback:opacity-90 transition-opacity">
+                 {/* Large blurred background initial for design */}
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">
+                    {getDomain(bookmark.url).substring(0, 1)}
+                 </div>
+                 {/* High-res Site Favicon */}
+                 <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                 <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -677,7 +734,7 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
               </h4>
             )}
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
-              {displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : getDomain(bookmark.url)}
+              {displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : displayType === 'google' ? 'GOOGLE SEARCH' : getDomain(bookmark.url)}
             </p>
           </div>
         )}
@@ -904,41 +961,6 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                           {formatDate(bookmark.created_at)}
                         </div>
                       </div>
-
-                      {/* Add comment row
-                      <div className="border-t border-[#efefef] dark:border-[#262626] px-4 py-3 flex items-center gap-3">
-                        <svg className="w-6 h-6 text-[#737373] dark:text-[#a8a8a8] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" strokeLinecap="round" />
-                        </svg>
-                        <input 
-                          id={`ig-comment-${bookmark.id}`}
-                          type="text" 
-                          value={igCommentText} 
-                          onChange={(e) => setIgCommentText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && igCommentText.trim()) {
-                              setIgComments([...igComments, igCommentText.trim()]);
-                              setIgCommentText('');
-                              toast.success('Comment added');
-                            }
-                          }}
-                          placeholder="Add a comment..." 
-                          className="flex-1 bg-transparent border-none outline-none text-[14px] text-[#262626] dark:text-[#F5F5F5] placeholder-[#737373] dark:placeholder-[#a8a8a8]"
-                        />
-                        {igCommentText.trim() && (
-                          <button 
-                            onClick={() => {
-                              setIgComments([...igComments, igCommentText.trim()]);
-                              setIgCommentText('');
-                              toast.success('Comment added');
-                            }}
-                            className="text-[#0095F6] hover:text-[#00376B] font-semibold text-[14px] cursor-pointer"
-                          >
-                            Post
-                          </button>
-                        )}
-                      </div> */}
                     </div>
                   </div>
 
@@ -990,11 +1012,12 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                           className="w-full bg-[#F0F0F0] dark:bg-[#141517] rounded-2xl overflow-hidden relative cursor-zoom-in group/media"
                           onClick={() => setIsFullscreenImage(true)}
                         >
-                          {previewImageUrl ? (
+                          {previewImageUrl && !imgError ? (
                             <img 
                               src={previewImageUrl} 
                               alt={bookmark.title || "Pinterest Pin"} 
                               className="w-full h-auto max-h-[55vh] object-contain rounded-2xl block m-auto group-hover/media:scale-[1.01] transition-transform duration-300" 
+                              onError={() => setImgError(true)}
                             />
                           ) : (
                             <div className="w-full aspect-[2/3] flex flex-col items-center justify-center text-[#E60023] gap-3">
@@ -1049,6 +1072,20 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     />
                   </div>
 
+                ) : displayType === 'google' ? (
+                  <div className="w-full flex bg-[#F8F9FA] dark:bg-[#202124] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar justify-center items-center">
+                    <div className="w-full max-w-[500px] flex flex-col items-center gap-8">
+                       <svg viewBox="0 0 272 92" width="150" height="50" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.86 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/><path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/><path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/><path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.96-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.5-.01z"/></svg>
+                       <div className="w-full rounded-full bg-white dark:bg-[#303134] border border-[#dfe1e5] dark:border-[#5f6368] shadow-md flex items-center px-6 py-3.5 gap-4">
+                          <SearchIcon className="text-[#9aa0a6] w-5 h-5 shrink-0" />
+                          <span className="text-base text-[#202124] dark:text-[#e8eaed] truncate">{getGoogleQuery(bookmark.url) || 'Google Search'}</span>
+                       </div>
+                       <a href={bookmark.url} target="_blank" rel="noreferrer" className="px-6 py-2.5 bg-[#f8f9fa] dark:bg-[#303134] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] border border-[#f8f9fa] dark:border-[#303134] text-[#3c4043] dark:text-[#e8eaed] rounded text-sm font-medium transition-colors">
+                          Open Search Results
+                       </a>
+                    </div>
+                  </div>
+
                 ) : displayType === 'tiktok' ? (
                   <div className="w-full aspect-[9/16] md:aspect-auto md:h-full relative flex items-center justify-center bg-[#FAF9F5] dark:bg-[#0F120F] overflow-hidden">
                     <img src={bookmark.image_url || previewImageUrl} alt={bookmark.title || "TikTok preview"} className="w-full h-full object-contain z-10" />
@@ -1079,9 +1116,22 @@ export default function BookmarkCard({ bookmark, isDragged, onDragStart, onDragE
                     <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" />
                   </div>
                 ) : (
-                  <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full">
+                  <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full justify-center items-center">
                     <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
-                      <img src={previewImageUrl} alt={bookmark.title || "Link preview"} className="w-full h-auto object-cover md:h-full md:object-contain" />
+                      {previewImageUrl && !imgError ? (
+                        <img 
+                          src={previewImageUrl} 
+                          alt={bookmark.title || "Link preview"} 
+                          className="w-full h-auto object-cover md:h-full md:object-contain bg-white dark:bg-[#151815]" 
+                          onError={() => setImgError(true)} 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815]">
+                           <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-24 h-24 rounded-2xl shadow-xl mb-6 bg-white p-2" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                           <span className="text-xl font-bold text-[#171A17] dark:text-[#F3F0E9] text-center px-4">{getDomain(bookmark.url)}</span>
+                           <span className="text-sm font-medium text-[#4D6A51] dark:text-[#8FAA91] mt-2 underline">Visit Website</span>
+                        </div>
+                      )}
                     </a>
                   </div>
                 )}
