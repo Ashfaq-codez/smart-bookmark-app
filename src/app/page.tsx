@@ -231,7 +231,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-3xl md:text-5xl font-serif text-[#171A17] dark:text-[#F3F0E9] mb-6 leading-tight">Everything you find,<br/>in its right place.</h2>
-            <p className="text-lg text-[#171A17]/60 dark:text-white/60 font-sans mb-10">We believe that saving a link shouldn't feel like throwing it into a black hole. inntoit automatically extracts beautiful previews, pulls official brand logos, and organizes the internet into a calm, searchable library.</p>
+            <p className="text-lg text-[#171A17]/60 dark:text-white/60 font-sans mb-10">We believe that saving a link should not feel like throwing it into a black hole. inntoit automatically extracts beautiful previews, pulls official brand logos, and organizes the internet into a calm, searchable library.</p>
             
             <div className="space-y-6">
               {features.map((feature, i) => (
