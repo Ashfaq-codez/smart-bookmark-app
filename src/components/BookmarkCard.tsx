@@ -122,23 +122,29 @@ export default function BookmarkCard({
     setFallbackStep((bookmark.image_url || ytHighResThumbnail) ? 0 : 1);
   }, [bookmark.image_url, ytHighResThumbnail]);
 
-  const previewImageUrl = useMemo(() => {
+ const previewImageUrl = useMemo(() => {
     if (displayType === 'google') return undefined;
 
+    // Step 0: DB Image or YouTube Thumb
     if (fallbackStep === 0) {
       return ytHighResThumbnail || bookmark.image_url || undefined;
     }
+    // Step 1: Live Screenshot (Added /wait/4/ to allow 3D/WebGL sites to load)
     if (fallbackStep === 1 && bookmark.url) {
-      // Prioritize the official, stable Open Graph image first
+      if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
+      return `https://image.thum.io/get/width/1000/crop/800/wait/4/noanimate/${bookmark.url}`;
+    }
+    // Step 2: Open Graph Metadata Proxy (The Peace Sign Hand fallback)
+    if (fallbackStep === 2 && bookmark.url) {
       return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
     }
-    if (fallbackStep === 2 && bookmark.url) {
-      // Prevent whole-page screenshots for IG/TikTok to avoid login walls
+    // Step 3: WordPress mshots (Final screenshot backup)
+    if (fallbackStep === 3 && bookmark.url) {
       if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
-      return `https://image.thum.io/get/width/800/crop/600/noanimate/${bookmark.url}`;
+      return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=1000`;
     }
     
-    return undefined;
+    return undefined; // Triggers Favicon UI
   }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
@@ -322,6 +328,7 @@ export default function BookmarkCard({
           onDelete={handleDelete} 
           onFullscreenImage={(url) => { setFullscreenImageUrl(url); setIsFullscreenImage(true); }}
           getDomain={getDomain}
+          onCyclePreview={() => setFallbackStep(prev => prev + 1)}
         />
       )}
 

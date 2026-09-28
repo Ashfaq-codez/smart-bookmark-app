@@ -26,11 +26,12 @@ interface EditorialModalProps {
   onDelete: (id: number) => Promise<void>;
   onFullscreenImage: (url: string) => void;
   getDomain: (url: string) => string;
+  onCyclePreview?: () => void;
 }
 
 export default function EditorialModal({ 
   bookmark, isVisible, displayType, previewImageUrl, folderHierarchy, 
-  onClose, onSave, onDelete, onFullscreenImage, getDomain 
+  onClose, onSave, onDelete, onFullscreenImage, getDomain, onCyclePreview 
 }: EditorialModalProps) {
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -330,7 +331,19 @@ export default function EditorialModal({
                 </div>
               </div>
             ) : (
-              <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full justify-center items-center">
+              <div className="w-full flex relative overflow-hidden bg-[#FAF9F5] dark:bg-[#0F120F] transition-colors duration-500 md:h-full justify-center items-center group/preview">
+                
+                {/* Manual Cycle Preview Button */}
+                {onCyclePreview && previewImageUrl && (
+                  <button 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCyclePreview(); }}
+                    className="absolute top-4 left-4 z-50 bg-black/40 hover:bg-black/70 text-white p-2.5 rounded-full backdrop-blur-md transition-all shadow-lg opacity-0 group-hover/preview:opacity-100"
+                    title="Load alternative preview image"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+                  </button>
+                )}
+
                 <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="w-full h-full block cursor-pointer hover:opacity-90 transition-opacity">
                   {previewImageUrl ? (
                     <img 
@@ -340,7 +353,7 @@ export default function EditorialModal({
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815]">
-                       <img src={`https://www.google.com/s2/favicons?domain=${getDomain(bookmark.url)}&sz=128`} alt="Favicon" className="w-24 h-24 rounded-2xl shadow-xl mb-6 bg-white p-2" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                       <img src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} alt="Favicon" className="w-24 h-24 rounded-2xl shadow-xl mb-6 bg-white p-2" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
                        <span className="text-xl font-bold text-[#171A17] dark:text-[#F3F0E9] text-center px-4">{getDomain(bookmark.url)}</span>
                        <span className="text-sm font-medium text-[#4D6A51] dark:text-[#8FAA91] mt-2 underline">Visit Website</span>
                     </div>
