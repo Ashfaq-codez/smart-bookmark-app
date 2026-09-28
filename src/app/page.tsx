@@ -23,17 +23,17 @@ const IMG = {
   pin: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=700&auto=format&fit=crop&q=80',
 }
 
-// Each saved thing keeps the look of where it came from. The reel is last so it ends up on top of the stack.
+// 3D Spatial coordinates for the chaotic cinematic scatter effect
 const STORY_CARDS = [
-  { k: 'pdf', sx: 90, sy: 70, sr: 20 },
-  { k: 'note', sx: -30, sy: 120, sr: -8 },
-  { k: 'x', sx: 60, sy: -130, sr: 25 },
-  { k: 'yt', sx: 80, sy: -90, sr: 15 },
-  { k: 'pin', sx: -80, sy: 60, sr: -12 },
-  { k: 'reel', sx: -70, sy: -80, sr: -24 },
+  { k: 'pdf', tx: 180, ty: -200, tz: 1400, rx: 65, ry: -55, rz: 45 },
+  { k: 'note', tx: -200, ty: -120, tz: 1100, rx: -50, ry: 65, rz: -55 },
+  { k: 'x', tx: 220, ty: 160, tz: 800, rx: 75, ry: 35, rz: 70 },
+  { k: 'yt', tx: -160, ty: 200, tz: 1700, rx: -65, ry: -75, rz: -60 },
+  { k: 'pin', tx: 100, ty: -280, tz: 950, rx: 35, ry: 95, rz: 25 },
+  { k: 'reel', tx: -100, ty: 280, tz: 1200, rx: -85, ry: -25, rz: 100 },
 ]
 
-const LEAD = 'A reel at 2 a.m. A pin you can’t stop looking at. One line in an essay that changed how you work. You hit save and move on.'
+const LEAD = 'A reel at 2 a.m. A pin you can&rsquo;t stop looking at. One line in an essay that changed how you work. You hit save and move on.'
 
 const Bar = ({ dot, name, when }: { dot: string; name: string; when: string }) => (
   <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5 text-[11px] font-body font-semibold">
@@ -54,7 +54,7 @@ function StoryCard({ k }: { k: string }) {
         <Img src={IMG.reel} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <span className="absolute bottom-3 left-3 w-9 h-9 rounded-full bg-white/90 text-black flex items-center justify-center text-xs pl-0.5">▶</span>
-        <span className="absolute bottom-3 right-3 -rotate-3 px-2.5 py-1.5 rounded-md bg-[#FFE066] text-[#2B2410] text-[11px] font-body font-bold shadow-lg">“use this for the café”</span>
+        <span className="absolute bottom-3 right-3 -rotate-3 px-2.5 py-1.5 rounded-md bg-[#FFE066] text-[#2B2410] text-[11px] font-body font-bold shadow-lg">&ldquo;use this for the café&rdquo;</span>
       </div>
       <div className="p-3.5 shrink-0">
         <p className="font-block text-[17px] leading-tight uppercase">Kyoto joinery, no nails</p>
@@ -135,10 +135,10 @@ const MOMENTS = [
   { tab: 'The 2 a.m. find', src: 'Reel, saved 2:07 a.m.', title: 'Light through paper walls', bg: 'linear-gradient(140deg,#7A2E1D,#FF8A3D)',
     lost: 'Weeks later you remember loving it. The link now says “This video is unavailable.”',
     kept: 'It is still here, in the same light, with the note you wrote: “use this for the café.”' },
-  { tab: 'The idea that wasn’t ready', src: 'Essay, saved 3 years ago', title: 'On slow work', bg: 'linear-gradient(140deg,#0E1F3A,#6366F1)',
+  { tab: 'The idea that wasn&rsquo;t ready', src: 'Essay, saved 3 years ago', title: 'On slow work', bg: 'linear-gradient(140deg,#0E1F3A,#6366F1)',
     lost: 'You are finally building the thing, and you cannot remember where you read that one line.',
     kept: 'You type “slow” and it opens on the paragraph you underlined back then.' },
-  { tab: 'The house you’ll build', src: '212 pins, since 2021', title: 'Concrete, timber, quiet', bg: 'linear-gradient(140deg,#0A2A1D,#34D399)',
+  { tab: 'The house you&rsquo;ll build', src: '212 pins, since 2021', title: 'Concrete, timber, quiet', bg: 'linear-gradient(140deg,#0A2A1D,#34D399)',
     lost: 'A camera roll of screenshots, buried under nine thousand others, half with no source.',
     kept: 'Every pin sits on one wall with where it came from. The plot is bought. The wall is ready.' },
 ]
@@ -158,10 +158,7 @@ export default function HomePage() {
   const [tabs, setTabs] = useState(40)
   const rootRef = useRef<HTMLElement>(null)
 
-  // Interactive Gallery Filter State
   const [activeCanvasFilter, setActiveCanvasFilter] = useState<'all' | 'cinema' | 'socials' | 'architecture' | 'notes'>('all')
-
-  // Interactive Instagram Reel State in Demo
   const [moment, setMoment] = useState(0)
   const [demoIgLiked, setDemoIgLiked] = useState(false)
   const [demoIgLikesCount, setDemoIgLikesCount] = useState(14820)
@@ -212,7 +209,6 @@ export default function HomePage() {
     return () => cancelAnimationFrame(raf)
   }, [])
 
-  // Smooth Intersection Observer for kinetic scroll reveals
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -231,7 +227,6 @@ export default function HomePage() {
     return () => observer.disconnect()
   }, [])
 
-  // Instagram Demo Double Tap handler
   const handleDemoDoubleTap = () => {
     if (!demoIgLiked) {
       setDemoIgLiked(true)
@@ -271,7 +266,6 @@ export default function HomePage() {
         .font-body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .font-block { font-family: 'Cabinet Grotesk', sans-serif; font-weight: 900; letter-spacing: -0.02em; }
 
-        /* Elastic Kinetic Reveals */
         .kinetic-reveal {
           opacity: 0;
           will-change: transform, opacity, filter;
@@ -326,7 +320,6 @@ export default function HomePage() {
         @keyframes float-y { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
         .float-y { animation: float-y 5s ease-in-out infinite; }
         
-        /* Hero */
         .hero-line { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
         .hero-line > span { display: block; transform: translateY(112%); white-space: nowrap; animation: line-up 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards, squeeze 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: var(--d, 0s), var(--d, 0s); }
         @keyframes line-up { to { transform: translateY(0); } }
@@ -372,7 +365,24 @@ export default function HomePage() {
         .rv { display: inline-block; --l: clamp(0, ((var(--p, 0) - .2) * 3.2 * var(--n) - var(--i)) / 3, 1); opacity: calc(.14 + .86 * var(--l)); transform: translateY(calc((1 - var(--l)) * .28em)); will-change: opacity, transform; }
         @media (prefers-reduced-motion: reduce) { .rv { opacity: 1 !important; transform: none !important; } }
         .hero-in { transform: translate3d(0, calc(var(--o, 0) * 90px), 0) scale(calc(1 - var(--o, 0) * .08)); opacity: calc(1 - var(--o, 0) * 1.4); }
-        .sc { transform: translate(calc(var(--sp, 1) * var(--x) * var(--sm, 1)), calc(var(--sp, 1) * var(--y) * var(--sm, 1))) rotate(calc(var(--sp, 1) * var(--r) + (1 - var(--sp, 1)) * var(--b))) scale(calc(1 - var(--sp, 1) * .06)); will-change: transform; }
+        
+        /* THE 3D SPATIAL ENGINE */
+        .sc { 
+          transform: 
+            translate3d(
+              calc(var(--sp, 1) * var(--tx) * var(--sm, 1)), 
+              calc(var(--sp, 1) * var(--ty) * var(--sm, 1)), 
+              calc(var(--sp, 1) * var(--tz) + (1 - var(--sp, 1)) * var(--z))
+            ) 
+            rotateX(calc(var(--sp, 1) * var(--rx)))
+            rotateY(calc(var(--sp, 1) * var(--ry)))
+            rotateZ(calc(var(--sp, 1) * var(--rz) + (1 - var(--sp, 1)) * var(--b))) 
+            scale(calc(1 - var(--sp, 1) * .12)); 
+          filter: blur(calc(var(--sp, 1) * 12px));
+          opacity: calc(1 - var(--sp, 1) * 0.85);
+          will-change: transform, opacity, filter; 
+        }
+        
         .story-stage { --sm: 1; }
         @media (max-width: 767px) { .story-stage { --sm: .42; } }
         .plx-img { transform: translate3d(0, calc(var(--pc, 0) * -7%), 0) scale(1.18); will-change: transform; }
@@ -380,6 +390,7 @@ export default function HomePage() {
           .kinetic-reveal { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; transition: none; }
           .w-in, .w-in.g-text { animation: none; transform: none; }
           .g-text { animation: none; }
+          .sc { transform: translate3d(0,0,var(--z)) rotateZ(var(--b)) scale(0.88); filter: none; opacity: 1; }
         }
       `}} />
 
@@ -492,7 +503,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* THE MOMENT BEFORE THE SAVE: the sentence lights up word by word as you scroll */}
+      {/* THE MOMENT BEFORE THE SAVE */}
       <section data-scrub="" className="relative z-10 px-5 sm:px-10 py-20 sm:py-32 max-w-7xl mx-auto">
         <h2 className="max-w-5xl font-tall-block uppercase text-[clamp(1.85rem,4.6vw,4rem)] leading-[1.04] text-[#111311] dark:text-white" style={{ '--n': LEAD.split(' ').length + 3 } as React.CSSProperties}>
           {LEAD.split(' ').map((w, i) => (
@@ -501,12 +512,11 @@ export default function HomePage() {
         </h2>
       </section>
 
-      {/* STORY: DYNAMIC SCROLL ANIMATION (No massive gaps, driven natively by flow) */}
+      {/* STORY: 3D SPATIAL TORNADO SCROLL ANIMATION */}
       <section id="story" data-scrub="story" className="story-stage relative h-[260vh] z-10">
         <div className="sticky top-0 h-screen overflow-hidden flex items-center pt-16"><div className="w-full">
         <div className="max-w-7xl mx-auto px-5 sm:px-10 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           
-          {/* Text Wing */}
           <div className="space-y-6 z-20">
             <div className="flex items-end gap-4">
               <span className="font-tall-block text-[#111311] dark:text-white text-[clamp(4.5rem,13vw,9rem)] leading-[0.9] min-w-[2.1ch] inline-block text-right tabular-nums">
@@ -518,7 +528,6 @@ export default function HomePage() {
             </div>
             
             <div className="mt-4 relative h-[236px] sm:h-[260px] lg:h-[320px]">
-              {/* Dynamic Text Crossfade */}
               <div className={`absolute top-0 left-0 transition-all duration-500 ${tabs > 15 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                 <h2 className="font-tall-block uppercase text-[clamp(1.75rem,4.2vw,3.25rem)] leading-[1] text-[#111311] dark:text-white">Every one felt important. <br/> None will be found again.</h2>
                 <p className="mt-4 max-w-md text-base sm:text-lg font-body text-[#111311]/70 dark:text-white/70 leading-relaxed">
@@ -535,12 +544,16 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Dynamic Animation Wing: Chaos -> Stacked Vault */}
-          <div className="relative w-full h-[36vh] sm:h-[44vh] lg:h-auto lg:aspect-[4/3] flex items-center justify-center">
-            <div className="relative w-full max-w-[300px] h-[400px] scale-[.6] sm:scale-[.78] lg:scale-100">
+          <div className="relative w-full h-[36vh] sm:h-[44vh] lg:h-auto lg:aspect-[4/3] flex items-center justify-center [perspective:2400px] [transform-style:preserve-3d]">
+            <div className="relative w-full max-w-[300px] h-[400px] scale-[.6] sm:scale-[.78] lg:scale-100 [transform-style:preserve-3d]">
               {STORY_CARDS.map((c, i) => (
                 <div key={c.k} className="sc absolute inset-0 m-auto w-[260px] sm:w-[280px] h-[360px]"
-                  style={{ zIndex: i, '--x': `${c.sx}%`, '--y': `${c.sy}%`, '--r': `${c.sr}deg`, '--b': `${(i - 5) * 4}deg` } as React.CSSProperties}>
+                  style={{ 
+                    zIndex: i, 
+                    '--tx': `${c.tx}%`, '--ty': `${c.ty}%`, '--tz': `${c.tz}px`,
+                    '--rx': `${c.rx}deg`, '--ry': `${c.ry}deg`, '--rz': `${c.rz}deg`, 
+                    '--b': `${(i - 2.5) * 5}deg`, '--z': `${i * 4}px`
+                  } as React.CSSProperties}>
                   <StoryCard k={c.k} />
                 </div>
               ))}
@@ -563,7 +576,6 @@ export default function HomePage() {
 
           <div className="space-y-24">
             
-            {/* INSTAGRAM REEL LIVE CARD */}
             <div className="flex flex-col md:flex-row items-center gap-10 kinetic-reveal kr-up" data-scrub="">
               <div className="w-full md:w-1/2 flex justify-center">
                 <div className="w-full max-w-sm bg-white dark:bg-[#000000] border border-black/10 dark:border-[#262626] rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 hover:scale-[1.02]">
@@ -648,12 +660,11 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-3xl font-block uppercase leading-tight">Preserve the exact aesthetic</h3>
                 <p className="text-base font-body text-[#111311]/70 dark:text-[#F3F4F3]/70 leading-relaxed">
-                  Saving a reel doesn't mean extracting text. It means capturing the poster frame, the precise caption, and the visual weight of the content seamlessly.
+                  Saving a reel doesn&apos;t mean extracting text. It means capturing the poster frame, the precise caption, and the visual weight of the content seamlessly.
                 </p>
               </div>
             </div>
 
-            {/* YOUTUBE CINEMA CARD */}
             <div className="flex flex-col md:flex-row-reverse items-center gap-10 kinetic-reveal kr-up" data-scrub="">
               <div className="w-full md:w-1/2 flex justify-center">
                 <div className="w-full max-w-md bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 transition-all duration-500 hover:scale-[1.02] group/yt">
@@ -692,12 +703,11 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-3xl font-block uppercase leading-tight">Cinema-grade ingestion</h3>
                 <p className="text-base font-body text-[#111311]/70 dark:text-[#F3F4F3]/70 leading-relaxed">
-                  Rich media isn't stripped of its context. Video essays, shorts, and full documentaries are securely encapsulated with their full resolution thumbnails and timestamps.
+                  Rich media isn&apos;t stripped of its context. Video essays, shorts, and full documentaries are securely encapsulated with their full resolution thumbnails and timestamps.
                 </p>
               </div>
             </div>
 
-            {/* PINTEREST PIN CARD */}
             <div className="flex flex-col md:flex-row items-center gap-10 kinetic-reveal kr-up" data-scrub="">
               <div className="w-full md:w-1/2 flex justify-center">
                 <div className="w-full max-w-xs bg-white dark:bg-[#1C1D20] rounded-2xl overflow-hidden shadow-2xl border border-black/10 dark:border-white/10 transition-all duration-500 hover:scale-[1.02] group/pin">
@@ -862,7 +872,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 3D FREESTYLE FLOATING DASHBOARD STAGE - STRAIGHTENED */}
         <div data-scrub="stage" className="relative py-6 w-full flex items-center justify-center [perspective:1600px]">
           <div className="absolute inset-x-[10%] top-[10%] bottom-[4%] rounded-full blur-[100px] pointer-events-none" style={{ opacity: 'calc(var(--cp, 0) * .6)', background: 'conic-gradient(from 90deg, var(--g1), var(--g2), var(--g3), var(--g4), var(--g5), var(--g1))' }} />
           <div className="hidden sm:block absolute left-[3%] top-[18%] z-20 px-4 py-2 rounded-full g-btn font-block text-lg uppercase shadow-2xl float-y" style={{ opacity: 'var(--cp, 0)', transform: 'translate3d(calc((1 - var(--cp, 0)) * -90px), calc((1 - var(--cp, 0)) * 70px), 0)' }}>Saved at 2 a.m.</div>
