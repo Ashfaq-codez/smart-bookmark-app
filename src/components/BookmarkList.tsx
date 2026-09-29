@@ -85,6 +85,75 @@ function formatDateHeader(dateString?: string): string {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+const SlidersIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="9" cy="6" r="2" fill="currentColor"></circle><circle cx="15" cy="12" r="2" fill="currentColor"></circle><circle cx="8" cy="18" r="2" fill="currentColor"></circle></svg>
+
+// One source of truth for media types. To add a category: add its label above and its raw types here.
+const mediaTypeMatchers: Record<string, string[]> = {
+  link: ['link'], note: ['note'], image: ['image'],
+  videos: ['video', 'youtube'], documents: ['pdf', 'file'],
+  socials: ['twitter', 'instagram', 'pinterest', 'linkedin', 'github'],
+}
+const matchesType = (b: Bookmark, t: string) => (mediaTypeMatchers[t] || [t]).includes(b.type || 'link')
+
+// Anything that should be reachable from the command palette registers here (see `commands` in the component).
+type Command = { id: string; group: string; label: string; hint?: string; run: () => void }
+type FilterChip = { l: string; x: () => void }
+
+const KBD = 'hidden sm:inline-block px-1.5 py-0.5 rounded border border-black/10 dark:border-white/15 text-[10px] font-medium text-[#171A17]/50 dark:text-white/50'
+const BTN = 'h-9 px-3 inline-flex items-center gap-2 rounded-lg border border-black/10 dark:border-white/10 text-sm font-medium text-[#171A17] dark:text-[#F3F0E9] hover:bg-black/5 dark:hover:bg-white/5 transition-colors'
+
+function Seg<T extends string | number>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: { v: T; label: string }[] }) {
+  return (
+    <div role="radiogroup" className="flex p-0.5 rounded-lg bg-black/[0.05] dark:bg-white/[0.06]">
+      {options.map(o => (
+        <button key={String(o.v)} role="radio" aria-checked={value === o.v} onClick={() => onChange(o.v)}
+          className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${value === o.v ? 'bg-white dark:bg-[#252A25] text-[#171A17] dark:text-white shadow-sm' : 'text-[#171A17]/55 dark:text-white/55 hover:text-[#171A17] dark:hover:text-white'}`}>{o.label}</button>
+      ))}
+    </div>
+  )
+}
+
+function CommandPalette({ commands, saves, onPick, onClose }: { commands: Command[]; saves: Bookmark[]; onPick: (b: Bookmark) => void; onClose: () => void }) {
+  const [q, setQ] = useState('')
+  const [i, setI] = useState(0)
+  const needle = q.trim().toLowerCase()
+  const items = useMemo(() => {
+    const cmds = commands.filter(c => !needle || c.label.toLowerCase().includes(needle))
+    const hits = needle ? saves.filter(b => (b.title || b.url || '').toLowerCase().includes(needle)).slice(0, 6) : []
+    return [
+      ...cmds.map(c => ({ key: c.id, group: c.group, label: c.label, hint: c.hint, run: c.run })),
+      ...hits.map(b => ({ key: `b${b.id}`, group: 'Saves', label: b.title || b.url, hint: undefined as string | undefined, run: () => onPick(b) })),
+    ]
+  }, [needle, commands, saves])
+  const go = (it: (typeof items)[number]) => { onClose(); it.run() }
+  return (
+    <div className="fixed inset-0 z-[300] flex items-start justify-center pt-[12vh] px-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label="Command palette" onClick={e => e.stopPropagation()} className="w-full max-w-xl overflow-hidden rounded-2xl bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/10 shadow-2xl">
+        <input autoFocus value={q} placeholder="Search saves or run a command" aria-label="Search saves or run a command"
+          onChange={e => { setQ(e.target.value); setI(0) }}
+          onKeyDown={e => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setI(v => Math.min(v + 1, items.length - 1)) }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setI(v => Math.max(v - 1, 0)) }
+            else if (e.key === 'Enter' && items[i]) go(items[i])
+          }}
+          className="w-full bg-transparent outline-none px-5 py-4 text-base border-b border-black/[0.06] dark:border-white/10 text-[#171A17] dark:text-[#F3F0E9] placeholder-black/40 dark:placeholder-white/40" />
+        <ul role="listbox" className="max-h-[50vh] overflow-y-auto p-2">
+          {items.length === 0 && <li className="px-3 py-8 text-center text-sm text-[#171A17]/60 dark:text-white/60">Nothing matches “{q}”.</li>}
+          {items.map((it, n) => (
+            <li key={it.key} role="option" aria-selected={n === i}>
+              {(n === 0 || items[n - 1].group !== it.group) && <p className="px-3 pt-3 pb-1 text-xs font-medium text-[#171A17]/45 dark:text-white/45">{it.group}</p>}
+              <button onMouseMove={() => setI(n)} onClick={() => go(it)} className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm text-left text-[#171A17] dark:text-[#F3F0E9] ${n === i ? 'bg-[#4D6A51]/10 dark:bg-[#8FAA91]/15' : ''}`}>
+                <span className="truncate">{it.label}</span>{it.hint && <kbd className={KBD}>{it.hint}</kbd>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
   const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
   const [isLoading, setIsLoading] = useState(true)
@@ -118,6 +187,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   const gridRef = useRef<HTMLDivElement>(null)
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [mod, setMod] = useState('⌘')
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const [customCategories, setCustomCategories] = useState<string[]>([])
   const [customSubCategories, setCustomSubCategories] = useState<Record<string, string[]>>({})
@@ -380,19 +452,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
       const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
 
-      let isMediaTypeMatch = true;
-      if (activeMediaType !== null) {
-        const bookmarkType = bookmark.type || 'link';
-        if (activeMediaType === 'socials') {
-          isMediaTypeMatch = bookmarkType === 'twitter' || bookmarkType === 'instagram' || bookmarkType === 'pinterest' || bookmarkType === 'linkedin' || bookmarkType === 'github';
-        } else if (activeMediaType === 'videos') {
-          isMediaTypeMatch = bookmarkType === 'video' || bookmarkType === 'youtube';
-        } else if (activeMediaType === 'documents') {
-          isMediaTypeMatch = bookmarkType === 'pdf' || bookmarkType === 'file';
-        } else {
-          isMediaTypeMatch = bookmarkType === activeMediaType;
-        }
-      }
+      const isMediaTypeMatch = activeMediaType === null || matchesType(bookmark, activeMediaType);
 
       const searchTarget = searchQuery.toLowerCase();
       const isSearchMatch = searchTarget === '' ||
@@ -484,6 +544,43 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     await updateBookmark(id, { category: targetCategory === 'All' ? 'Uncategorized' : targetCategory, sub_category: targetSubCategory || null })
   }
 
+  const hasFilters = activeFilter !== 'All' || activeMediaType !== null || searchQuery !== ''
+  const clearAll = () => { setActiveFilter('All'); setActiveSubFilter(null); setActiveMediaType(null); setSearchQuery('') }
+  const viewTitle = activeSubFilter || (activeFilter !== 'All' ? activeFilter : activeMediaType ? mediaTypeLabels[activeMediaType] : 'All saves')
+  const crumbs = [activeFilter !== 'All' && activeFilter, activeFilter !== 'All' && activeSubFilter, activeFilter === 'All' && activeMediaType && mediaTypeLabels[activeMediaType]].filter(Boolean) as string[]
+  const typeCounts = useMemo(() => Object.fromEntries(Object.keys(mediaTypeLabels).map(t => [t, bookmarks.filter(b => matchesType(b, t)).length])) as Record<string, number>, [bookmarks])
+  const openCapture = () => { setIsExpanded(true); setTimeout(() => captureBarRef.current?.querySelector<HTMLElement>('.tiptap')?.focus(), 120) }
+  const chips = [
+    activeFilter !== 'All' && { l: activeSubFilter ? `${activeFilter} / ${activeSubFilter}` : activeFilter, x: () => { setActiveFilter('All'); setActiveSubFilter(null) } },
+    searchQuery && { l: `“${searchQuery}”`, x: () => setSearchQuery('') },
+  ].filter(Boolean) as FilterChip[]
+
+  // Extension point: future features add an entry here and they show up in the palette (and can take a shortcut hint).
+  const commands: Command[] = useMemo(() => [
+    { id: 'new-note', group: 'Create', label: 'New note', hint: 'N', run: openCapture },
+    { id: 'upload', group: 'Create', label: 'Upload a file', run: () => fileInputRef.current?.click() },
+    { id: 'group', group: 'View', label: isGroupedByDate ? 'Ungroup by date' : 'Group by date', run: () => setIsGroupedByDate(v => !v) },
+    { id: 'details', group: 'View', label: isMinimalist ? 'Show card details' : 'Hide card details', run: toggleMinimalist },
+    { id: 'sort', group: 'View', label: sortOrder === 'desc' ? 'Sort oldest first' : 'Sort newest first', run: () => setSortOrder(o => (o === 'desc' ? 'asc' : 'desc')) },
+    { id: 'all', group: 'Go to', label: 'All saves', run: clearAll },
+    ...Object.entries(mediaTypeLabels).map(([t, label]) => ({ id: `type-${t}`, group: 'Go to', label, run: () => setActiveMediaType(t) })),
+    ...Object.keys(folderHierarchy).map(f => ({ id: `folder-${f}`, group: 'Folders', label: f, run: () => { setActiveFilter(f); setActiveSubFilter(null) } })),
+  ], [isGroupedByDate, isMinimalist, sortOrder, folderHierarchy])
+
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad/i.test(navigator.platform)) setMod('Ctrl')
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      const typing = !!t && (/INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o) }
+      else if (e.key === 'Escape') { setPaletteOpen(false); setShowGridMenu(false) }
+      else if (!typing && !e.metaKey && !e.ctrlKey && e.key === '/') { e.preventDefault(); searchRef.current?.focus() }
+      else if (!typing && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); openCapture() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
     <div className="bg-[#FAF9F5] dark:bg-[#0F120F] min-h-screen font-sans text-[#171A17] dark:text-[#F3F0E9] flex selection:bg-[#E8EFE5] selection:text-[#4D6A51] dark:selection:bg-[#202820] dark:selection:text-[#69866E] transition-colors duration-500">
       
@@ -567,147 +664,82 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
       {/* ─── MAIN CONTENT ─── */}
       <div className={`flex-1 flex flex-col min-h-screen relative w-full transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px] lg:w-[calc(100%-280px)]' : 'lg:ml-[72px] lg:w-[calc(100%-72px)]'}`}>
 
-        {/* PERMANENTLY FIXED HEADER AREA */}
-        <div className="sticky top-0 z-40 w-full">
-          <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150 border-b border-white/40 dark:border-white/10 shadow-sm transition-colors">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-[#171A17]/70 dark:text-white/70 hover:text-[#171A17] dark:hover:text-white transition-colors">
-                <MenuIcon />
-              </button>
-
-              <div className="flex items-center gap-3">
-                <div className="font-serif text-xl sm:text-2xl font-medium text-[#171A17] dark:text-[#F4F1EA]">
-                  inntoit
-                </div>
-                {activeMediaType && (
-                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider bg-[#4D6A51]/10 text-[#4D6A51] dark:bg-[#8FAA91]/20 dark:text-[#8FAA91]">
-                     {mediaTypeLabels[activeMediaType]}
-                   </span>
-                )}
-              </div>
+        {/* TOP BAR: navigation context, search, primary action */}
+        <div className="sticky top-0 z-40 w-full bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06]">
+          <header className="h-14 flex items-center gap-3 px-3 sm:px-8">
+            <button aria-label="Open menu" onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-lg text-[#171A17]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"><MenuIcon /></button>
+            <nav aria-label="Breadcrumb" className="hidden md:flex items-center gap-1.5 text-sm shrink-0 text-[#171A17]/55 dark:text-white/55">
+              <button onClick={clearAll} className="hover:text-[#171A17] dark:hover:text-white transition-colors">Library</button>
+              {crumbs.map(c => <span key={c} className="flex items-center gap-1.5"><span aria-hidden="true">/</span><span className="text-[#171A17] dark:text-white font-medium truncate max-w-[22ch]" title={c}>{c}</span></span>)}
+            </nav>
+            <div className="relative flex-1 max-w-xl md:ml-4">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/45 dark:text-white/45" />
+              <input ref={searchRef} type="text" aria-label="Search saves" placeholder="Search your saves" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-9 bg-black/[0.04] dark:bg-white/[0.06] border border-transparent focus:border-[#4D6A51] dark:focus:border-[#8FAA91] outline-none pl-9 pr-14 rounded-lg text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/45 dark:placeholder-white/45 transition-colors" />
+              {searchQuery
+                ? <button aria-label="Clear search" onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white"><ClearIcon /></button>
+                : <kbd className={`${KBD} absolute right-2.5 top-1/2 -translate-y-1/2`}>/</kbd>}
             </div>
-
-            <div className="flex items-center gap-4 flex-1 justify-end">
-              <div className="hidden sm:flex items-center gap-2 w-full max-w-[500px] justify-end">
-                <div className="relative flex-1">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                  <input
-                    type="text"
-                    placeholder="Search your mind..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2 rounded-2xl text-[16px] sm:text-sm text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                      <ClearIcon />
-                    </button>
-                  )}
-                </div>
-
-                {/* DESKTOP GRID CHANGER */}
-                <div className="relative hidden sm:block">
-                  <button
-                    onClick={() => setShowGridMenu(!showGridMenu)}
-                    title="Change Grid Layout"
-                    className="shrink-0 p-2 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all hover:bg-white/60 dark:hover:bg-white/10"
-                  >
-                    {userColPreference === 5 ? <Grid5Icon /> : userColPreference === 9 ? <Grid9Icon /> : <Grid6Icon />}
-                  </button>
-                  {showGridMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowGridMenu(false)} />
-                      <div className="absolute right-0 top-full mt-2 p-1.5 flex flex-col gap-1.5 bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl z-50">
-                        {[5, 6, 9].map((cols) => (
-                           <button 
-                             key={cols}
-                             onClick={() => { setUserColPreference(cols as 5|6|9); localStorage.setItem('space_grid_pref', String(cols)); setShowGridMenu(false); }}
-                             className={`p-2 rounded-xl transition-all ${userColPreference === cols ? 'bg-[#4D6A51] text-white dark:bg-[#8FAA91] dark:text-[#151815]' : 'text-[#171A17]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#171A17] dark:hover:text-white'}`}
-                             title={`${cols} Columns`}
-                           >
-                             {cols === 5 ? <Grid5Icon /> : cols === 9 ? <Grid9Icon /> : <Grid6Icon />}
-                           </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => setIsGroupedByDate(!isGroupedByDate)}
-                  title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
-                  className={`shrink-0 p-2 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all ${
-                    isGroupedByDate
-                      ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]'
-                      : 'bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
-                  }`}
-                >
-                  <CalendarIcon />
-                </button>
-
-                <button
-                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
-                  className="shrink-0 p-2 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all hover:bg-white/60 dark:hover:bg-white/10"
-                >
-                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
-                </button>
-              </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button onClick={() => setPaletteOpen(true)} aria-label="Open command palette" className={`${BTN} hidden md:inline-flex text-[#171A17]/60 dark:text-white/60`}>Commands <kbd className={KBD}>{mod} K</kbd></button>
+              <button onClick={openCapture} aria-label="New save" className="h-9 px-3 sm:px-4 inline-flex items-center gap-2 rounded-lg bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-sm font-medium hover:opacity-90 transition-opacity"><PlusIcon /><span className="hidden sm:inline">New</span></button>
             </div>
           </header>
+        </div>
 
-          <div className="px-4 py-3 sm:hidden border-b border-white/40 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-2xl saturate-150">
-             <div className="flex items-center gap-2 w-full">
-                <div className="relative flex-1">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50" />
-                  <input
-                    type="text"
-                    placeholder="Search your mind..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] outline-none pl-9 pr-8 py-2.5 rounded-2xl text-[16px] text-[#171A17] dark:text-[#F3F0E9] placeholder-black/50 dark:placeholder-white/50 focus:bg-white/60 dark:focus:bg-white/10 transition-all"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-                      <ClearIcon />
-                    </button>
-                  )}
-                </div>
-
-                {/* MOBILE MINIMALIST VIEW TOGGLE */}
-                <button
-                  onClick={toggleMinimalist}
-                  title={isMinimalist ? "Detailed View" : "Minimalist View"}
-                  className="shrink-0 p-2.5 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all sm:hidden"
-                >
-                  {isMinimalist ? <ViewMinimalIcon /> : <ViewDetailedIcon />}
-                </button>
-
-                <button
-                  onClick={() => setIsGroupedByDate(!isGroupedByDate)}
-                  title={isGroupedByDate ? "Disable Timeline View" : "Group by Date"}
-                  className={`shrink-0 p-2.5 rounded-2xl backdrop-blur-xl border shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all ${
-                    isGroupedByDate
-                      ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]'
-                      : 'bg-white/40 dark:bg-white/5 border-white/50 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white'
-                  }`}
-                >
-                  <CalendarIcon />
-                </button>
-
-                <button
-                  onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                  title={`Sort: ${sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}`}
-                  className="shrink-0 p-2.5 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.06)] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-all"
-                >
-                  {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
-                </button>
-             </div>
+        {/* PAGE HEADER: title, count, view options, type tabs, active filters */}
+        <div className="px-3 sm:px-8 pt-6 pb-2">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="font-serif text-2xl sm:text-3xl font-medium leading-tight text-[#171A17] dark:text-[#F4F1EA] break-words">{viewTitle}</h1>
+              <p className="mt-1 text-sm text-[#171A17]/55 dark:text-white/55">{filteredBookmarks.length} {filteredBookmarks.length === 1 ? 'save' : 'saves'}{filteredBookmarks.length !== bookmarks.length ? ` of ${bookmarks.length}` : ''}</p>
+            </div>
+            {/* Extension point: put future page-level actions (share, export, select) beside the View menu. */}
+            <div className="relative flex items-center gap-2">
+              <button onClick={() => setShowGridMenu(v => !v)} aria-haspopup="menu" aria-expanded={showGridMenu} className={BTN}><SlidersIcon />View</button>
+              {showGridMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowGridMenu(false)} />
+                  <div role="menu" className="absolute right-0 top-full mt-2 w-72 z-50 p-4 space-y-4 rounded-2xl bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.16)]">
+                    <div><p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Sort</p>
+                      <Seg<'desc' | 'asc'> value={sortOrder} onChange={setSortOrder} options={[{ v: 'desc', label: 'Newest first' }, { v: 'asc', label: 'Oldest first' }]} /></div>
+                    <div><p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Card details</p>
+                      <Seg<'full' | 'min'> value={isMinimalist ? 'min' : 'full'} onChange={v => { if ((v === 'min') !== isMinimalist) toggleMinimalist() }} options={[{ v: 'full', label: 'Detailed' }, { v: 'min', label: 'Minimal' }]} /></div>
+                    <div className="hidden sm:block"><p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Columns</p>
+                      <Seg<'auto' | 5 | 6 | 9> value={userColPreference} onChange={v => { setUserColPreference(v); if (v === 'auto') localStorage.removeItem('space_grid_pref'); else localStorage.setItem('space_grid_pref', String(v)) }} options={[{ v: 'auto', label: 'Auto' }, { v: 5, label: '5' }, { v: 6, label: '6' }, { v: 9, label: '9' }]} /></div>
+                    <label className="flex items-center justify-between text-sm text-[#171A17] dark:text-[#F3F0E9]">Group by date
+                      <input type="checkbox" role="switch" checked={isGroupedByDate} onChange={() => setIsGroupedByDate(v => !v)} className="w-4 h-4 accent-[#4D6A51]" /></label>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+
+          <div role="tablist" aria-label="Filter by type" className="mt-5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[{ k: null as string | null, label: 'All' }, ...Object.entries(mediaTypeLabels).map(([k, label]) => ({ k: k as string | null, label }))].map(t => {
+              const on = activeMediaType === t.k
+              return (
+                <button key={t.label} role="tab" aria-selected={on} onClick={() => setActiveMediaType(t.k)}
+                  className={`shrink-0 flex items-center gap-2 px-3.5 h-9 rounded-full text-sm font-medium border transition-colors ${on ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]' : 'border-black/10 dark:border-white/10 text-[#171A17]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                  {t.label}<span className={`text-xs tabular-nums ${on ? 'opacity-75' : 'opacity-50'}`}>{t.k === null ? bookmarks.length : typeCounts[t.k]}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {chips.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#171A17] dark:text-[#F3F0E9]">
+              {chips.map(f => (
+                <span key={f.l} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-md bg-black/[0.05] dark:bg-white/[0.07]">{f.l}
+                  <button aria-label={`Remove ${f.l}`} onClick={f.x} className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"><ClearIcon /></button></span>
+              ))}
+              <button onClick={clearAll} className="px-1.5 py-1 font-medium text-[#4D6A51] dark:text-[#8FAA91] hover:underline">Clear all</button>
+            </div>
+          )}
         </div>
 
         {/* MAIN GRID VIEW OR EMPTY STATE */}
-        <main className="flex-1 p-2 sm:p-8 pb-32 sm:pb-32">
+        <main className="flex-1 px-3 sm:px-8 pt-4 pb-32">
           <div className="w-full flex flex-col items-start" ref={gridRef}>
             {isLoading ? (
               <div className="w-full flex gap-1.5 sm:gap-6">
@@ -718,41 +750,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 ))}
               </div>
             ) : bookmarks.length === 0 ? (
-              
-              /* BEAUTIFUL EMPTY STATE DASHBOARD */
-              <div className="w-full flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-fade-in">
-                <div className="w-16 h-16 bg-[#4D6A51]/10 dark:bg-[#8FAA91]/10 text-[#4D6A51] dark:text-[#8FAA91] rounded-2xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <div className="w-full max-w-xl mx-auto mt-[8vh] text-center px-4 animate-fade-in">
+                <h2 className="font-serif text-2xl sm:text-3xl text-[#171A17] dark:text-[#F3F0E9]">Nothing saved yet</h2>
+                <p className="mt-3 text-sm sm:text-base leading-relaxed text-[#171A17]/60 dark:text-white/60">Paste a link, write a note or upload a file. inntoit keeps the preview, not just the address.</p>
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                  <button onClick={openCapture} className="h-10 px-5 rounded-lg bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-sm font-medium hover:opacity-90 transition-opacity">Add your first save</button>
+                  <button onClick={() => fileInputRef.current?.click()} className={`${BTN} h-10 px-5`}>Upload a file</button>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-serif text-[#171A17] dark:text-[#F3F0E9] mb-3">Your Space is Empty</h2>
-                <p className="text-[#171A17]/60 dark:text-white/60 max-w-md mx-auto mb-10 text-sm sm:text-base leading-relaxed">
-                  Start cataloging your mind. Paste links, write quick thoughts, or drop documents using the capture bar below.
-                </p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl text-left">
-                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-                     <div className="w-8 h-8 rounded-full bg-[#1DA1F2]/10 text-[#1DA1F2] flex items-center justify-center mb-3"><XIcon /></div>
-                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Social Media</h3>
-                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Paste Twitter, Instagram, or TikTok links to generate native, playable previews.</p>
-                  </div>
-                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-                     <div className="w-8 h-8 rounded-full bg-[#FF0000]/10 text-[#FF0000] flex items-center justify-center mb-3"><YouTubeIcon /></div>
-                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Videos & Media</h3>
-                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Save YouTube videos or direct MP4 links to watch them instantly inside your dashboard.</p>
-                  </div>
-                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-                     <div className="w-8 h-8 rounded-full bg-orange-500/10 text-orange-500 flex items-center justify-center mb-3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>
-                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Rich Notes</h3>
-                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Expand the capture bar to write journals, create to-do lists, and format rich text.</p>
-                  </div>
-                  <div className="bg-white/50 dark:bg-[#151815]/50 backdrop-blur-sm p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-                     <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mb-3"><PaperclipIcon /></div>
-                     <h3 className="font-semibold text-sm text-[#171A17] dark:text-[#F3F0E9] mb-1">Files & Documents</h3>
-                     <p className="text-xs text-[#171A17]/50 dark:text-white/50">Upload PDFs, images, or documents to securely archive them in your personal space.</p>
-                  </div>
-                </div>
+                <p className="mt-6 text-xs text-[#171A17]/45 dark:text-white/45">Press N to write a note, or {mod} K to search and run commands.</p>
               </div>
-
+            ) : filteredBookmarks.length === 0 ? (
+              <div className="w-full max-w-md mx-auto mt-[8vh] text-center px-4">
+                <h2 className="font-serif text-xl sm:text-2xl text-[#171A17] dark:text-[#F3F0E9]">No saves match</h2>
+                <p className="mt-2 text-sm text-[#171A17]/60 dark:text-white/60">Try a different search, or remove a filter to see everything again.</p>
+                {hasFilters && <button onClick={clearAll} className={`${BTN} mt-6`}>Clear filters</button>}
+              </div>
             ) : isGroupedByDate && groupedBookmarks ? (
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
                 const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
@@ -760,11 +772,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
                 return (
                   <div key={dateLabel} className="w-full mb-10">
-                    <div className="flex items-center gap-4 mb-6">
-                      <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0] shrink-0 tracking-wide">
-                        {dateLabel}
-                      </h3>
-                      <div className="h-px bg-black/[0.06] dark:bg-white/[0.06] flex-1"></div>
+                    <div className="sticky top-14 z-30 flex items-baseline gap-2.5 py-2.5 mb-4 bg-[#FAF9F5]/90 dark:bg-[#0F120F]/90 backdrop-blur">
+                      <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0]">{dateLabel}</h3>
+                      <span className="text-xs tabular-nums text-[#171A17]/45 dark:text-white/45">{groupBookmarks.length}</span>
                     </div>
 
                     <div className="w-full flex gap-1.5 sm:gap-6 items-start">
@@ -905,6 +915,8 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
 
       </div>
+
+      {paletteOpen && <CommandPalette commands={commands} saves={bookmarks} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); setTimeout(() => setForcedInspectId(b.id), 100) }} />}
 
       {/* DUPLICATE MODAL */}
       {duplicateMatch && (
