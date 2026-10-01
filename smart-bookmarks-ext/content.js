@@ -120,10 +120,21 @@ function getSelectionHtml() {
   }
 }
 
+// Remember the latest non-empty selection, in case a site clears it when the context menu opens
+let lastSelectionHtml = null;
+let selTimer = null;
+document.addEventListener('selectionchange', () => {
+  clearTimeout(selTimer);
+  selTimer = setTimeout(() => {
+    const h = getSelectionHtml();
+    if (h) lastSelectionHtml = h;
+  }, 120);
+});
+
 document.addEventListener('contextmenu', (e) => {
   rightClickedElement = e.target;
   // Grab the selection NOW, before the context menu / page can change it
-  selectedHtml = getSelectionHtml();
+  selectedHtml = getSelectionHtml() || lastSelectionHtml;
 }, true);
 
 function extractExactUrl(target) {
@@ -213,6 +224,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_CLICKED_CONTEXT') {
     const result = extractExactUrl(rightClickedElement);
     // If no specific post/video is found, default to saving the main page URL
-    sendResponse({ ...(result || { url: window.location.href }), html: selectedHtml });
+    sendResponse({ ...(result || { url: window.location.href }), html: selectedHtml || getSelectionHtml() || lastSelectionHtml, v: 3 });
   }
 });

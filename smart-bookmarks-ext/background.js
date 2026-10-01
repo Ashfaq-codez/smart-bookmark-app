@@ -49,6 +49,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       capturedContent = html || plainTextToHtml(capturedContent);
       console.log('[inntoit] selection saved as', formatKept ? 'HTML' : 'PLAIN fallback', {
         contentScriptReplied: !chrome.runtime.lastError,
+        contentScriptVersion: response?.v,
         error: chrome.runtime.lastError?.message
       });
     }
