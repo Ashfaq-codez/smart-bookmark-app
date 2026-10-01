@@ -29,6 +29,21 @@ interface EditorialModalProps {
   onCyclePreview?: () => void;
 }
 
+// Plain-text notes (e.g. saved before HTML capture, or from inputs) have no block tags,
+// so TipTap collapses their newlines into one paragraph. Convert them to real paragraphs/line breaks.
+const toEditorHtml = (raw: string): string => {
+  if (!raw) return ''
+  if (/<(p|br|ul|ol|li|h[1-6]|blockquote|pre|hr|div|table)\b/i.test(raw)) return raw
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return raw
+    .replace(/\r\n?/g, '\n')
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
 export default function EditorialModal({ 
   bookmark, isVisible, displayType, previewImageUrl, folderHierarchy, 
   onClose, onSave, onDelete, onFullscreenImage, getDomain, onCyclePreview 
@@ -144,8 +159,10 @@ export default function EditorialModal({
           <div className={`w-full md:w-[60%] flex flex-col shrink-0 md:shrink border-b md:border-b-0 md:border-r border-black/[0.04] dark:border-white/[0.04] transition-colors duration-500 ${displayType === 'note' ? 'bg-[#FAF9F5] dark:bg-[#0F120F]' : 'bg-white dark:bg-[#1A1D1A]'} md:h-full md:overflow-hidden`}>
             
             {displayType === 'note' ? (
-              <div className="w-full flex flex-col relative bg-[#FAF9F5] dark:bg-[#0F120F] h-auto min-h-[50dvh] md:h-full">
-                 <TipTapEditor value={editContent || ''} onChange={setEditContent} onBlur={handleAutoSave} isExpanded={true} />
+              <div className="inntoit-note-pane w-full flex flex-col relative bg-[#FAF9F5] dark:bg-[#0F120F] h-auto min-h-[50dvh] md:h-full">
+                 {/* Scoped to this pane only: the shared editor zeroes <p> margins, which made saved paragraphs run together */}
+                 <style>{`.inntoit-note-pane .tiptap > p { margin-bottom: 0.85em !important; }`}</style>
+                 <TipTapEditor value={toEditorHtml(editContent || '')} onChange={setEditContent} onBlur={handleAutoSave} isExpanded={true} />
               </div>
             ) : displayType === 'twitter' ? (
               <div className="w-full flex bg-[#151618] p-4 md:p-8 md:h-full md:overflow-y-auto custom-scrollbar">
