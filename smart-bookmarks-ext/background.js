@@ -39,11 +39,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   let capturedContent = info.selectionText || null;
   let detectedType = capturedContent ? 'note' : null;
 
-  chrome.tabs.sendMessage(tab.id, { type: 'GET_CLICKED_CONTEXT' }, (response) => {
+  chrome.tabs.sendMessage(tab.id, { type: 'GET_CLICKED_CONTEXT' }, { frameId: info.frameId || 0 }, (response) => {
     // Keep formatting: prefer the HTML captured by the content script,
     // otherwise rebuild paragraphs/line breaks from the plain selection text.
+    let formatKept = false;
     if (capturedContent) {
-      capturedContent = (!chrome.runtime.lastError && response?.html) || plainTextToHtml(capturedContent);
+      const html = !chrome.runtime.lastError && response?.html;
+      formatKept = !!html;
+      capturedContent = html || plainTextToHtml(capturedContent);
+      console.log('[inntoit] selection saved as', formatKept ? 'HTML' : 'PLAIN fallback', {
+        contentScriptReplied: !chrome.runtime.lastError,
+        error: chrome.runtime.lastError?.message
+      });
     }
 
     if (!chrome.runtime.lastError && response?.url) {
@@ -72,7 +79,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         chrome.action.setBadgeText({ text: "DUP" });
         chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
       } else if (res.ok) {
-        chrome.action.setBadgeText({ text: "OK" });
+        // "OK" = formatting captured, "TXT" = fell back to plain text (content script didn't reply)
+        chrome.action.setBadgeText({ text: capturedContent && !formatKept ? "TXT" : "OK" });
         chrome.action.setBadgeBackgroundColor({ color: "#4D6A51" });
       } else {
         throw new Error("Failed");
