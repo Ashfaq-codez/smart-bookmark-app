@@ -34,7 +34,9 @@ function renderNode(node, ctx) {
       .filter((c) => c.tagName.toUpperCase() === 'LI')
       .map((li) => `<li>${toBlocks(li, ctx)}</li>`)
       .join('');
-    return { block: true, html: items ? `<${tag.toLowerCase()}>${items}</${tag.toLowerCase()}>` : '' };
+    const start = tag === 'OL' ? parseInt(node.getAttribute('start') || '', 10) : NaN;
+    const startAttr = Number.isInteger(start) && start > 1 ? ` start="${start}"` : '';
+    return { block: true, html: items ? `<${tag.toLowerCase()}${startAttr}>${items}</${tag.toLowerCase()}>` : '' };
   }
 
   if (/^H[1-6]$/.test(tag)) {
