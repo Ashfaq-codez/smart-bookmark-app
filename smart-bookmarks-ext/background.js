@@ -1,5 +1,17 @@
 const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
 
+// Fallback when the content script can't supply HTML (inputs, restricted pages)
+function plainTextToHtml(text) {
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text
+    .replace(/\r\n?/g, '\n')
+    .split(/\n{2,}/)
+    .map((para) => para.trim())
+    .filter(Boolean)
+    .map((para) => `<p>${esc(para).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -28,6 +40,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   let detectedType = capturedContent ? 'note' : null;
 
   chrome.tabs.sendMessage(tab.id, { type: 'GET_CLICKED_CONTEXT' }, (response) => {
+    // Keep formatting: prefer the HTML captured by the content script,
+    // otherwise rebuild paragraphs/line breaks from the plain selection text.
+    if (capturedContent) {
+      capturedContent = (!chrome.runtime.lastError && response?.html) || plainTextToHtml(capturedContent);
+    }
+
     if (!chrome.runtime.lastError && response?.url) {
       // Final safety check just in case the content script failed and returned a blob
       if (!response.url.startsWith('blob:')) {
