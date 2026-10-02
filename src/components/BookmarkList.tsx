@@ -155,34 +155,34 @@ function CommandPalette({ commands, saves, onPick, onClose }: { commands: Comman
   )
 }
 
-// Estimated card height relative to column width. Used to drop each card into the shortest column
-// (true masonry) instead of rotating columns, which left gaps whenever card heights differed.
+// --- Masonry: place each card in the currently shortest column (cards keep their newest-first order) ---
+// Real heights aren't known before images load, so each card gets a height estimate relative to column width (=100).
 const estimateCardHeight = (b: Bookmark): number => {
-  const type = deriveDisplayType(b) || 'link'
-  const textLen = (b.content || b.description || b.title || '').replace(/<[^>]*>/g, '').length
-  switch (type) {
-    case 'note': return Math.min(1.35, 0.35 + textLen / 450)
-    case 'twitter': return 0.3 + Math.min(0.7, textLen / 380) + (b.image_url ? 0.55 : 0)
+  const t = deriveDisplayType(b) as string | null | undefined
+  const textLen = (b.content || '').replace(/<[^>]*>?/gm, '').trim().length
+  switch (t) {
+    case 'note': return Math.min(160, 40 + textLen * 0.22)
+    case 'twitter': return 60 + Math.min(70, ((b.description || b.content || '').length) * 0.25) + (b.image_url ? 55 : 0)
     case 'instagram':
-    case 'tiktok': return 1.25
-    case 'pinterest': return 1.5
-    case 'pdf': return 1.33
-    case 'google': return 0.56
-    case 'youtube': return b.url?.toLowerCase().includes('/shorts/') ? 1.25 : 0.5625
-    case 'video': return 0.5625
-    case 'image': return 0.95
-    default: return b.image_url ? 0.75 : 0.56
+    case 'tiktok': return 125
+    case 'youtube': return (b.url || '').toLowerCase().includes('/shorts/') ? 125 : 56
+    case 'pinterest': return 150
+    case 'pdf': return 133
+    case 'google': return 56
+    case 'video': return 56
+    case 'image': return 90
+    default: return (b.image_url ? 62 : 56)
   }
 }
 
-const distributeToColumns = (items: Bookmark[], count: number): Bookmark[][] => {
+const distributeIntoColumns = (items: Bookmark[], count: number): Bookmark[][] => {
   const cols: Bookmark[][] = Array.from({ length: count }, () => [])
   const heights: number[] = Array.from({ length: count }, () => 0)
   items.forEach((b) => {
     let target = 0
-    for (let c = 1; c < count; c++) if (heights[c] < heights[target] - 0.05) target = c
+    for (let i = 1; i < count; i++) if (heights[i] < heights[target] - 0.5) target = i
     cols[target].push(b)
-    heights[target] += estimateCardHeight(b) + 0.06
+    heights[target] += estimateCardHeight(b) + 6
   })
   return cols
 }
@@ -508,7 +508,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const masonryColumns = useMemo(() => {
     if (isGroupedByDate) return [];
-    return distributeToColumns(filteredBookmarks, columnsCount)
+    return distributeIntoColumns(filteredBookmarks, columnsCount)
   }, [filteredBookmarks, columnsCount, isGroupedByDate])
 
   const groupedBookmarks = useMemo(() => {
@@ -773,9 +773,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         <main className="flex-1 px-3 sm:px-8 pt-4 pb-32">
           <div className="w-full flex flex-col items-start" ref={gridRef}>
             {isLoading ? (
-              <div className="w-full flex gap-1.5 sm:gap-6">
+              <div className="w-full flex gap-2 sm:gap-4">
                 {Array.from({ length: columnsCount }).map((_, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-1.5 sm:gap-6 w-full flex-1 min-w-0">
+                  <div key={colIndex} className="flex flex-col gap-2 sm:gap-4 w-full flex-1 min-w-0">
                     {Array.from({ length: 3 }).map((_, i) => <BookmarkSkeleton key={i} />)}
                   </div>
                 ))}
@@ -798,7 +798,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               </div>
             ) : isGroupedByDate && groupedBookmarks ? (
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
-                const groupCols = distributeToColumns(groupBookmarks, columnsCount)
+                const groupCols = distributeIntoColumns(groupBookmarks, columnsCount)
 
                 return (
                   <div key={dateLabel} className="w-full mb-10">
@@ -807,9 +807,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                       <span className="text-xs tabular-nums text-[#171A17]/45 dark:text-white/45">{groupBookmarks.length}</span>
                     </div>
 
-                    <div className="w-full flex gap-1.5 sm:gap-6 items-start">
+                    <div className="w-full flex gap-2 sm:gap-4 items-start">
                       {groupCols.map((colBookmarks, colIndex) => (
-                        <div key={colIndex} className="flex flex-col gap-1.5 sm:gap-6 w-full flex-1 min-w-0">
+                        <div key={colIndex} className="flex flex-col gap-2 sm:gap-4 w-full flex-1 min-w-0">
                           {colBookmarks.map(bookmark => (
                             <BookmarkCard
                               key={bookmark.id}
@@ -833,9 +833,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 )
               })
             ) : (
-              <div className="w-full flex gap-1.5 sm:gap-6 items-start">
+              <div className="w-full flex gap-2 sm:gap-4 items-start">
                 {masonryColumns.map((colBookmarks, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-1.5 sm:gap-6 w-full flex-1 min-w-0">
+                  <div key={colIndex} className="flex flex-col gap-2 sm:gap-4 w-full flex-1 min-w-0">
                     {colBookmarks.map(bookmark => (
                       <BookmarkCard
                         key={bookmark.id}
