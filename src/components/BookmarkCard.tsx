@@ -11,7 +11,7 @@ import {
   XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon, SearchIcon 
 } from './BookmarkIcons';
 import { 
-  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta, getGoogleQuery 
+  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getGoogleQuery 
 } from '@/utils/bookmarkHelpers';
 import EditorialModal from './EditorialModal'
 
@@ -160,19 +160,21 @@ export default function BookmarkCard({
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(156, 163, 175, 0.5); }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(75, 85, 99, 0.5); }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(75, 85, 99, 0.8); }
+        .inntoit-reveal { opacity: 0; transition: opacity 0.25s ease; }
+        .group:hover .inntoit-reveal, .group:focus-within .inntoit-reveal { opacity: 1; }
+        @media (hover: none) { .inntoit-reveal { opacity: 1; } }
       `}} />
 
       <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={openModal} className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
         
         {displayType === 'note' ? (
-          <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] relative overflow-hidden max-h-[260px] sm:max-h-[340px]">
+          <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 relative overflow-hidden max-h-[260px] sm:max-h-[340px]">
             <div className="tiptap prose prose-sm sm:prose-base dark:prose-invert max-w-none font-serif text-[#171A17] dark:text-[#F3F0E9] break-words w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
-            {isLongNote && <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-[#151815] to-transparent pointer-events-none" />}
+            {isLongNote && <div className="absolute bottom-0 left-0 w-full h-14 bg-gradient-to-t from-white dark:from-[#151815] to-transparent pointer-events-none" />}
           </div>
           
         ) : displayType === 'twitter' ? (
-          <div className="w-full bg-white dark:bg-[#1C1D21] rounded-xl sm:rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-transparent relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
+          <div className="w-full bg-white dark:bg-[#1C1D21] rounded-xl sm:rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 relative overflow-hidden">
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1"><XIcon /></div>
             <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
               {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
@@ -190,8 +192,7 @@ export default function BookmarkCard({
           </div>
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
-          <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04]">
-            {displayType === 'instagram' ? <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" /> : <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />}
+          <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#151815]">
             {previewImageUrl ? (
                 <img src={previewImageUrl} alt={bookmark.title || "Post thumbnail"} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
@@ -199,22 +200,21 @@ export default function BookmarkCard({
                     {displayType === 'instagram' ? <InstagramIcon className="w-12 h-12 text-black/20 dark:text-white/20" /> : <TikTokIcon className="w-12 h-12 text-black/20 dark:text-white/20" />}
                 </div>
             )}
-            <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
+            <div className={`inntoit-reveal absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm ${displayType === 'instagram' ? 'bg-white' : 'bg-black text-white'}`}>
               {displayType === 'instagram' ? <InstagramIcon /> : <TikTokIcon />}
             </div>
             {previewImageUrl && <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors z-10 pointer-events-none"><PlayCircleIcon className="w-10 h-10 sm:w-14 sm:h-14 text-white/90 drop-shadow-lg" /></div>}
           </div>
 
         ) : displayType === 'youtube' ? (
-          <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]`}>
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
+          <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden bg-black`}>
             <img src={previewImageUrl} alt={bookmark.title || "YouTube thumbnail"} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" onError={() => setFallbackStep(prev => prev + 1)} />
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white"><YouTubeIcon className="text-[#FF0000]" /></div>
+            <div className="inntoit-reveal absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1 sm:p-1.5 shadow-sm bg-white"><YouTubeIcon className="text-[#FF0000]" /></div>
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10 pointer-events-none"><PlayCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" /></div>
           </div>
 
         ) : displayType === 'google' ? (
-          <div className="w-full aspect-[4/3] sm:aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#F8F9FA] dark:bg-[#202124] flex flex-col items-center justify-center p-6 gap-4 group/google cursor-pointer hover:bg-[#f1f3f4] dark:hover:bg-[#303134] transition-colors" onClick={() => window.open(bookmark.url, '_blank')}>
+          <div className="w-full aspect-[4/3] sm:aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden bg-[#F8F9FA] dark:bg-[#202124] flex flex-col items-center justify-center p-6 gap-4 group/google cursor-pointer hover:bg-[#f1f3f4] dark:hover:bg-[#303134] transition-colors" onClick={() => window.open(bookmark.url, '_blank')}>
              {/* Google Authentic Logo SVG */}
              <svg viewBox="0 0 272 92" width="75" height="24" xmlns="http://www.w3.org/2000/svg" className="opacity-90 group-hover/google:opacity-100 transition-opacity"><path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.86 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/><path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/><path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/><path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/><path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.96-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.5-.01z"/></svg>
              {/* Search Bar mockup */}
@@ -225,26 +225,25 @@ export default function BookmarkCard({
           </div>
 
         ) : displayType === 'pinterest' ? (
-          <div className="w-full aspect-[2/3] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-gray-100 dark:bg-[#151815] border border-black/[0.04] dark:border-white/[0.04] group/pin">
-            <div className="absolute top-0 left-0 w-full h-[4px] bg-[#E60023] z-20" />
+          <div className="w-full aspect-[2/3] relative rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#151815] group/pin">
             {previewImageUrl ? (
               <img src={previewImageUrl} alt={bookmark.title || "Pinterest Pin"} className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-[#202020] text-[#E60023] gap-2"><PinterestIcon className="w-12 h-12" /></div>
             )}
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1.5 shadow-sm bg-white text-[#E60023]"><PinterestIcon className="w-4 h-4" /></div>
+            <div className="inntoit-reveal absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full p-1.5 shadow-sm bg-white text-[#E60023]"><PinterestIcon className="w-4 h-4" /></div>
             <div className="absolute inset-x-0 bottom-0 pt-8 pb-3 px-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent flex items-center justify-between z-10">
               <span className="text-white text-[11px] font-medium font-sans truncate drop-shadow-sm max-w-[80%]">{getDomain(bookmark.url)}</span>
             </div>
           </div>
 
         ) : displayType === 'video' ? (
-          <div className="w-full aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] bg-black border border-black/[0.04] dark:border-white/[0.04]">
+          <div className="w-full aspect-video relative rounded-xl sm:rounded-2xl overflow-hidden bg-black">
             <video src={bookmark.url} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted autoPlay playsInline loop onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()} />
           </div>
           
         ) : displayType === 'pdf' ? (
-          <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center p-3 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-transparent dark:border-white/5">
+          <div className="w-full relative aspect-[3/4] bg-[#8ba3a0] dark:bg-[#334155] rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center p-3 md:p-6">
             <div className="w-full h-full bg-[#FAF9F5] shadow-xl relative flex flex-col items-center justify-center overflow-hidden" style={{ clipPath: 'polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 0 100%)' }}>
               <div className="absolute top-0 right-0 w-[24px] h-[24px] sm:w-[36px] sm:h-[36px] bg-[#c1ccc9] shadow-[-2px_2px_6px_rgba(0,0,0,0.15)] rounded-bl z-20" />
               <div className="w-full h-full relative z-10 bg-white">
@@ -258,24 +257,9 @@ export default function BookmarkCard({
             <img src={previewImageUrl} alt={bookmark.title || "Image"} className="w-full h-auto object-cover md:h-full md:object-contain" onError={() => setFallbackStep(prev => prev + 1)} />
           </div>
         ) : (
-          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-black/[0.04] dark:border-white/[0.04] bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
+          <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
             
-            {/* Dynamic Brand Accent Line */}
-            {getPlatformMeta(bookmark.url).color !== 'transparent' && (
-               <div className="absolute top-0 left-0 w-full h-[3px] z-20" style={{ backgroundColor: getPlatformMeta(bookmark.url).color }} />
-            )}
 
-            {/* Dynamic Official Platform Logo Badge (Hides entirely if Logo fails) */}
-            {!faviconError && (
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
-                 <img 
-                   src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} 
-                   alt="Platform Logo" 
-                   className="w-full h-full object-contain rounded-sm" 
-                   onError={() => setFaviconError(true)} 
-                 />
-              </div>
-            )}
 
             {previewImageUrl ? (
               <img 
@@ -305,11 +289,11 @@ export default function BookmarkCard({
         )}
 
         {!isMinimalist && displayType !== 'note' && displayType !== 'twitter' && (
-          <div className="px-1 flex flex-col min-w-0 gap-1 w-full mt-1 pb-1 sm:pb-0">
+          <div className="inntoit-reveal absolute inset-x-0 bottom-0 z-30 px-3 pb-3 pt-10 flex flex-col min-w-0 gap-0.5 w-full rounded-b-xl sm:rounded-b-2xl bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none">
             {hasValidTitle && displayType !== 'instagram' && (
-              <h4 className="text-[13px] sm:text-[14px] font-semibold font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-2 leading-snug w-full">{bookmark.title}</h4>
+              <h4 className="text-[13px] sm:text-[14px] font-semibold font-sans text-white line-clamp-2 leading-snug w-full drop-shadow-sm">{bookmark.title}</h4>
             )}
-            <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400 font-sans line-clamp-1 w-full">
+            <p className="text-[11px] sm:text-[12px] text-white/75 font-sans line-clamp-1 w-full">
               {displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : displayType === 'google' ? 'GOOGLE SEARCH' : getDomain(bookmark.url)}
             </p>
           </div>

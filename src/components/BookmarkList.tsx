@@ -11,6 +11,7 @@ import BookmarkCard from '@/components/BookmarkCard'
 import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import TipTapEditor from '@/components/TipTapEditor'
 import { toast } from 'react-hot-toast'
+import { deriveDisplayType } from '@/utils/bookmarkHelpers'
 
 // --- Existing Icons ---
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -152,6 +153,38 @@ function CommandPalette({ commands, saves, onPick, onClose }: { commands: Comman
       </div>
     </div>
   )
+}
+
+// Estimated card height relative to column width. Used to drop each card into the shortest column
+// (true masonry) instead of rotating columns, which left gaps whenever card heights differed.
+const estimateCardHeight = (b: Bookmark): number => {
+  const type = deriveDisplayType(b) || 'link'
+  const textLen = (b.content || b.description || b.title || '').replace(/<[^>]*>/g, '').length
+  switch (type) {
+    case 'note': return Math.min(1.35, 0.35 + textLen / 450)
+    case 'twitter': return 0.3 + Math.min(0.7, textLen / 380) + (b.image_url ? 0.55 : 0)
+    case 'instagram':
+    case 'tiktok': return 1.25
+    case 'pinterest': return 1.5
+    case 'pdf': return 1.33
+    case 'google': return 0.56
+    case 'youtube': return b.url?.toLowerCase().includes('/shorts/') ? 1.25 : 0.5625
+    case 'video': return 0.5625
+    case 'image': return 0.95
+    default: return b.image_url ? 0.75 : 0.56
+  }
+}
+
+const distributeToColumns = (items: Bookmark[], count: number): Bookmark[][] => {
+  const cols: Bookmark[][] = Array.from({ length: count }, () => [])
+  const heights: number[] = Array.from({ length: count }, () => 0)
+  items.forEach((b) => {
+    let target = 0
+    for (let c = 1; c < count; c++) if (heights[c] < heights[target] - 0.05) target = c
+    cols[target].push(b)
+    heights[target] += estimateCardHeight(b) + 0.06
+  })
+  return cols
 }
 
 export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
@@ -475,9 +508,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const masonryColumns = useMemo(() => {
     if (isGroupedByDate) return [];
-    const cols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
-    filteredBookmarks.forEach((b, i) => cols[i % columnsCount].push(b))
-    return cols
+    return distributeToColumns(filteredBookmarks, columnsCount)
   }, [filteredBookmarks, columnsCount, isGroupedByDate])
 
   const groupedBookmarks = useMemo(() => {
@@ -767,8 +798,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               </div>
             ) : isGroupedByDate && groupedBookmarks ? (
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
-                const groupCols: Bookmark[][] = Array.from({ length: columnsCount }, () => [])
-                groupBookmarks.forEach((b, i) => groupCols[i % columnsCount].push(b))
+                const groupCols = distributeToColumns(groupBookmarks, columnsCount)
 
                 return (
                   <div key={dateLabel} className="w-full mb-10">
