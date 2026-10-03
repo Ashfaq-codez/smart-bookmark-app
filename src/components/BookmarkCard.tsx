@@ -172,7 +172,7 @@ export default function BookmarkCard({
           
         ) : displayType === 'twitter' ? (
           <div className="w-full bg-white dark:bg-[#1C1D21] rounded-xl sm:rounded-2xl p-4 md:p-5 flex flex-col min-w-0 gap-3 shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 relative overflow-hidden">
-            
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1"><XIcon /></div>
             <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
               {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
@@ -191,7 +191,7 @@ export default function BookmarkCard({
 
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
           <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-gray-100 dark:bg-[#151815]">
-            
+            {displayType === 'instagram' ? <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" /> : <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />}
             {previewImageUrl ? (
                 <img src={previewImageUrl} alt={bookmark.title || "Post thumbnail"} className="w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
@@ -207,7 +207,7 @@ export default function BookmarkCard({
 
         ) : displayType === 'youtube' ? (
           <div className={`w-full ${isYouTubeShort ? 'aspect-[4/5]' : 'aspect-video'} relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-black`}>
-            
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF0000] z-20" />
             <img src={previewImageUrl} alt={bookmark.title || "YouTube thumbnail"} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" onError={() => setFallbackStep(prev => prev + 1)} />
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-300 rounded-full p-1 sm:p-1.5 shadow-sm bg-white"><YouTubeIcon className="text-[#FF0000]" /></div>
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors z-10 pointer-events-none"><PlayCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" /></div>
@@ -226,7 +226,7 @@ export default function BookmarkCard({
 
         ) : displayType === 'pinterest' ? (
           <div className="w-full aspect-[2/3] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-gray-100 dark:bg-[#151815] group/pin">
-            
+            <div className="absolute top-0 left-0 w-full h-[4px] bg-[#E60023] z-20" />
             {previewImageUrl ? (
               <img src={previewImageUrl} alt={bookmark.title || "Pinterest Pin"} className="w-full h-full object-cover block group-hover/pin:scale-[1.03] transition-transform duration-700 ease-out" loading="lazy" onError={() => setFallbackStep(prev => prev + 1)} />
             ) : (
@@ -258,7 +258,10 @@ export default function BookmarkCard({
         ) : (
           <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
             
-            
+            {/* Dynamic Brand Accent Line */}
+            {getPlatformMeta(bookmark.url).color !== 'transparent' && (
+               <div className="absolute top-0 left-0 w-full h-[3px] z-20" style={{ backgroundColor: getPlatformMeta(bookmark.url).color }} />
+            )}
 
             {/* Dynamic Official Platform Logo Badge (Hides entirely if Logo fails) */}
             {!faviconError && (

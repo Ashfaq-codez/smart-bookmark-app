@@ -155,6 +155,32 @@ function CommandPalette({ commands, saves, onPick, onClose }: { commands: Comman
   )
 }
 
+// --- View menu visuals ---
+const Tile = ({ active, onClick, label, children }: { active: boolean, onClick: () => void, label: string, children: React.ReactNode }) => (
+  <button type="button" onClick={onClick} aria-pressed={active}
+    className={`flex-1 min-w-0 flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-[11px] font-medium transition-colors ${active ? 'border-[#4D6A51] dark:border-[#8FAA91] bg-[#4D6A51]/[0.07] dark:bg-[#8FAA91]/10 text-[#171A17] dark:text-white' : 'border-black/10 dark:border-white/10 text-[#171A17]/55 dark:text-white/55 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'}`}>
+    {children}<span>{label}</span>
+  </button>
+)
+const ColumnsGlyph = ({ n }: { n: number | 'auto' }) => {
+  const bars = n === 'auto' ? 4 : Math.min(n, 9)
+  const w = 30, gap = 2, bw = (w - gap * (bars - 1)) / bars
+  return (
+    <svg width="30" height="20" viewBox="0 0 30 20" fill="currentColor" aria-hidden="true" opacity={n === 'auto' ? 0.55 : 1}>
+      {Array.from({ length: bars }).map((_, i) => {
+        const h = [20, 13, 17, 10, 15, 12, 18, 11, 16][i % 9]
+        return <rect key={i} x={i * (bw + gap)} y={0} width={bw} height={h} rx={n === 'auto' ? 1.5 : Math.min(1.5, bw / 2)} strokeDasharray={n === 'auto' ? '2 1.5' : undefined} />
+      })}
+    </svg>
+  )
+}
+const CardGlyph = ({ detailed }: { detailed: boolean }) => (
+  <svg width="30" height="20" viewBox="0 0 30 20" fill="none" aria-hidden="true">
+    <rect x="1" y="1" width="28" height="18" rx="3.5" stroke="currentColor" strokeWidth="1.5" />
+    {detailed && <><rect x="5" y="11.5" width="14" height="2" rx="1" fill="currentColor" /><rect x="5" y="15" width="8" height="1.6" rx="0.8" fill="currentColor" opacity="0.5" /></>}
+  </svg>
+)
+
 // --- Masonry: place each card in the currently shortest column (cards keep their newest-first order) ---
 // Real heights aren't known before images load, so each card gets a height estimate relative to column width (=100).
 const estimateCardHeight = (b: Bookmark): number => {
@@ -592,7 +618,6 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     { id: 'upload', group: 'Create', label: 'Upload a file', run: () => fileInputRef.current?.click() },
     { id: 'group', group: 'View', label: isGroupedByDate ? 'Ungroup by date' : 'Group by date', run: () => setIsGroupedByDate(v => !v) },
     { id: 'details', group: 'View', label: isMinimalist ? 'Show card details' : 'Hide card details', run: toggleMinimalist },
-    { id: 'sort', group: 'View', label: sortOrder === 'desc' ? 'Sort oldest first' : 'Sort newest first', run: () => setSortOrder(o => (o === 'desc' ? 'asc' : 'desc')) },
     { id: 'all', group: 'Go to', label: 'All saves', run: clearAll },
     ...Object.entries(mediaTypeLabels).map(([t, label]) => ({ id: `type-${t}`, group: 'Go to', label, run: () => setActiveMediaType(t) })),
     ...Object.keys(folderHierarchy).map(f => ({ id: `folder-${f}`, group: 'Folders', label: f, run: () => { setActiveFilter(f); setActiveSubFilter(null) } })),
@@ -624,25 +649,25 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         /* Light Mode: Green Capture Bar -> White Text & Cursor */
         .capture-bar-wrapper .tiptap, 
         .capture-bar-wrapper .tiptap * {
-          color: #ffffff !important;
-          caret-color: #ffffff !important;
+          color: #171A17 !important;
+          caret-color: #4D6A51 !important;
         }
         .capture-bar-wrapper .tiptap p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
           height: 0;
           pointer-events: none;
-          color: rgba(255, 255, 255, 0.7) !important;
+          color: rgba(23, 26, 23, 0.38) !important;
         }
 
         /* Dark Mode: White Capture Bar -> Green Text & Cursor */
         .dark .capture-bar-wrapper .tiptap, 
         .dark .capture-bar-wrapper .tiptap * {
-          color: #4D6A51 !important;
-          caret-color: #4D6A51 !important;
+          color: #F3F0E9 !important;
+          caret-color: #8FAA91 !important;
         }
         .dark .capture-bar-wrapper .tiptap p.is-editor-empty:first-child::before {
-          color: rgba(77, 106, 81, 0.5) !important;
+          color: rgba(243, 240, 233, 0.38) !important;
         }
       `}} />
 
@@ -713,7 +738,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
             <div className="ml-auto flex items-center gap-2">
               <button onClick={() => setPaletteOpen(true)} aria-label="Open command palette" className={`${BTN} hidden md:inline-flex text-[#171A17]/60 dark:text-white/60`}>Commands <kbd className={KBD}>{mod} K</kbd></button>
-              <button onClick={openCapture} aria-label="New save" className="h-9 px-3 sm:px-4 inline-flex items-center gap-2 rounded-lg bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-sm font-medium hover:opacity-90 transition-opacity"><PlusIcon /><span className="hidden sm:inline">New</span></button>
+              
             </div>
           </header>
         </div>
@@ -727,23 +752,58 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
             </div>
             {/* Extension point: put future page-level actions (share, export, select) beside the View menu. */}
             <div className="relative flex items-center gap-2">
+              <button
+                onClick={() => setSortOrder(o => (o === 'desc' ? 'asc' : 'desc'))}
+                aria-label={sortOrder === 'desc' ? 'Sorted newest first. Switch to oldest first' : 'Sorted oldest first. Switch to newest first'}
+                title="Sort by date saved"
+                className={BTN}
+              >
+                {sortOrder === 'desc' ? <SortDescIcon /> : <SortAscIcon />}
+                <span>{sortOrder === 'desc' ? 'Newest' : 'Oldest'}</span>
+              </button>
               <button onClick={() => setShowGridMenu(v => !v)} aria-haspopup="menu" aria-expanded={showGridMenu} className={BTN}><SlidersIcon />View</button>
               {showGridMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowGridMenu(false)} />
-                  <div role="menu" className="absolute right-0 top-full mt-2 w-72 z-50 p-4 space-y-4 rounded-2xl bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.16)]">
-                    <div><p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Sort</p>
-                      <Seg<'desc' | 'asc'> value={sortOrder} onChange={setSortOrder} options={[{ v: 'desc', label: 'Newest first' }, { v: 'asc', label: 'Oldest first' }]} /></div>
-                    <div><p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Card details</p>
-                      <Seg<'full' | 'min'> value={isMinimalist ? 'min' : 'full'} onChange={v => { if ((v === 'min') !== isMinimalist) toggleMinimalist() }} options={[{ v: 'full', label: 'Detailed' }, { v: 'min', label: 'Minimal' }]} /></div>
-                    <div className="hidden sm:block"><p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Columns</p>
-                      <Seg<'auto' | 5 | 6 | 9> value={userColPreference} onChange={v => { setUserColPreference(v); if (v === 'auto') localStorage.removeItem('space_grid_pref'); else localStorage.setItem('space_grid_pref', String(v)) }} options={[{ v: 'auto', label: 'Auto' }, { v: 5, label: '5' }, { v: 6, label: '6' }, { v: 9, label: '9' }]} /></div>
+                  <div role="menu" className="absolute right-0 top-full mt-2 w-[19rem] z-50 p-4 space-y-5 rounded-2xl bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.16)]">
+                    <div className="hidden sm:block">
+                      <p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Layout</p>
+                      <div className="flex gap-2">
+                        {([['auto', 'Auto'], [5, '5'], [6, '6'], [9, '9']] as const).map(([v, label]) => (
+                          <Tile key={String(v)} active={userColPreference === v} label={label}
+                            onClick={() => { setUserColPreference(v); if (v === 'auto') localStorage.removeItem('space_grid_pref'); else localStorage.setItem('space_grid_pref', String(v)) }}>
+                            <ColumnsGlyph n={v} />
+                          </Tile>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Cards</p>
+                      <div className="flex gap-2">
+                        <Tile active={!isMinimalist} label="Details" onClick={() => { if (isMinimalist) toggleMinimalist() }}><CardGlyph detailed /></Tile>
+                        <Tile active={isMinimalist} label="Just the save" onClick={() => { if (!isMinimalist) toggleMinimalist() }}><CardGlyph detailed={false} /></Tile>
+                      </div>
+                    </div>
                     <label className="flex items-center justify-between text-sm text-[#171A17] dark:text-[#F3F0E9]">Group by date
                       <input type="checkbox" role="switch" checked={isGroupedByDate} onChange={() => setIsGroupedByDate(v => !v)} className="w-4 h-4 accent-[#4D6A51]" /></label>
                   </div>
                 </>
               )}
             </div>
+          </div>
+
+          {/* CAPTURE: the one place to add something */}
+          <div className="mt-5 flex items-center gap-2 w-full max-w-2xl">
+            <button onClick={openCapture} aria-label="Save a link, note or file"
+              className="group flex-1 min-w-0 h-12 flex items-center gap-3 px-4 rounded-xl bg-white dark:bg-[#151815] border border-black/[0.07] dark:border-white/10 text-left text-[#171A17]/50 dark:text-white/50 hover:border-[#4D6A51]/50 dark:hover:border-[#8FAA91]/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.05)] transition-all">
+              <span className="text-[#4D6A51] dark:text-[#8FAA91]"><PlusIcon /></span>
+              <span className="flex-1 truncate text-[15px]">Paste a link or write a note</span>
+              <kbd className={KBD}>N</kbd>
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} aria-label="Upload an image, video or PDF" title="Upload an image, video or PDF"
+              className="h-12 w-12 shrink-0 inline-flex items-center justify-center rounded-xl bg-white dark:bg-[#151815] border border-black/[0.07] dark:border-white/10 text-[#171A17]/60 dark:text-white/60 hover:text-[#171A17] dark:hover:text-white hover:border-black/20 dark:hover:border-white/25 transition-colors disabled:opacity-50">
+              {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
+            </button>
           </div>
 
           <div role="tablist" aria-label="Filter by type" className="mt-5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -859,11 +919,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           </div>
         </main>
 
-        {/* --- FOCUS MODE OVERLAY & CAPTURE BAR --- */}
-        
-        {/* 1. Dark Backdrop */}
-        <div 
-          className={`fixed inset-0 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md z-[90] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        {/* --- COMPOSER (opens from the capture row, N, or the command palette) --- */}
+        <div
+          className={`fixed inset-0 bg-[#FBF9F4]/80 dark:bg-[#080A08]/90 backdrop-blur-md z-[90] transition-opacity duration-300 ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
           onPointerDown={(e) => {
             e.preventDefault();
             setIsExpanded(false);
@@ -871,79 +929,52 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           }}
         />
 
-        {/* 2. The Capture Bar / Modal Editor */}
-        <div 
+        <div
           ref={captureBarRef}
-          className={`fixed z-[100] flex flex-col bg-[#4D6A51] dark:bg-[#FAF9F5] text-white dark:text-[#4D6A51] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] origin-bottom ${
-            isExpanded 
-              ? 'bottom-[50dvh] translate-y-1/2 left-1/2 -translate-x-1/2 w-[92vw] sm:w-[600px] md:w-[750px] h-[65dvh] rounded-[24px] p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/[0.08]' 
-              : 'bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] h-[52px] rounded-full p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/20 dark:border-black/10 hover:shadow-xl hover:-translate-y-0.5'
-          }`}
+          role="dialog"
+          aria-label="Save to inntoit"
+          className={`fixed z-[100] left-1/2 top-1/2 flex flex-col w-[92vw] sm:w-[640px] h-[min(60dvh,520px)] rounded-3xl bg-white dark:bg-[#151815] text-[#171A17] dark:text-[#F3F0E9] border border-black/[0.06] dark:border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.22)] overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] -translate-x-1/2 ${isExpanded ? '-translate-y-1/2 opacity-100 scale-100' : '-translate-y-[46%] opacity-0 scale-[0.97] pointer-events-none'}`}
         >
-           {/* Top Header (Visible only in Focus Mode) */}
-           <div className={`flex items-center justify-between w-full transition-opacity duration-300 shrink-0 ${isExpanded ? 'opacity-100 h-auto mb-4 sm:mb-6 delay-150' : 'opacity-0 h-0 hidden'}`}>
-             <span className="text-[11px] font-bold uppercase tracking-widest text-white/90 dark:text-[#4D6A51]/80 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-white dark:bg-[#4D6A51] shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
-                New Quick Note
-             </span>
-             <div className="flex items-center gap-3">
-               <span className="text-[10px] font-sans text-white/80 dark:text-[#4D6A51]/70 uppercase tracking-widest hidden sm:block border border-white/20 dark:border-[#4D6A51]/20 px-2 py-1 rounded-md">
-                 Press ⌘+Enter to save
-               </span>
-               <button 
-                 onClick={() => { 
-                   setIsExpanded(false);
-                   if (document.activeElement instanceof HTMLElement) document.activeElement.blur() 
-                 }}
-                 className="text-xs sm:hidden font-bold uppercase tracking-widest text-white/80 dark:text-[#4D6A51]/80 hover:text-white"
-               >
-                 Done
-               </button>
-             </div>
-           </div>
+          <div className="flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 shrink-0">
+            <div>
+              <p className="text-sm font-semibold">Save to inntoit</p>
+              <p className="text-xs text-[#171A17]/50 dark:text-white/50">Paste a link, write a note, or attach a file</p>
+            </div>
+            <button
+              aria-label="Close"
+              onClick={() => { setIsExpanded(false); if (document.activeElement instanceof HTMLElement) document.activeElement.blur() }}
+              className="p-2 -mr-2 rounded-lg text-[#171A17]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#171A17] dark:hover:text-white transition-colors"
+            ><ClearIcon /></button>
+          </div>
 
-           {/* Editor Body */}
-           <div className={`capture-bar-wrapper flex-1 w-full relative flex flex-col justify-center min-h-0 ${isExpanded ? 'items-start' : 'items-center px-11'}`}>
-             <div className={`w-full custom-scrollbar transition-all duration-500 ${isExpanded ? 'h-full overflow-y-auto text-lg md:text-xl delay-75' : 'h-[24px] overflow-hidden text-[16px] sm:text-sm whitespace-nowrap'}`}>
-                <TipTapEditor 
-                  value={inputValue} 
-                  onChange={setInputValue} 
-                  onFocus={() => { setIsInputFocused(true); setIsExpanded(true); }} 
-                  onBlur={() => setIsInputFocused(false)}
-                  isExpanded={isExpanded}
-                />
-             </div>
-           </div>
+          <div className="capture-bar-wrapper flex-1 min-h-0 w-full px-5 sm:px-6 py-4 overflow-y-auto custom-scrollbar text-base sm:text-lg">
+            <TipTapEditor
+              value={inputValue}
+              onChange={setInputValue}
+              onFocus={() => { setIsInputFocused(true); setIsExpanded(true); }}
+              onBlur={() => setIsInputFocused(false)}
+              isExpanded={isExpanded}
+            />
+          </div>
 
-           {/* Bottom Actions */}
-           <div className={`w-full shrink-0 flex items-center transition-all ${isExpanded ? 'justify-between mt-4 pt-4 border-t border-white/20 dark:border-[#4D6A51]/20 opacity-100 delay-150' : 'absolute inset-0 pointer-events-none'}`}>
-              
-              {/* Paperclip Button */}
-              <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute left-1.5 top-1/2 -translate-y-1/2'}`}>
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className={`shrink-0 text-white/90 dark:text-[#4D6A51]/80 hover:text-white dark:hover:text-[#4D6A51] hover:bg-white/10 dark:hover:bg-[#4D6A51]/10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${isExpanded ? 'w-10 h-10 bg-white/10 dark:bg-[#4D6A51]/5' : 'w-10 h-10'}`}
-                >
-                  {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
-                </button>
-              </div>
-
-              {/* Send Button */}
-              <div className={`pointer-events-auto flex items-center transition-all ${!isExpanded && 'absolute right-1.5 top-1/2 -translate-y-1/2'}`}>
-                <button
-                  onClick={handleQuickCapture}
-                  disabled={isSaving || (!inputValue.replace(/<[^>]*>?/gm, '').trim() && !/<(img|hr|table)/i.test(inputValue))}
-                  className={`shrink-0 text-[#4D6A51] dark:text-white bg-white dark:bg-[#4D6A51] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity disabled:opacity-30 ${isExpanded ? 'w-10 h-10 shadow-lg' : 'w-10 h-10'}`}
-                >
-                  <SendIcon />
-                </button>
-              </div>
-
-           </div>
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-black/[0.06] dark:border-white/10">
+            <div className="flex items-center gap-2">
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,application/pdf" />
+              <button onClick={() => fileInputRef.current?.click()} disabled={isUploading}
+                className="h-9 px-3 inline-flex items-center gap-2 rounded-lg text-sm text-[#171A17]/65 dark:text-white/65 hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50">
+                {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}<span>Attach</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <kbd className={KBD}>{mod} ↵</kbd>
+              <button
+                onClick={handleQuickCapture}
+                disabled={isSaving || (!inputValue.replace(/<[^>]*>?/gm, '').trim() && !/<(img|hr|table)/i.test(inputValue))}
+                className="h-9 px-4 inline-flex items-center gap-2 rounded-lg bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-30"
+              >{isSaving ? <SpinnerIcon /> : <SendIcon />}<span>Save</span></button>
+            </div>
+          </div>
         </div>
-
       </div>
 
       {paletteOpen && <CommandPalette commands={commands} saves={bookmarks} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); setTimeout(() => setForcedInspectId(b.id), 100) }} />}
