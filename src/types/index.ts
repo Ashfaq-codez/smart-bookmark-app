@@ -5,6 +5,7 @@ export type Bookmark = {
   category: string;
   sub_category?: string | null;
   created_at: string;
+  updated_at?: string;
   user_id: string;
   description?: string | null;
   content?: string | null; 

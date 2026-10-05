@@ -5,41 +5,38 @@ import { Bookmark } from '@/types';
 import { normalizeUrl } from '@/utils/normalizeUrl';
 import toast from 'react-hot-toast';
 
+// Realtime keeps the list in sync while the tab is open. A full re-fetch is only a safety net
+// for when the tab slept long enough that the websocket may have missed events.
+const STALE_AFTER_MS = 5 * 60 * 1000;
+
 export const useBookmarks = (initialBookmarks: Bookmark[]) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
-  
+
   // Memoize the client to prevent infinite WebSocket reconnects on every render
   const supabase = useMemo(() => createClient(), []);
 
-  // ---> BACKGROUND SYNC ENGINE (Realtime + Focus Revalidation) <---
+  // ---> BACKGROUND SYNC ENGINE (Realtime + long-sleep revalidation) <---
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let hiddenAt: number | null = null;
+    let revalidating = false;
 
     const setupRealtime = async () => {
-      // 1. Fetch the authenticated user to scope the realtime channel
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 2. The Realtime Subscription (Syncs insertions, deletes, updates securely)
       channel = supabase
         .channel(`realtime_bookmarks_${user.id}`)
         .on(
           'postgres_changes',
-          { 
-            event: '*', 
-            schema: 'public', 
-            table: 'bookmarks',
-            filter: `user_id=eq.${user.id}` 
-          },
+          { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${user.id}` },
           (payload) => {
             if (payload.eventType === 'INSERT') {
               const newItem = payload.new as Bookmark;
               setBookmarks((prev) => {
-                // Deduplicate by ID
                 const idExists = prev.some((b) => b.id === newItem.id);
                 if (idExists) return prev;
 
-                // Deduplicate by normalized URL if it's a link
                 if (newItem.type === 'link' || !newItem.type) {
                   const targetUrl = normalizeUrl(newItem.url);
                   const urlExists = prev.some(
@@ -64,31 +61,36 @@ export const useBookmarks = (initialBookmarks: Bookmark[]) => {
 
     setupRealtime();
 
-    // FOCUS REVALIDATION: Silently fetches fresh data when coming back to a sleeping tab
-    const revalidateOnFocus = async () => {
-      const { data, error } = await supabase
-        .from('bookmarks')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (data && !error) {
-        setBookmarks(data);
+    const revalidate = async () => {
+      if (revalidating) return;
+      revalidating = true;
+      try {
+        const { data, error } = await supabase
+          .from('bookmarks')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data && !error) setBookmarks(data);
+      } finally {
+        revalidating = false;
       }
     };
 
+    // Previously this re-downloaded EVERY bookmark on every window focus AND every visibility change
+    // (two full fetches per tab switch). Now: only after the tab was hidden for a long time.
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        revalidateOnFocus();
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
       }
+      if (hiddenAt !== null && Date.now() - hiddenAt > STALE_AFTER_MS) revalidate();
+      hiddenAt = null;
     };
 
-    window.addEventListener('focus', revalidateOnFocus);
-    window.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       if (channel) supabase.removeChannel(channel);
-      window.removeEventListener('focus', revalidateOnFocus);
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [supabase]);
 
