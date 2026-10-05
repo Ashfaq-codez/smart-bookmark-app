@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 !.env.example
+
+PROJECT_CONTEXT.md
+PROJECT_SOURCES.md
