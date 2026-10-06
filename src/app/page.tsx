@@ -33,7 +33,7 @@ const STORY_CARDS = [
   { k: 'reel', tx: -100, ty: 280, tz: 1200, rx: -85, ry: -25, rz: 100 },
 ]
 
-const LEAD = 'A reel at 2 a.m. A pin you can&rsquo;t stop looking at. One line in an essay that changed how you work. You hit save and move on.'
+const LEAD = 'A reel at 2 a.m. A pin you can nott stop looking at. One line in an essay that changed how you work. You hit save and move on.'
 
 const Bar = ({ dot, name, when }: { dot: string; name: string; when: string }) => (
   <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5 text-[11px] font-body font-semibold">
@@ -135,10 +135,10 @@ const MOMENTS = [
   { tab: 'The 2 a.m. find', src: 'Reel, saved 2:07 a.m.', title: 'Light through paper walls', bg: 'linear-gradient(140deg,#7A2E1D,#FF8A3D)',
     lost: 'Weeks later you remember loving it. The link now says “This video is unavailable.”',
     kept: 'It is still here, in the same light, with the note you wrote: “use this for the café.”' },
-  { tab: 'The idea that wasn&rsquo;t ready', src: 'Essay, saved 3 years ago', title: 'On slow work', bg: 'linear-gradient(140deg,#0E1F3A,#6366F1)',
+  { tab: 'The idea that was not ready', src: 'Essay, saved 3 years ago', title: 'On slow work', bg: 'linear-gradient(140deg,#0E1F3A,#6366F1)',
     lost: 'You are finally building the thing, and you cannot remember where you read that one line.',
     kept: 'You type “slow” and it opens on the paragraph you underlined back then.' },
-  { tab: 'The house you&rsquo;ll build', src: '212 pins, since 2021', title: 'Concrete, timber, quiet', bg: 'linear-gradient(140deg,#0A2A1D,#34D399)',
+  { tab: 'The house you will build', src: '212 pins, since 2021', title: 'Concrete, timber, quiet', bg: 'linear-gradient(140deg,#0A2A1D,#34D399)',
     lost: 'A camera roll of screenshots, buried under nine thousand others, half with no source.',
     kept: 'Every pin sits on one wall with where it came from. The plot is bought. The wall is ready.' },
 ]
@@ -454,10 +454,10 @@ export default function HomePage() {
           <div className="kinetic-reveal kr-up inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 glass-brutal px-4 py-1.5 mb-8 shadow-sm">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#d31212]" />
             </span>
             <span className="text-[10px] sm:text-[11px] font-mono-tech font-bold tracking-[0.25em] uppercase text-[#111311]/80 dark:text-white/80">
-              STATION 01 {'//'} THE VISUAL ARCHIVE FOR SHARP MINDS
+              This project is under active development. Expect bugs, missing features, and rough edges. Feedback is welcome.
             </span>
           </div>
 
@@ -660,7 +660,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-3xl font-block uppercase leading-tight">Preserve the exact aesthetic</h3>
                 <p className="text-base font-body text-[#111311]/70 dark:text-[#F3F4F3]/70 leading-relaxed">
-                  Saving a reel doesn&apos;t mean extracting text. It means capturing the poster frame, the precise caption, and the visual weight of the content seamlessly.
+                  Saving a reel does not mean extracting text. It means capturing the poster frame, the precise caption, and the visual weight of the content seamlessly.
                 </p>
               </div>
             </div>
@@ -1060,7 +1060,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="kinetic-reveal kr-roll-right p-8 sm:p-12 g-border rounded-[40px] bg-[#0C110D] text-white flex flex-col justify-between shadow-2xl relative">
+          {/* <div className="kinetic-reveal kr-roll-right p-8 sm:p-12 g-border rounded-[40px] bg-[#0C110D] text-white flex flex-col justify-between shadow-2xl relative">
             <div className="absolute top-6 right-8">
               <span className="px-3.5 py-1 rounded-full bg-[#1A3826] text-white text-[10px] font-mono-tech uppercase tracking-widest font-bold">
                 ARCHITECT
@@ -1088,7 +1088,7 @@ export default function HomePage() {
             >
               Claim Pro Vault
             </Link>
-          </div>
+          </div> */}
 
         </div>
       </section>
