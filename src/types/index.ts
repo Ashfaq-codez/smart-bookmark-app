@@ -8,7 +8,10 @@ export type Bookmark = {
   updated_at?: string;
   user_id: string;
   description?: string | null;
+  // Full note body. NOT present on cards in the list; it is loaded when a bookmark is opened.
   content?: string | null; 
+  // Trimmed copy of the note body made by the database, used by the cards in the list.
+  content_preview?: string | null;
   image_url?: string | null;
   tags?: string[];
   // Expanded types to support native social media cards

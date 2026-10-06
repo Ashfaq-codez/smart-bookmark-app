@@ -41,6 +41,8 @@ export default function BookmarkCard({
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
   const [fullscreenImageUrl, setFullscreenImageUrl] = useState('')
   const [faviconError, setFaviconError] = useState(false);
+  // The list only carries a trimmed note body. The editor must receive the FULL row, or saving would overwrite the note.
+  const [fullBookmark, setFullBookmark] = useState<Bookmark | null>(null)
   const supabase = createClient()
 
   useEffect(() => { setMounted(true) }, [])
@@ -102,6 +104,17 @@ export default function BookmarkCard({
     }
   }
 
+  useEffect(() => {
+    if (!isModalOpen) { setFullBookmark(null); return }
+    let cancelled = false
+    supabase.from('bookmarks').select('*').eq('id', bookmark.id).maybeSingle().then(({ data, error }) => {
+      if (cancelled) return
+      if (error || !data) { handleCloseModal(); return }   // never leave the page locked with no editor on screen
+      setFullBookmark(data as Bookmark)
+    })
+    return () => { cancelled = true }
+  }, [isModalOpen, bookmark.id])
+
   const handleDelete = async (id: number) => {
     if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
     await deleteBookmark(id);
@@ -148,7 +161,8 @@ export default function BookmarkCard({
   }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
-  const plainTextLength = bookmark.content ? bookmark.content.replace(/<[^>]*>?/gm, '').trim().length : 0;
+  const previewHtml = bookmark.content_preview ?? bookmark.content ?? '';
+  const plainTextLength = previewHtml ? previewHtml.replace(/<[^>]*>?/gm, '').trim().length : 0;
   const isLongNote = plainTextLength > 250;
 
   return (
@@ -166,7 +180,7 @@ export default function BookmarkCard({
         
         {displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 relative overflow-hidden max-h-[260px] sm:max-h-[340px]">
-            <div className="tiptap prose prose-sm sm:prose-base dark:prose-invert max-w-none font-serif text-[#171A17] dark:text-[#F3F0E9] break-words w-full" dangerouslySetInnerHTML={{ __html: bookmark.content || '' }} />
+            <div className="tiptap prose prose-sm sm:prose-base dark:prose-invert max-w-none font-serif text-[#171A17] dark:text-[#F3F0E9] break-words w-full" dangerouslySetInnerHTML={{ __html: previewHtml }} />
             {isLongNote && <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-[#151815] to-transparent pointer-events-none" />}
           </div>
           
@@ -175,7 +189,7 @@ export default function BookmarkCard({
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1"><XIcon /></div>
             <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
-              {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', false)}
+              {renderTwitterText(bookmark.description || previewHtml || bookmark.title || '', false)}
             </div>
             {bookmark.image_url && (
               <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
@@ -314,9 +328,9 @@ export default function BookmarkCard({
         )}
       </div>
 
-      {mounted && isModalOpen && (
+      {mounted && isModalOpen && fullBookmark && (
         <EditorialModal 
-          bookmark={bookmark} 
+          bookmark={fullBookmark} 
           isVisible={isVisible} 
           displayType={displayType || 'link'} 
           previewImageUrl={previewImageUrl} 

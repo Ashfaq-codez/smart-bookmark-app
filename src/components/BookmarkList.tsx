@@ -5,6 +5,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useBookmarks } from '@/hooks/useBookmarks'
+import { MEDIA_TYPE_MATCHERS, BookmarkStats, ListQuery } from '@/lib/bookmarkQuery'
 import { Bookmark } from '@/types'
 import Sidebar from '@/components/Sidebar'
 import BookmarkCard from '@/components/BookmarkCard'
@@ -90,12 +91,7 @@ const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="non
 const SlidersIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="9" cy="6" r="2" fill="currentColor"></circle><circle cx="15" cy="12" r="2" fill="currentColor"></circle><circle cx="8" cy="18" r="2" fill="currentColor"></circle></svg>
 
 // One source of truth for media types. To add a category: add its label above and its raw types here.
-const mediaTypeMatchers: Record<string, string[]> = {
-  link: ['link'], note: ['note'], image: ['image'],
-  videos: ['video', 'youtube'], documents: ['pdf', 'file'],
-  socials: ['twitter', 'instagram', 'pinterest', 'linkedin', 'github'],
-}
-const matchesType = (b: Bookmark, t: string) => (mediaTypeMatchers[t] || [t]).includes(b.type || 'link')
+const mediaTypeMatchers = MEDIA_TYPE_MATCHERS
 
 // Anything that should be reachable from the command palette registers here (see `commands` in the component).
 type Command = { id: string; group: string; label: string; hint?: string; run: () => void }
@@ -115,18 +111,26 @@ function Seg<T extends string | number>({ value, onChange, options }: { value: T
   )
 }
 
-function CommandPalette({ commands, saves, onPick, onClose }: { commands: Command[]; saves: Bookmark[]; onPick: (b: Bookmark) => void; onClose: () => void }) {
+type SaveHit = { id: number; title: string; url: string }
+
+function CommandPalette({ commands, search, onPick, onClose }: { commands: Command[]; search: (q: string) => Promise<SaveHit[]>; onPick: (b: SaveHit) => void; onClose: () => void }) {
   const [q, setQ] = useState('')
   const [i, setI] = useState(0)
   const needle = q.trim().toLowerCase()
+  const [hits, setHits] = useState<SaveHit[]>([])
+  useEffect(() => {
+    if (!needle) { setHits([]); return }
+    let cancelled = false
+    const t = setTimeout(async () => { const r = await search(needle); if (!cancelled) setHits(r) }, 200)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [needle])
   const items = useMemo(() => {
     const cmds = commands.filter(c => !needle || c.label.toLowerCase().includes(needle))
-    const hits = needle ? saves.filter(b => (b.title || b.url || '').toLowerCase().includes(needle)).slice(0, 6) : []
     return [
       ...cmds.map(c => ({ key: c.id, group: c.group, label: c.label, hint: c.hint, run: c.run })),
       ...hits.map(b => ({ key: `b${b.id}`, group: 'Saves', label: b.title || b.url, hint: undefined as string | undefined, run: () => onPick(b) })),
     ]
-  }, [needle, commands, saves])
+  }, [needle, commands, hits])
   const go = (it: (typeof items)[number]) => { onClose(); it.run() }
   return (
     <div className="fixed inset-0 z-[300] flex items-start justify-center pt-[12vh] px-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
@@ -213,8 +217,7 @@ const distributeIntoColumns = (items: Bookmark[], count: number): Bookmark[][] =
   return cols
 }
 
-export default function BookmarkList({ initialBookmarks, userEmail }: { initialBookmarks: Bookmark[], userEmail?: string }) {
-  const { bookmarks, updateBookmark, deleteBookmark } = useBookmarks(initialBookmarks)
+export default function BookmarkList({ initialBookmarks, initialHasMore, initialStats, userEmail }: { initialBookmarks: Bookmark[], initialHasMore: boolean, initialStats: BookmarkStats, userEmail?: string }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
@@ -234,6 +237,19 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // The database does the filtering, searching and sorting; the hook loads one page at a time.
+  const query = useMemo<ListQuery>(
+    () => ({ category: activeFilter, sub: activeSubFilter, mediaType: activeMediaType, search: searchQuery, sort: sortOrder }),
+    [activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]
+  )
+  const {
+    bookmarks, pinned, hasMore, isFetching, isLoadingMore, stats,
+    loadMore, updateBookmark, deleteBookmark, pinById, clearPinned, searchSaves,
+  } = useBookmarks({ initialBookmarks, initialHasMore, initialStats, query })
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef(loadMore)
+  loadMoreRef.current = loadMore
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -507,30 +523,9 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const filteredBookmarks = useMemo(() => {
-    const filtered = bookmarks.filter((bookmark) => {
-      const isCategoryMatch = activeFilter === 'All' || (bookmark.category || 'Uncategorized') === activeFilter;
-      const isSubCategoryMatch = activeFilter === 'All' || !activeSubFilter ? true : bookmark.sub_category === activeSubFilter;
-
-      const isMediaTypeMatch = activeMediaType === null || matchesType(bookmark, activeMediaType);
-
-      const searchTarget = searchQuery.toLowerCase();
-      const isSearchMatch = searchTarget === '' ||
-        bookmark.title.toLowerCase().includes(searchTarget) ||
-        bookmark.url.toLowerCase().includes(searchTarget) ||
-        (bookmark.content !== null && bookmark.content !== undefined && bookmark.content.toLowerCase().includes(searchTarget)) ||
-        (bookmark.description !== null && bookmark.description !== undefined && bookmark.description.toLowerCase().includes(searchTarget)) ||
-        (bookmark.category !== null && bookmark.category !== undefined && bookmark.category.toLowerCase().includes(searchTarget)) ||
-        (bookmark.sub_category !== null && bookmark.sub_category !== undefined && bookmark.sub_category.toLowerCase().includes(searchTarget));
-
-      return isCategoryMatch && isSubCategoryMatch && isMediaTypeMatch && isSearchMatch;
-    });
-
-    return filtered.sort((a, b) => {
-      const dateA = new Date(a.created_at || 0).getTime();
-      const dateB = new Date(b.created_at || 0).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
-  }, [bookmarks, activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]);
+    const loaded = new Set(bookmarks.map(b => b.id))
+    return [...pinned.filter(p => !loaded.has(p.id)), ...bookmarks]
+  }, [bookmarks, pinned])
 
   const masonryColumns = useMemo(() => {
     if (isGroupedByDate) return [];
@@ -551,28 +546,28 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
 
   const folderHierarchy = useMemo(() => {
     const tree: Record<string, string[]> = {}
-    const baseCats = Array.from(new Set([...customCategories, ...bookmarks.map(b => b.category || 'Uncategorized')]))
+    const baseCats = Array.from(new Set([...customCategories, ...stats.folders.map(f => f.category || 'Uncategorized')]))
     baseCats.forEach(c => { if (c !== 'All') tree[c] = [] })
-    bookmarks.forEach(b => {
-      const p = b.category || 'Uncategorized'
-      if (b.sub_category) { if (!tree[p]) tree[p] = []; if (!tree[p].includes(b.sub_category)) tree[p].push(b.sub_category) }
+    stats.folders.forEach(f => {
+      const p = f.category || 'Uncategorized'
+      if (f.sub_category) { if (!tree[p]) tree[p] = []; if (!tree[p].includes(f.sub_category)) tree[p].push(f.sub_category) }
     })
     Object.entries(customSubCategories).forEach(([p, subs]) => {
       if (!tree[p]) tree[p] = []
       subs.forEach(s => { if (!tree[p].includes(s)) tree[p].push(s) })
     })
     return tree
-  }, [bookmarks, customCategories, customSubCategories])
+  }, [stats, customCategories, customSubCategories])
 
   const getCounts = useMemo(() => {
-    const counts: Record<string, number> = { 'All': bookmarks.length }
-    bookmarks.forEach(b => {
-      const c = b.category || 'Uncategorized'
-      counts[c] = (counts[c] || 0) + 1
-      if (b.sub_category) counts[`${c}::${b.sub_category}`] = (counts[`${c}::${b.sub_category}`] || 0) + 1
+    const counts: Record<string, number> = { 'All': stats.total }
+    stats.folders.forEach(f => {
+      const c = f.category || 'Uncategorized'
+      counts[c] = (counts[c] || 0) + f.n
+      if (f.sub_category) counts[`${c}::${f.sub_category}`] = (counts[`${c}::${f.sub_category}`] || 0) + f.n
     })
     return counts
-  }, [bookmarks])
+  }, [stats])
 
   const handleAddCategory = () => {
     const t = newCategoryName.trim()
@@ -602,10 +597,20 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
   }
 
   const hasFilters = activeFilter !== 'All' || activeMediaType !== null || searchQuery !== ''
-  const clearAll = () => { setActiveFilter('All'); setActiveSubFilter(null); setActiveMediaType(null); setSearchQuery('') }
+  const clearAll = () => { setActiveFilter('All'); setActiveSubFilter(null); setActiveMediaType(null); setSearchQuery(''); clearPinned() }
   const viewTitle = activeSubFilter || (activeFilter !== 'All' ? activeFilter : activeMediaType ? mediaTypeLabels[activeMediaType] : 'All saves')
   const crumbs = [activeFilter !== 'All' && activeFilter, activeFilter !== 'All' && activeSubFilter, activeFilter === 'All' && activeMediaType && mediaTypeLabels[activeMediaType]].filter(Boolean) as string[]
-  const typeCounts = useMemo(() => Object.fromEntries(Object.keys(mediaTypeLabels).map(t => [t, bookmarks.filter(b => matchesType(b, t)).length])) as Record<string, number>, [bookmarks])
+  const typeCounts = useMemo(() => Object.fromEntries(Object.keys(mediaTypeLabels).map(t => [
+    t, stats.types.filter(x => (mediaTypeMatchers[t] || [t]).includes(x.type || 'link')).reduce((sum, x) => sum + x.n, 0)
+  ])) as Record<string, number>, [stats])
+  // The grid only holds the pages loaded so far, so the header count comes from the database totals when it can.
+  const knownViewCount: number | null =
+    searchQuery ? null
+    : activeFilter !== 'All' ? (activeMediaType ? null : (getCounts[activeSubFilter ? `${activeFilter}::${activeSubFilter}` : activeFilter] ?? 0))
+    : activeMediaType ? (typeCounts[activeMediaType] ?? 0)
+    : stats.total
+  const viewCountLabel = knownViewCount !== null ? String(knownViewCount) : `${filteredBookmarks.length}${hasMore ? '+' : ''}`
+  const viewIsFiltered = knownViewCount === null ? true : knownViewCount !== stats.total
   const openCapture = () => { setIsExpanded(true); setTimeout(() => captureBarRef.current?.querySelector<HTMLElement>('.tiptap')?.focus(), 120) }
   const chips = [
     activeFilter !== 'All' && { l: activeSubFilter ? `${activeFilter} / ${activeSubFilter}` : activeFilter, x: () => { setActiveFilter('All'); setActiveSubFilter(null) } },
@@ -622,6 +627,21 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
     ...Object.entries(mediaTypeLabels).map(([t, label]) => ({ id: `type-${t}`, group: 'Go to', label, run: () => setActiveMediaType(t) })),
     ...Object.keys(folderHierarchy).map(f => ({ id: `folder-${f}`, group: 'Folders', label: f, run: () => { setActiveFilter(f); setActiveSubFilter(null) } })),
   ], [isGroupedByDate, isMinimalist, sortOrder, folderHierarchy])
+
+  // Load the next page when the bottom of the grid is near the screen
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver((entries) => { if (entries[0]?.isIntersecting) loadMoreRef.current() }, { rootMargin: '900px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasMore, filteredBookmarks.length, isGroupedByDate])
+
+  // A shared link like /dashboard?b=123 may point at a save that is not on the first page
+  useEffect(() => {
+    const b = new URLSearchParams(window.location.search).get('b')
+    if (b && /^\d+$/.test(b)) pinById(Number(b))
+  }, [])
 
   useEffect(() => {
     if (!/Mac|iPhone|iPad/i.test(navigator.platform)) setMod('Ctrl')
@@ -748,7 +768,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
               <h1 className="font-serif text-2xl sm:text-3xl font-medium leading-tight text-[#171A17] dark:text-[#F4F1EA] break-words">{viewTitle}</h1>
-              <p className="mt-1 text-sm text-[#171A17]/55 dark:text-white/55">{filteredBookmarks.length} {filteredBookmarks.length === 1 ? 'save' : 'saves'}{filteredBookmarks.length !== bookmarks.length ? ` of ${bookmarks.length}` : ''}</p>
+              <p className="mt-1 text-sm text-[#171A17]/55 dark:text-white/55">{viewCountLabel} {viewCountLabel === '1' ? 'save' : 'saves'}{viewIsFiltered ? ` of ${stats.total}` : ''}</p>
             </div>
             {/* Extension point: put future page-level actions (share, export, select) beside the View menu. */}
             <div className="relative flex items-center gap-2">
@@ -812,7 +832,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
               return (
                 <button key={t.label} role="tab" aria-selected={on} onClick={() => setActiveMediaType(t.k)}
                   className={`shrink-0 flex items-center gap-2 px-3.5 h-9 rounded-full text-sm font-medium border transition-colors ${on ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]' : 'border-black/10 dark:border-white/10 text-[#171A17]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5'}`}>
-                  {t.label}<span className={`text-xs tabular-nums ${on ? 'opacity-75' : 'opacity-50'}`}>{t.k === null ? bookmarks.length : typeCounts[t.k]}</span>
+                  {t.label}<span className={`text-xs tabular-nums ${on ? 'opacity-75' : 'opacity-50'}`}>{t.k === null ? stats.total : typeCounts[t.k]}</span>
                 </button>
               )
             })}
@@ -840,7 +860,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   </div>
                 ))}
               </div>
-            ) : bookmarks.length === 0 ? (
+            ) : stats.total === 0 ? (
               <div className="w-full max-w-xl mx-auto mt-[8vh] text-center px-4 animate-fade-in">
                 <h2 className="font-serif text-2xl sm:text-3xl text-[#171A17] dark:text-[#F3F0E9]">Nothing saved yet</h2>
                 <p className="mt-3 text-sm sm:text-base leading-relaxed text-[#171A17]/60 dark:text-white/60">Paste a link, write a note or upload a file. inntoit keeps the preview, not just the address.</p>
@@ -916,6 +936,11 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                 ))}
               </div>
             )}
+
+            {/* Infinite scroll: when this line comes near the screen, the next page loads */}
+            <div ref={sentinelRef} aria-hidden="true" className="h-px w-full" />
+            {isFetching && <div className="fixed top-0 left-0 right-0 h-0.5 bg-[#4D6A51] dark:bg-[#8FAA91] animate-pulse z-[250]" />}
+            {isLoadingMore && <p className="w-full py-6 text-center text-xs text-[#171A17]/45 dark:text-white/45">Loading more…</p>}
           </div>
         </main>
 
@@ -977,7 +1002,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
         </div>
       </div>
 
-      {paletteOpen && <CommandPalette commands={commands} saves={bookmarks} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); setTimeout(() => setForcedInspectId(b.id), 100) }} />}
+      {paletteOpen && <CommandPalette commands={commands} search={searchSaves} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); pinById(b.id); setTimeout(() => setForcedInspectId(b.id), 100) }} />}
 
       {/* DUPLICATE MODAL */}
       {duplicateMatch && (
@@ -995,6 +1020,7 @@ export default function BookmarkList({ initialBookmarks, userEmail }: { initialB
                   setActiveSubFilter(null);
                   setActiveMediaType(null);
                   setSearchQuery('');
+                  pinById(duplicateMatch.id);
                   setTimeout(() => setForcedInspectId(duplicateMatch.id), 100);
                   setDuplicateMatch(null);
                   setInputValue('');
