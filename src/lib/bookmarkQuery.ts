@@ -83,4 +83,4 @@ export function rowMatchesQuery(b: Partial<Bookmark> & { search_text?: string | 
   const s = q.search.trim().toLowerCase()
   if (s && typeof b.search_text === 'string' && !b.search_text.includes(s)) return false
   return true
-}
+}   
