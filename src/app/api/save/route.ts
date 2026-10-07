@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { normalizeUrl, detectSiteType } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
@@ -40,31 +41,6 @@ export async function OPTIONS(request: Request) {
     status: 204,
     headers: corsHeaders(origin),
   });
-}
-
-function normalizeUrl(rawUrl: string, type: string = 'link'): string {
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return '';
-  try {
-    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-    const parsed = new URL(withProto);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    const path = parsed.pathname.replace(/\/+$/, '') || '/';
-    let search = parsed.search;
-
-    if (host === 'youtube.com' && path === '/watch') {
-      const videoId = parsed.searchParams.get('v');
-      if (videoId) search = `?v=${videoId}`;
-    } else if (host === 'youtu.be') {
-      const videoId = path.substring(1);
-      if (videoId) return `${parsed.protocol}//youtube.com/watch?v=${videoId}`;
-    }
-
-    const hash = type === 'note' ? parsed.hash : '';
-    return `${parsed.protocol}//${host}${path}${search}${hash}`;
-  } catch {
-    return trimmed.toLowerCase().replace(/\/+$/, '');
-  }
 }
 
 export async function POST(request: Request) {
@@ -151,19 +127,7 @@ export async function POST(request: Request) {
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
     
-    let detectedType = itemType;
-    if (cleanUrl && isLink) {
-      try {
-        const parsedUrl = new URL(cleanUrl);
-        const host = parsedUrl.hostname.toLowerCase();
-        if (host.includes('twitter.com') || host.includes('x.com')) detectedType = 'twitter';
-        else if (host.includes('instagram.com')) detectedType = 'instagram';
-        else if (host.includes('youtube.com') || host.includes('youtu.be')) detectedType = 'youtube';
-        else if (host.includes('pinterest.com') || host.includes('pin.it')) detectedType = 'pinterest';
-        else if (host.includes('github.com')) detectedType = 'github';
-        else if (host.includes('linkedin.com')) detectedType = 'linkedin';
-      } catch (e) {}
-    }
+    const detectedType: string = (cleanUrl && isLink && detectSiteType(cleanUrl)) || itemType;
 
     if (cleanUrl) {
       let existingRecord = null;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { normalizeUrl } from '@/utils/normalizeUrl'
 
-// Describes how src/utils/normalizeUrl.ts behaves TODAY (it is used by the live-sync hook).
+// src/utils/normalizeUrl.ts now re-exports the shared cleaner in src/lib/urlTools.ts (same as the save route).
 describe('normalizeUrl (utils)', () => {
   it('adds https:// when there is no protocol', () => {
     expect(normalizeUrl('example.com/a')).toBe('https://example.com/a')
@@ -29,8 +29,8 @@ describe('normalizeUrl (utils)', () => {
     expect(normalizeUrl('Not A Url/')).toBe('not a url')
   })
 
-  // This version does NOT clean YouTube links, unlike the save route. Phase E will make them match.
-  it('currently keeps every YouTube parameter', () => {
-    expect(normalizeUrl('https://www.youtube.com/watch?v=abc&list=PL1')).toBe('https://youtube.com/watch?v=abc&list=PL1')
+  it('cleans YouTube links exactly like the save route does', () => {
+    expect(normalizeUrl('https://www.youtube.com/watch?v=abc&list=PL1')).toBe('https://youtube.com/watch?v=abc')
+    expect(normalizeUrl('https://youtu.be/abc?t=5')).toBe('https://youtube.com/watch?v=abc')
   })
 })

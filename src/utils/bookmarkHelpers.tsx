@@ -1,5 +1,11 @@
 import React from 'react'
 import { Bookmark } from '@/types'
+import { hostIs, detectSiteType } from '@/lib/urlTools'
+
+// The host name of an address (lowercase, no www.), or '' when it is not an address
+const hostOf = (url: string) => {
+  try { return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.toLowerCase().replace(/^www\./, '') } catch { return '' }
+}
 
 export const isVideoMedia = (url?: string | null) => {
   if (!url) return false;
@@ -31,7 +37,8 @@ export const getYouTubeId = (url: string) => {
 }
 
 export const getTwitterAuthor = (url: string) => {
-  const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)/);
+  if (!hostIs(hostOf(url), 'twitter.com') && !hostIs(hostOf(url), 'x.com')) return 'unknown';
+  const match = url.match(/(?:twitter\.com|x\.com)\/([^/?#]+)/);
   return match ? match[1] : 'unknown';
 }
 
@@ -47,19 +54,24 @@ export const formatDateTime = (dateString: string) => {
 }
 
 export const deriveDisplayType = (b: Bookmark) => {
-  if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'note', 'pdf', 'image', 'video'].includes(b.type || '')) return b.type;
+  // A saved label is trusted only if the address really is that site. Old saves made by the earlier
+  // "contains x.com" check were stored as X posts even for dropbox.com, netflix.com...
+  let storedType = b.type;
+  if (storedType && ['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github'].includes(storedType) && b.url) {
+    const real = storedType === 'tiktok' ? (hostIs(hostOf(b.url), 'tiktok.com') ? 'tiktok' : null) : detectSiteType(b.url);
+    if (real !== storedType) storedType = 'link';
+  }
+  if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'note', 'pdf', 'image', 'video'].includes(storedType || '')) return storedType;
   if (b.url) {
     if (isGoogleSearchUrl(b.url)) return 'google';
     const url = b.url.toLowerCase();
-    if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-    if (url.includes('instagram.com')) return 'instagram';
-    if (url.includes('pinterest.com') || url.includes('pin.it')) return 'pinterest';
-    if (url.includes('tiktok.com')) return 'tiktok';
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-    if (url.includes('github.com')) return 'github';
+    // Match the real site (x.com, www.x.com, mobile.twitter.com...), never just "contains" (dropbox.com is not x.com)
+    const site = detectSiteType(b.url);
+    if (site === 'twitter' || site === 'instagram' || site === 'pinterest' || site === 'youtube' || site === 'github') return site;
+    if (hostIs(hostOf(b.url), 'tiktok.com')) return 'tiktok';
     if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
   }
-  return b.type || 'link';
+  return storedType || 'link';
 }
 
 export const getInstaMeta = (b: Bookmark) => {
@@ -131,18 +143,18 @@ export const getPlatformMeta = (url: string) => {
   if (!url) return { name: 'Website', color: 'transparent' };
   try {
     const host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace('www.', '');
-    if (host.includes('spotify.com')) return { name: 'Spotify', color: '#1DB954' };
-    if (host.includes('reddit.com')) return { name: 'Reddit', color: '#FF4500' };
-    if (host.includes('figma.com')) return { name: 'Figma', color: '#F24E1E' };
-    if (host.includes('vimeo.com')) return { name: 'Vimeo', color: '#1AB7EA' };
-    if (host.includes('codepen.io')) return { name: 'CodePen', color: '#000000' };
-    if (host.includes('soundcloud.com')) return { name: 'SoundCloud', color: '#FF3300' };
-    if (host.includes('github.com')) return { name: 'GitHub', color: '#24292e' };
-    if (host.includes('codesandbox.io')) return { name: 'CodeSandbox', color: '#151515' };
-    if (host.includes('linkedin.com')) return { name: 'LinkedIn', color: '#0A66C2' };
-    if (host.includes('dribbble.com')) return { name: 'Dribbble', color: '#EA4C89' };
-    if (host.includes('behance.net')) return { name: 'Behance', color: '#1769FF' };
-    if (host.includes('notion.so') || host.includes('notion.site')) return { name: 'Notion', color: '#000000' };
+    if (hostIs(host, 'spotify.com')) return { name: 'Spotify', color: '#1DB954' };
+    if (hostIs(host, 'reddit.com')) return { name: 'Reddit', color: '#FF4500' };
+    if (hostIs(host, 'figma.com')) return { name: 'Figma', color: '#F24E1E' };
+    if (hostIs(host, 'vimeo.com')) return { name: 'Vimeo', color: '#1AB7EA' };
+    if (hostIs(host, 'codepen.io')) return { name: 'CodePen', color: '#000000' };
+    if (hostIs(host, 'soundcloud.com')) return { name: 'SoundCloud', color: '#FF3300' };
+    if (hostIs(host, 'github.com')) return { name: 'GitHub', color: '#24292e' };
+    if (hostIs(host, 'codesandbox.io')) return { name: 'CodeSandbox', color: '#151515' };
+    if (hostIs(host, 'linkedin.com')) return { name: 'LinkedIn', color: '#0A66C2' };
+    if (hostIs(host, 'dribbble.com')) return { name: 'Dribbble', color: '#EA4C89' };
+    if (hostIs(host, 'behance.net')) return { name: 'Behance', color: '#1769FF' };
+    if (hostIs(host, 'notion.so') || hostIs(host, 'notion.site')) return { name: 'Notion', color: '#000000' };
     return { name: host, color: 'transparent' };
   } catch {
     return { name: 'Website', color: 'transparent' };

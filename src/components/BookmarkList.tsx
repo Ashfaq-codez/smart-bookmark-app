@@ -13,6 +13,7 @@ import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import TipTapEditor from '@/components/TipTapEditor'
 import { toast } from 'react-hot-toast'
 import { deriveDisplayType } from '@/utils/bookmarkHelpers'
+import { normalizeUrl } from '@/utils/normalizeUrl'
 
 // --- Existing Icons ---
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -53,26 +54,6 @@ const mediaTypeLabels: Record<string, string> = {
   'documents': 'Documents',
   'socials': 'Socials'
 };
-
-function normalizeUrl(rawUrl: string): string {
-  const trimmed = rawUrl.trim()
-  if (!trimmed) return ''
-  try {
-    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
-    const parsed = new URL(withProto)
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, '')
-    const path = parsed.pathname.replace(/\/+$/, '') || '/'
-    let search = parsed.search
-    if (host === 'youtube.com' && path === '/watch') {
-      const videoId = parsed.searchParams.get('v')
-      if (videoId) search = `?v=${videoId}`
-    } else if (host === 'youtu.be') {
-      const videoId = path.substring(1)
-      if (videoId) return `${parsed.protocol}//youtube.com/watch?v=${videoId}`
-    }
-    return `${parsed.protocol}//${host}${path}${search}`
-  } catch { return trimmed.toLowerCase().replace(/\/+$/, '') }
-}
 
 function formatDateHeader(dateString?: string): string {
   if (!dateString) return 'Unknown Date';

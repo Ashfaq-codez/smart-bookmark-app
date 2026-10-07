@@ -12,7 +12,9 @@ export async function fetchPageDetails(cleanUrl: string, detectedType: string): 
     if (!(await isSafeUrl(cleanUrl))) return EMPTY;
 
     if (detectedType === 'twitter') {
-      const vxUrl = cleanUrl.replace('twitter.com', 'api.vxtwitter.com').replace('x.com', 'api.vxtwitter.com');
+      const vx = new URL(cleanUrl);
+      vx.hostname = 'api.vxtwitter.com';
+      const vxUrl = vx.href;
       const response = await safeFetch(vxUrl, { signal: AbortSignal.timeout(5000) });
       if (!response.ok) return EMPTY;
       const data = await response.json();

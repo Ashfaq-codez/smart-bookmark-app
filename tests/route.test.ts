@@ -148,12 +148,21 @@ describe('POST /api/save: saving links', () => {
     }
   })
 
-  // KNOWN BUG: the route checks host.includes('x.com'), so any address ending in x.com is treated as an X post.
-  // "it.fails" means: this test passes while the bug exists, and starts failing once it is fixed (then remove ".fails").
-  it.fails('does not treat dropbox.com as an X (Twitter) post', async () => {
-    const fake = loggedIn()
-    await post({ url: 'https://www.dropbox.com/s/abc', title: 'T' })
-    expect(fake.inserted[0].type).toBe('link')
+  it('does not treat look-alike sites (dropbox.com, linux.com, netflix.com) as X, and does treat sub-domains as the site', async () => {
+    const cases: [string, string][] = [
+      ['https://www.dropbox.com/s/abc', 'link'],
+      ['https://linux.com/news', 'link'],
+      ['https://www.netflix.com/title/1', 'link'],
+      ['https://notgithub.com/x', 'link'],
+      ['https://evil.com/?u=https://x.com/a', 'link'],
+      ['https://mobile.twitter.com/jack/status/20', 'twitter'],
+      ['https://m.youtube.com/watch?v=dQw4w9WgXcQ', 'youtube'],
+    ]
+    for (const [url, expected] of cases) {
+      const fake = loggedIn()
+      await post({ url, title: 'T' })
+      expect(fake.inserted[0].type).toBe(expected)
+    }
   })
 
   it('reports a link that is already saved and does not save it again', async () => {

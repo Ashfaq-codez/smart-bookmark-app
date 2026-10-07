@@ -22,6 +22,7 @@ describe('getTwitterAuthor', () => {
   })
   it('falls back to "unknown"', () => {
     expect(getTwitterAuthor('https://example.com')).toBe('unknown')
+    expect(getTwitterAuthor('https://dropbox.com/foo')).toBe('unknown')
   })
 })
 
@@ -80,10 +81,23 @@ describe('deriveDisplayType (decides which kind of card to draw)', () => {
     expect(deriveDisplayType({} as any)).toBe('link')
   })
 
-  // KNOWN BUG: it checks url.includes('x.com'), which also matches dropbox.com, linux.com, netflix.com...
-  // "it.fails" passes while the bug exists and starts failing when it is fixed (then remove ".fails").
-  it.fails('does not treat dropbox.com as an X (Twitter) post', () => {
-    expect(deriveDisplayType({ url: 'https://www.dropbox.com/s/abc' } as any)).toBe('link')
+  it('does not treat look-alike sites as X, Instagram, GitHub, etc.', () => {
+    for (const url of ['https://www.dropbox.com/s/abc', 'https://linux.com/a', 'https://netflix.com/title/1', 'https://notgithub.com/x', 'https://evil.com/?u=https://x.com/a'])
+      expect(deriveDisplayType({ url } as any)).toBe('link')
+  })
+
+  it('ignores a wrong saved label (old saves of dropbox.com / netflix.com stored as "twitter")', () => {
+    expect(deriveDisplayType({ type: 'twitter', url: 'https://www.dropbox.com/s/abc' } as any)).toBe('link')
+    expect(deriveDisplayType({ type: 'twitter', url: 'https://netflix.com/title/1' } as any)).toBe('link')
+    expect(deriveDisplayType({ type: 'twitter', url: 'https://x.com/jack/status/20' } as any)).toBe('twitter')
+    expect(deriveDisplayType({ type: 'youtube', url: 'https://youtu.be/dQw4w9WgXcQ' } as any)).toBe('youtube')
+    expect(deriveDisplayType({ type: 'note', url: 'https://smart-bookmark.internal/note-1' } as any)).toBe('note')
+  })
+
+  it('still recognises sub-domains of the real sites', () => {
+    expect(deriveDisplayType({ url: 'https://mobile.twitter.com/jack/status/20' } as any)).toBe('twitter')
+    expect(deriveDisplayType({ url: 'https://m.youtube.com/watch?v=dQw4w9WgXcQ' } as any)).toBe('youtube')
+    expect(deriveDisplayType({ url: 'https://gist.github.com/u/1' } as any)).toBe('github')
   })
 })
 
@@ -93,6 +107,9 @@ describe('getPlatformMeta', () => {
   })
   it('uses the host name for other sites, with no colour', () => {
     expect(getPlatformMeta('https://www.foo.com')).toEqual({ name: 'foo.com', color: 'transparent' })
+  })
+  it('does not mix up look-alike sites', () => {
+    expect(getPlatformMeta('https://notspotify.com/x')).toEqual({ name: 'notspotify.com', color: 'transparent' })
   })
   it('handles an empty address', () => {
     expect(getPlatformMeta('')).toEqual({ name: 'Website', color: 'transparent' })

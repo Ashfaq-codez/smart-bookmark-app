@@ -13,6 +13,33 @@ const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'IMG', 'VIDEO',
 const BLOCK_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'MAIN', 'ASIDE', 'NAV', 'FIGURE', 'FIGCAPTION', 'DL', 'DT', 'DD', 'TABLE', 'THEAD', 'TBODY', 'TR', 'ADDRESS', 'P', 'FORM', 'DETAILS', 'SUMMARY']);
 const INLINE_MAP = { B: 'strong', STRONG: 'strong', I: 'em', EM: 'em', U: 'u', S: 's', STRIKE: 's', DEL: 's', CODE: 'code', SUP: 'sup', SUB: 'sub' };
 
+// Bold / italic / underline / strike given by CSS instead of a tag (<span style="font-weight:700"> ...)
+function styleMarks(el) {
+  const st = el.style;
+  if (!st) return [];
+  const marks = [];
+  const fw = st.fontWeight;
+  if (fw === 'bold' || fw === 'bolder' || parseInt(fw, 10) >= 600) marks.push('strong');
+  if (st.fontStyle === 'italic') marks.push('em');
+  const deco = (st.textDecorationLine || st.textDecoration || '');
+  if (deco.includes('underline')) marks.push('u');
+  if (deco.includes('line-through')) marks.push('s');
+  return marks;
+}
+
+// A selection inside a bold/italic/underlined LIVE element: copy that look onto the wrapper clone
+function copyLiveLook(clone, live) {
+  try {
+    const cs = getComputedStyle(live);
+    const ps = live.parentElement ? getComputedStyle(live.parentElement) : null;
+    if (!ps) return;
+    if (parseInt(cs.fontWeight, 10) >= 600 && parseInt(ps.fontWeight, 10) < 600) clone.style.fontWeight = '700';
+    if (cs.fontStyle === 'italic' && ps.fontStyle !== 'italic') clone.style.fontStyle = 'italic';
+    const d = cs.textDecorationLine || '';
+    if (d.includes('line-through') && !(ps.textDecorationLine || '').includes('line-through')) clone.style.textDecoration = 'line-through';
+  } catch (e) { /* styles unavailable: skip */ }
+}
+
 function renderNode(node, ctx) {
   if (node.nodeType === Node.TEXT_NODE) {
     let t = node.nodeValue;
@@ -28,6 +55,14 @@ function renderNode(node, ctx) {
   if (SKIP_TAGS.has(tag)) return { block: false, html: '' };
   if (tag === 'BR') return { block: false, html: '<br>' };
   if (tag === 'HR') return { block: true, html: '<hr>' };
+  if (tag === 'TR') {
+    // A table row becomes one line, cells separated by " | " (the editor has no tables)
+    const cells = Array.from(node.children)
+      .filter((c) => /^(TD|TH)$/.test(c.tagName.toUpperCase()))
+      .map((c) => inlineHtml(c, ctx))
+      .filter(Boolean);
+    return { block: true, html: cells.length ? `<p>${cells.join(' | ')}</p>` : '' };
+  }
 
   if (tag === 'UL' || tag === 'OL') {
     const items = Array.from(node.children)
@@ -64,9 +99,11 @@ function renderNode(node, ctx) {
   const inner = results.map((r) => r.html).join('');
   if (!inner) return { block: false, html: '' };
 
+  let marked = inner;
+  if (tag !== 'A') for (const mk of styleMarks(node)) marked = `<${mk}>${marked}</${mk}>`;
   if (INLINE_MAP[tag]) {
     const t = INLINE_MAP[tag];
-    return { block: false, html: `<${t}>${inner}</${t}>` };
+    return { block: false, html: `<${t}>${marked}</${t}>` };
   }
   if (tag === 'A') {
     const href = node.getAttribute('href') || '';
@@ -77,7 +114,7 @@ function renderNode(node, ctx) {
       }
     } catch (e) { /* ignore bad hrefs */ }
   }
-  return { block: false, html: inner };
+  return { block: false, html: marked };
 }
 
 function inlineHtml(el, ctx) {
@@ -107,12 +144,26 @@ function getSelectionHtml() {
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
   try {
     const range = sel.getRangeAt(0);
-    const frag = range.cloneContents();
+    let content = range.cloneContents();
     const anc = range.commonAncestorContainer;
     const ancEl = anc.nodeType === Node.ELEMENT_NODE ? anc : anc.parentElement;
     const ws = ancEl ? getComputedStyle(ancEl).whiteSpace : '';
     const ctx = { preserveNewlines: ws.startsWith('pre') };
-    const html = toBlocks(frag, ctx);
+
+    // cloneContents() drops the elements AROUND the selection (the <ul> of a list, the <h2> of a heading,
+    // the <pre> of a code block, a <strong>, a link...). Put them back so the format survives.
+    for (let el = ancEl; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+      if (SKIP_TAGS.has(el.tagName.toUpperCase())) continue;
+      const clone = el.cloneNode(false);
+      const elTag = el.tagName.toUpperCase();
+      // tags that already mean bold/italic/etc. (or headings) are handled by the converter itself
+      if (!INLINE_MAP[elTag] && !/^(H[1-6]|TH)$/.test(elTag)) copyLiveLook(clone, el);
+      clone.appendChild(content);
+      content = clone;
+    }
+    const holder = document.createElement('div');
+    holder.appendChild(content);
+    const html = toBlocks(holder, ctx);
     return html || null;
   } catch (e) {
     console.error('inntoit selection error:', e);
@@ -144,12 +195,14 @@ function extractExactUrl(target) {
   const cleanUrl = (rawUrl) => {
     try {
       const urlObj = new URL(rawUrl);
-      if (urlObj.hostname.includes('youtube.com')) {
+      // exact site or its sub-domains only ("dropbox.com" must not count as "x.com")
+      const isSite = (d) => urlObj.hostname === d || urlObj.hostname.endsWith('.' + d);
+      if (isSite('youtube.com')) {
         urlObj.searchParams.delete('list');
         urlObj.searchParams.delete('index');
         urlObj.searchParams.delete('pp');
       }
-      if (urlObj.hostname.includes('twitter.com') || urlObj.hostname.includes('x.com')) {
+      if (isSite('twitter.com') || isSite('x.com')) {
         // Drops all ?s= tracking params to perfectly match your iOS shortcut behavior
         return urlObj.origin + urlObj.pathname;
       }
