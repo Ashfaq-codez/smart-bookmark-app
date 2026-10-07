@@ -208,6 +208,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       if (res.status === 409) {
         chrome.action.setBadgeText({ text: "DUP" });
         chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
+      } else if (res.status === 429) {
+        chrome.action.setBadgeText({ text: "LIM" });
+        chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
       } else if (res.ok) {
         // "OK" = formatting captured, "TXT" = fell back to plain text (content script didn't reply)
         chrome.action.setBadgeText({ text: capturedContent && !formatKept ? "TXT" : "OK" });

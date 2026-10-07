@@ -489,12 +489,31 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
         const validNewTokens = allUrls.filter(token => !existingUrls.has(normalizeUrl(token)))
         if (validNewTokens.length === 0) { toast.error('Already cataloged.'); setIsSaving(false); return }
         
-        await Promise.all(validNewTokens.map(token => fetch('/api/save', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token }) 
-        })))
-        toast.success(`Cataloged ${validNewTokens.length} items`)
+        // Send in small groups and count what really happened (the server allows 60 saves a minute).
+        let saved = 0, already = 0, failed = 0, limited = false
+        for (let i = 0; i < validNewTokens.length && !limited; i += 5) {
+          const results = await Promise.all(validNewTokens.slice(i, i + 5).map(token =>
+            fetch('/api/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: /^https?:\/\//i.test(token) ? token : 'https://' + token })
+            }).then(r => r.status).catch(() => 0)
+          ))
+          for (const status of results) {
+            if (status === 200) saved++
+            else if (status === 409) already++
+            else if (status === 429) limited = true
+            else failed++
+          }
+        }
+        if (limited) {
+          // Keep the text in the box: pasting it again later is safe, links already saved are skipped.
+          toast.error(`Saved ${saved}. You hit the limit of 60 saves a minute. Paste the rest again in a minute.`)
+          setIsSaving(false)
+          return
+        }
+        if (failed > 0) toast.error(`Saved ${saved}${already ? `, ${already} already saved` : ''}, ${failed} could not be saved.`)
+        else toast.success(`Cataloged ${saved} item${saved === 1 ? '' : 's'}${already ? ` (${already} already saved)` : ''}`)
         
       } else {
         // --- SINGLE PASTE OR NOTE MODE ---
@@ -512,6 +531,7 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
           setIsSaving(false)
           return
         }
+        if (res.status === 429) { toast.error('Too many saves. Please wait a minute and try again.'); setIsSaving(false); return }
         if (!res.ok) throw new Error('Failed')
       }
       setInputValue('')

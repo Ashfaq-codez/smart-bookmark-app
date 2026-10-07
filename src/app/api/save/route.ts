@@ -4,6 +4,11 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
+import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
+
+// Most saves one person may make per minute through this route. Counted from the bookmarks table itself,
+// so it needs no extra service. (Notes and links typed in the dashboard also go through here.)
+const MAX_SAVES_PER_MINUTE = 60;
 
 const ALLOWED_ORIGINS = new Set([
   'https://smart-bookmark-app-lime.vercel.app',
@@ -77,7 +82,16 @@ export async function POST(request: Request) {
 
     const itemType = customType || 'link';
     const isLink = itemType === 'link';
-    const finalContent = customContent || (itemType === 'note' ? customDesc : null); 
+
+    const rawContent = customContent || (itemType === 'note' ? customDesc : null);
+    if (rawContent != null && typeof rawContent !== 'string') {
+      return NextResponse.json({ error: 'Content must be text' }, { status: 400, headers: corsHeaders(origin) });
+    }
+    if (rawContent && rawContent.length > MAX_NOTE_CHARS) {
+      return NextResponse.json({ error: 'Note is too long' }, { status: 413, headers: corsHeaders(origin) });
+    }
+    // Only allow-listed HTML is ever stored (no scripts, event handlers, images or unsafe links).
+    const finalContent = rawContent ? (sanitizeNoteHtml(rawContent) || null) : null;
 
     if (!rawUrl && !finalContent) {
       return NextResponse.json(
@@ -117,6 +131,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders(origin) });
       }
       userId = user.id;
+    }
+
+    // Save limit per person. If the count itself fails we let the save through rather than block a real user.
+    const { count: recentSaves, error: countError } = await supabase
+      .from('bookmarks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', new Date(Date.now() - 60_000).toISOString());
+    if (!countError && (recentSaves ?? 0) >= MAX_SAVES_PER_MINUTE) {
+      return NextResponse.json(
+        { error: 'Too many saves. Please wait a minute and try again.' },
+        { status: 429, headers: { ...corsHeaders(origin), 'Retry-After': '60' } }
+      );
     }
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
@@ -313,6 +340,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: newBookmark }, { status: 200, headers: corsHeaders(origin) });
   } catch (error: any) {
+    // Shows up in Vercel -> your project -> Logs, so a failed save can be traced.
+    console.error('[save] failed:', error?.code, error?.message);
     return NextResponse.json({ error: 'Server Error' }, { status: 500, headers: corsHeaders(origin) });
   }
 }

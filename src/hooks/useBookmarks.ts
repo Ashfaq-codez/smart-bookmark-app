@@ -147,11 +147,6 @@ export const useBookmarks = ({
                 if (q.sort === 'desc') return [light, ...prev]
                 return hasMoreRef.current ? prev : [...prev, light]
               })
-            } else if (payload.eventType === 'DELETE') {
-              scheduleStats()
-              const id = (payload.old as any).id
-              setBookmarks((prev) => prev.filter((b) => b.id !== id))
-              setPinned((prev) => prev.filter((b) => b.id !== id))
             } else if (payload.eventType === 'UPDATE') {
               scheduleStats()
               const row = payload.new as any
@@ -166,6 +161,19 @@ export const useBookmarks = ({
                 const next = prev.slice(); next[idx] = merged; return next
               })
             }
+          }
+        )
+        // DELETE events cannot be filtered by user (the database only sends the id of the removed row),
+        // so they need their own listener WITHOUT a filter. It only removes ids that are in this user's list.
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'bookmarks' },
+          (payload) => {
+            const id = (payload.old as any)?.id
+            if (id == null) return
+            scheduleStats()
+            setBookmarks((prev) => prev.filter((b) => b.id !== id))
+            setPinned((prev) => prev.filter((b) => b.id !== id))
           }
         )
         .subscribe()

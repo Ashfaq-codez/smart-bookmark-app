@@ -6,6 +6,8 @@ export type FakeOptions = {
   insertError?: any                 // make the insert fail with this error
   keyRow?: any                      // row returned for an API key lookup
   keyError?: any
+  recentCount?: number              // how many saves this user already made in the last minute
+  countError?: any                  // make that count lookup fail
 }
 
 export function fakeSupabase(opts: FakeOptions = {}) {
@@ -15,7 +17,12 @@ export function fakeSupabase(opts: FakeOptions = {}) {
   const from = (table: string) => {
     let isInsert = false
     const chain: any = {
-      select: () => chain,
+      select: (_cols?: string, o?: { head?: boolean }) => {
+        // The save-limit check asks for a count only: select('id', { count, head: true })
+        if (o?.head) chain.then = (resolve: any) => resolve({ count: opts.recentCount ?? 0, error: opts.countError ?? null })
+        return chain
+      },
+      gte: () => chain,
       eq: (col: string, val: any) => { if (table === 'api_keys') eqCalls.push([col, val]); return chain },
       in: () => chain,
       or: () => chain,
