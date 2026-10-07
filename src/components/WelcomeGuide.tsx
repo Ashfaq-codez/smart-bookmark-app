@@ -165,23 +165,23 @@ export default function WelcomeGuide({ onClose, onStart, mod = '⌘' }: { onClos
     <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center sm:p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
       <style>{`@keyframes inntoit-guide-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } } .inntoit-guide-in { animation: inntoit-guide-in .28s cubic-bezier(.22,1,.36,1) }`}</style>
       <div role="dialog" aria-modal="true" aria-labelledby="inntoit-guide-title" onClick={e => e.stopPropagation()}
-        className="relative w-full sm:max-w-lg overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#FAF9F5] dark:bg-[#0F120F] border border-black/[0.06] dark:border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+        className="relative w-full sm:max-w-xl lg:max-w-3xl overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#FAF9F5] dark:bg-[#0F120F] border border-black/[0.06] dark:border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
 
         <button aria-label="Close tour" onClick={onClose} className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/70 dark:bg-black/30 backdrop-blur text-[#171A17]/60 dark:text-white/60 hover:text-[#171A17] dark:hover:text-white transition-colors"><CloseGlyph /></button>
 
-        <div className="relative h-44 sm:h-48 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#EAF1E8] via-[#F6F3EA] to-[#F2ECDD] dark:from-[#1A251C] dark:via-[#151915] dark:to-[#121512]">
+        <div className="relative h-44 sm:h-56 lg:h-72 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#EAF1E8] via-[#F6F3EA] to-[#F2ECDD] dark:from-[#1A251C] dark:via-[#151915] dark:to-[#121512]">
           <div className="pointer-events-none absolute -top-16 -left-10 w-56 h-56 rounded-full bg-[#4D6A51]/10 dark:bg-[#8FAA91]/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 -right-10 w-56 h-56 rounded-full bg-amber-300/20 dark:bg-amber-500/10 blur-3xl" />
-          <div key={`art-${i}`} className="inntoit-guide-in relative w-full flex items-center justify-center">{step.art}</div>
+          <div key={`art-${i}`} className="inntoit-guide-in relative w-full flex items-center justify-center"><div className="w-full flex items-center justify-center lg:scale-125">{step.art}</div></div>
         </div>
 
-        <div key={`text-${i}`} className="inntoit-guide-in px-6 sm:px-8 pt-6 min-h-[10.5rem]">
+        <div key={`text-${i}`} className="inntoit-guide-in px-6 sm:px-8 lg:px-12 pt-6 lg:pt-8 min-h-[10.5rem] lg:min-h-[9.5rem]">
           <p className="text-xs font-medium text-[#4D6A51] dark:text-[#8FAA91]">Step {i + 1} of {steps.length}</p>
-          <h2 id="inntoit-guide-title" className="mt-1 font-serif text-2xl text-[#171A17] dark:text-[#F3F0E9]">{step.title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#171A17]/70 dark:text-white/70">{step.body}</p>
+          <h2 id="inntoit-guide-title" className="mt-1 font-serif text-2xl lg:text-[2rem] lg:leading-tight text-[#171A17] dark:text-[#F3F0E9]">{step.title}</h2>
+          <p className="mt-2 lg:mt-3 text-sm lg:text-base leading-relaxed max-w-2xl text-[#171A17]/70 dark:text-white/70">{step.body}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-6 sm:px-8 pt-4 pb-6">
+        <div className="flex items-center justify-between gap-3 px-6 sm:px-8 lg:px-12 pt-4 pb-6 lg:pb-8">
           <div className="flex items-center gap-1.5">
             {steps.map((s, n) => (
               <button key={s.title} aria-label={`Go to step ${n + 1}`} aria-current={n === i ? 'step' : undefined} onClick={() => setI(n)}

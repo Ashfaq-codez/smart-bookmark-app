@@ -15,6 +15,7 @@ import {
 } from '@/utils/bookmarkHelpers';
 import EditorialModal from './EditorialModal'
 import PinIcon from './PinIcon'
+import { TYPE_META } from './TypeIcons'
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -29,12 +30,13 @@ interface BookmarkCardProps {
   onCloseForcedModal?: () => void;
   folderHierarchy?: Record<string, string[]>;
   isMinimalist?: boolean;
+  onOpenGuide?: () => void;
 }
 
 export default function BookmarkCard({ 
   bookmark, isDragged, onDragStart, onDragEnd, 
   updateBookmark, deleteBookmark, onTogglePin, forceOpenModal, onCloseForcedModal, 
-  folderHierarchy, isMinimalist 
+  folderHierarchy, isMinimalist, onOpenGuide 
 }: BookmarkCardProps) {
   
   const [mounted, setMounted] = useState(false)
@@ -50,9 +52,10 @@ export default function BookmarkCard({
   useEffect(() => { setMounted(true) }, [])
 
   const isPinned = !!bookmark.pinned_at
+  const isWelcome = bookmark.url === 'https://inntoit.app/welcome'
   // A pin chosen inside the open editor is applied when it closes: pinning moves the card to the Pinned strip,
   // which would otherwise close the editor under the person's hands.
-  const pendingPin = useRef<boolean | null>(null)
+  const pendingPin = useRef<boolean | null>(null)   
   const applyPendingPin = () => {
     const want = pendingPin.current
     pendingPin.current = null
@@ -176,7 +179,7 @@ export default function BookmarkCard({
         .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(75, 85, 99, 0.8); }
       `}} />
 
-      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={openModal} className={`group relative isolate flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
+      <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={isWelcome && onOpenGuide ? onOpenGuide : openModal} className={`group relative isolate flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
         {onTogglePin && (
           <button
             type="button"
@@ -190,7 +193,22 @@ export default function BookmarkCard({
           </button>
         )}
         
-        {displayType === 'note' ? (
+        {isWelcome ? (
+          <div className="w-full relative overflow-hidden rounded-xl sm:rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-[#EAF1E8] via-[#F6F3EA] to-[#F2ECDD] dark:from-[#1A251C] dark:via-[#151915] dark:to-[#121512] border border-[#4D6A51]/15 dark:border-[#8FAA91]/15 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300">
+            <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#4D6A51]/10 dark:bg-[#8FAA91]/10 blur-2xl" />
+            <div className="relative flex gap-1.5 mb-4">
+              {['link', 'note', 'image', 'socials'].map(k => { const { Icon, tint } = TYPE_META[k]; return (
+                <span key={k} className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white dark:bg-[#202520] shadow-sm inline-flex items-center justify-center ${tint}`}><Icon className="w-3.5 h-3.5" /></span>
+              ) })}
+            </div>
+            <p className="relative font-serif text-lg sm:text-xl leading-snug text-[#171A17] dark:text-[#F3F0E9]">Welcome to inntoit</p>
+            <p className="relative mt-1 text-xs sm:text-[13px] leading-relaxed text-[#171A17]/60 dark:text-white/60">A one-minute tour of saving, folders, pins and search.</p>
+            <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2">
+              <span className="inline-flex items-center h-8 px-3 rounded-full bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-xs font-medium">Take the tour →</span>
+              <button type="button" onClick={(e) => { e.stopPropagation(); deleteBookmark(bookmark.id) }} className="text-[11px] font-medium text-[#171A17]/45 dark:text-white/45 hover:text-[#171A17] dark:hover:text-white transition-colors">Remove</button>
+            </div>
+          </div>
+        ) : displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 relative overflow-hidden max-h-[260px] sm:max-h-[340px]">
             <div className="tiptap prose prose-sm sm:prose-base dark:prose-invert max-w-none font-serif text-[#171A17] dark:text-[#F3F0E9] break-words w-full" dangerouslySetInnerHTML={{ __html: previewHtml }} />
             {isLongNote && <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-[#151815] to-transparent pointer-events-none" />}

@@ -19,6 +19,7 @@ import { deriveDisplayType } from '@/utils/bookmarkHelpers'
 import { normalizeUrl } from '@/utils/normalizeUrl'
 import WelcomeGuide from '@/components/WelcomeGuide'
 import { TYPE_META } from '@/components/TypeIcons'
+import CommandPalette from '@/components/CommandPalette'
 
 // --- Existing Icons ---
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -97,53 +98,7 @@ function Seg<T extends string | number>({ value, onChange, options }: { value: T
   )
 }
 
-type SaveHit = { id: number; title: string; url: string }
 
-function CommandPalette({ commands, search, onPick, onClose }: { commands: Command[]; search: (q: string) => Promise<SaveHit[]>; onPick: (b: SaveHit) => void; onClose: () => void }) {
-  const [q, setQ] = useState('')
-  const [i, setI] = useState(0)
-  const needle = q.trim().toLowerCase()
-  const [hits, setHits] = useState<SaveHit[]>([])
-  useEffect(() => {
-    if (!needle) { setHits([]); return }
-    let cancelled = false
-    const t = setTimeout(async () => { const r = await search(needle); if (!cancelled) setHits(r) }, 200)
-    return () => { cancelled = true; clearTimeout(t) }
-  }, [needle])
-  const items = useMemo(() => {
-    const cmds = commands.filter(c => !needle || c.label.toLowerCase().includes(needle))
-    return [
-      ...cmds.map(c => ({ key: c.id, group: c.group, label: c.label, hint: c.hint, run: c.run })),
-      ...hits.map(b => ({ key: `b${b.id}`, group: 'Saves', label: b.title || b.url, hint: undefined as string | undefined, run: () => onPick(b) })),
-    ]
-  }, [needle, commands, hits])
-  const go = (it: (typeof items)[number]) => { onClose(); it.run() }
-  return (
-    <div className="fixed inset-0 z-[300] flex items-start justify-center pt-[12vh] px-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label="Command palette" onClick={e => e.stopPropagation()} className="w-full max-w-xl overflow-hidden rounded-2xl bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/10 shadow-2xl">
-        <input autoFocus value={q} placeholder="Search saves or run a command" aria-label="Search saves or run a command"
-          onChange={e => { setQ(e.target.value); setI(0) }}
-          onKeyDown={e => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setI(v => Math.min(v + 1, items.length - 1)) }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); setI(v => Math.max(v - 1, 0)) }
-            else if (e.key === 'Enter' && items[i]) go(items[i])
-          }}
-          className="w-full bg-transparent outline-none px-5 py-4 text-base border-b border-black/[0.06] dark:border-white/10 text-[#171A17] dark:text-[#F3F0E9] placeholder-black/40 dark:placeholder-white/40" />
-        <ul role="listbox" className="max-h-[50vh] overflow-y-auto p-2">
-          {items.length === 0 && <li className="px-3 py-8 text-center text-sm text-[#171A17]/60 dark:text-white/60">Nothing matches “{q}”.</li>}
-          {items.map((it, n) => (
-            <li key={it.key} role="option" aria-selected={n === i}>
-              {(n === 0 || items[n - 1].group !== it.group) && <p className="px-3 pt-3 pb-1 text-xs font-medium text-[#171A17]/45 dark:text-white/45">{it.group}</p>}
-              <button onMouseMove={() => setI(n)} onClick={() => go(it)} className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm text-left text-[#171A17] dark:text-[#F3F0E9] ${n === i ? 'bg-[#4D6A51]/10 dark:bg-[#8FAA91]/15' : ''}`}>
-                <span className="truncate">{it.label}</span>{it.hint && <kbd className={KBD}>{it.hint}</kbd>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  )
-}
 
 // --- View menu visuals ---
 const Tile = ({ active, onClick, label, children }: { active: boolean, onClick: () => void, label: string, children: React.ReactNode }) => (
@@ -188,6 +143,7 @@ const GroupGlyph = ({ grouped }: { grouped: boolean }) => (
 // --- Masonry: place each card in the currently shortest column (cards keep their newest-first order) ---
 // Real heights aren't known before images load, so each card gets a height estimate relative to column width (=100).
 const estimateCardHeight = (b: Bookmark): number => {
+    if (b.url === 'https://inntoit.app/welcome') return 95
   const t = deriveDisplayType(b) as string | null | undefined
   const textLen = (b.content || '').replace(/<[^>]*>?/gm, '').trim().length
   switch (t) {
@@ -274,7 +230,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
 // Show the tour once, automatically, to someone whose library is empty
 useEffect(() => {
   try {
-    if (initialStats.total === 0 && !localStorage.getItem('inntoit_guide_seen')) {
+    if (initialStats.total <=1 && !localStorage.getItem('inntoit_guide_seen')) {
       setGuideOpen(true)
       localStorage.setItem('inntoit_guide_seen', '1')
     }
@@ -563,6 +519,7 @@ useEffect(() => {
       updateBookmark={updateBookmark}
       deleteBookmark={deleteBookmark}
       onTogglePin={togglePin}
+      onOpenGuide={() => setGuideOpen(true)}
       forceOpenModal={forcedInspectId === bookmark.id}
       onCloseForcedModal={() => setForcedInspectId(null)}
       folderHierarchy={folderHierarchy}
