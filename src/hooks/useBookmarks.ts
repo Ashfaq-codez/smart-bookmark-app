@@ -152,7 +152,7 @@ export const useBookmarks = ({
       if (!user) return
 
       channel = supabase
-        .channel(`realtime_bookmarks_${user.id}`)
+        .channel(`realtime_bookmarks_${user.id}_${crypto.randomUUID()}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${user.id}` },

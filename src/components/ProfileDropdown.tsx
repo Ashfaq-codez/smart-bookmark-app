@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import ExportSaves from './ExportSaves'
 
@@ -18,7 +19,8 @@ export default function ProfileDropdown({ email, isCollapsed }: ProfileDropdownP
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [hasCopied, setHasCopied] = useState(false)
-  
+  const [isAdminUser, setIsAdminUser] = useState<boolean | null>(null) // null = not checked yet
+
   const dropdownRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
@@ -83,6 +85,18 @@ export default function ProfileDropdown({ email, isCollapsed }: ProfileDropdownP
     }
   }, [isOpen])
 
+  // Ask the server "is this person an admin?" the first time the dropdown opens.
+  // The answer is remembered until the page reloads, so it only costs one request.
+  useEffect(() => {
+    if (!isOpen || isAdminUser !== null) return
+    let cancelled = false
+    fetch('/api/admin/check', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : { isAdmin: false }))
+      .then((data) => { if (!cancelled) setIsAdminUser(!!data.isAdmin) })
+      .catch(() => { if (!cancelled) setIsAdminUser(false) })
+    return () => { cancelled = true }
+  }, [isOpen, isAdminUser])
+
   return (
     <div className="relative flex flex-col font-sans z-50" ref={dropdownRef}>
       <button 
@@ -97,7 +111,18 @@ export default function ProfileDropdown({ email, isCollapsed }: ProfileDropdownP
           
           <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04]">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold mb-1">Account</p>
-            <p className="text-sm font-serif truncate text-[#171A17] dark:text-[#F3F0E9]">{email}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-serif truncate min-w-0 flex-1 text-[#171A17] dark:text-[#F3F0E9]">{email}</p>
+              {isAdminUser && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className="shrink-0 px-2 py-1 rounded-full bg-[#E8EFE5] dark:bg-[#202820] text-[#4D6A51] dark:text-[#8FAA91] text-[9px] uppercase tracking-widest font-bold hover:bg-[#DDE6DB] dark:hover:bg-[#2A342A] transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04]">
