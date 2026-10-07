@@ -20,12 +20,14 @@ import { normalizeUrl } from '@/utils/normalizeUrl'
 import WelcomeGuide from '@/components/WelcomeGuide'
 import { TYPE_META } from '@/components/TypeIcons'
 import CommandPalette from '@/components/CommandPalette'
+import FeedbackModal from '@/components/FeedbackModal'
 
 // --- Existing Icons ---
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
 const PaperclipIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
 const SpinnerIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
 const MenuIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+const FeedbackIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 const SearchIcon = ({ className }: { className?: string }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 const ClearIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 const SortDescIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M4 14v7"></path><path d="M7 18l-3 3-3-3"></path></svg>
@@ -227,6 +229,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 // Show the tour once, automatically, to someone whose library is empty
 useEffect(() => {
   try {
@@ -631,6 +634,7 @@ useEffect(() => {
     { id: 'group', group: 'View', label: isGroupedByDate ? 'Ungroup by date' : 'Group by date', run: () => setIsGroupedByDate(v => !v) },
     { id: 'details', group: 'View', label: isMinimalist ? 'Show card details' : 'Hide card details', run: toggleMinimalist },
     { id: 'guide', group: 'Help', label: 'How inntoit works', run: () => setGuideOpen(true) },
+    { id: 'feedback', group: 'Help', label: 'Send feedback', run: () => setFeedbackOpen(true) },
     { id: 'all', group: 'Go to', label: 'All saves', run: clearAll },
     ...Object.entries(mediaTypeLabels).map(([t, label]) => ({ id: `type-${t}`, group: 'Go to', label, run: () => setActiveMediaType(t) })),
     ...Object.keys(folderHierarchy).map(f => ({ id: `folder-${f}`, group: 'Folders', label: f, run: () => { setActiveFilter(f); setActiveSubFilter(null) } })),
@@ -765,7 +769,7 @@ useEffect(() => {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <button onClick={() => setPaletteOpen(true)} aria-label="Open command palette" className={`${BTN} hidden md:inline-flex text-[#171A17]/60 dark:text-white/60`}>Commands <kbd className={KBD}>{mod} K</kbd></button>
-              
+              <button onClick={() => setFeedbackOpen(true)} aria-label="Send feedback" title="Send feedback" className={`${BTN} w-9 px-0 justify-center md:w-auto md:px-3 text-[#171A17]/60 dark:text-white/60`}><FeedbackIcon /><span className="hidden md:inline">Feedback</span></button>
             </div>
           </header>
         </div>
@@ -883,7 +887,7 @@ useEffect(() => {
               </div>
             ) : stats.total === 0 ? (
               <div className="w-full max-w-xl mx-auto mt-[8vh] text-center px-4 animate-fade-in">
-                <h2 className="font-serif text-2xl sm:text-3xl text-[#171A17] dark:text-[#F3F0E9]">Nothing saved yet</h2>
+                <h2 className="font-serif text-2xl sm:text-3xl text-[#171A17] dark:text-[#F3F0E9]">Create a sanctuary for the inspiration you wish to return to </h2>
                 <p className="mt-3 text-sm sm:text-base leading-relaxed text-[#171A17]/60 dark:text-white/60">Paste a link, write a note or upload a file. inntoit keeps the preview, not just the address.</p>
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                   <button onClick={openCapture} className="h-10 px-5 rounded-lg bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-sm font-medium hover:opacity-90 transition-opacity">Add your first save</button>
@@ -1016,6 +1020,8 @@ useEffect(() => {
       
       {guideOpen && <WelcomeGuide mod={mod} onClose={() => setGuideOpen(false)} onStart={openCapture} />}
         
+      {feedbackOpen && <FeedbackModal mod={mod} onClose={() => setFeedbackOpen(false)} />}
+
       {paletteOpen && <CommandPalette commands={commands} search={searchSaves} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); pinById(b.id); setTimeout(() => setForcedInspectId(b.id), 100) }} />}
 
       {/* DUPLICATE MODAL */}
