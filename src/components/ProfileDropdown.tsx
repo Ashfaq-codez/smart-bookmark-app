@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import ExportSaves from './ExportSaves'
 
 interface ProfileDropdownProps { email: string; isCollapsed?: boolean; }
 
@@ -123,6 +124,8 @@ export default function ProfileDropdown({ email, isCollapsed }: ProfileDropdownP
               </div>
             )}
           </div>
+
+          <ExportSaves />
 
           <button onClick={handleSignOut} className="w-full p-5 text-left text-[10px] uppercase tracking-widest text-[#E53E3E] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer font-bold">
             Sign Out
