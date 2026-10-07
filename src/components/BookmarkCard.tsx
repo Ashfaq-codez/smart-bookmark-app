@@ -142,21 +142,8 @@ export default function BookmarkCard({
     if (fallbackStep === 0) {
       return ytHighResThumbnail || bookmark.image_url || undefined;
     }
-    // Step 1: Live Screenshot (Added /wait/4/ to allow 3D/WebGL sites to load)
-    if (fallbackStep === 1 && bookmark.url) {
-      if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
-      return `https://image.thum.io/get/width/1000/crop/800/wait/4/noanimate/${bookmark.url}`;
-    }
-    // Step 2: Open Graph Metadata Proxy (The Peace Sign Hand fallback)
-    if (fallbackStep === 2 && bookmark.url) {
-      return `https://api.microlink.io?url=${encodeURIComponent(bookmark.url)}&embed=image.url`;
-    }
-    // Step 3: WordPress mshots (Final screenshot backup)
-    if (fallbackStep === 3 && bookmark.url) {
-      if (displayType === 'instagram' || displayType === 'tiktok') return undefined;
-      return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(bookmark.url)}?w=1000`;
-    }
-    
+    // No more third-party screenshot services (they showed "not authorized" and leaked saved addresses).
+    // Without a saved image the card shows the site's icon instead.
     return undefined; // Triggers Favicon UI
   }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 

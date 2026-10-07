@@ -8,14 +8,17 @@ export type FakeOptions = {
   keyError?: any
   recentCount?: number              // how many saves this user already made in the last minute
   countError?: any                  // make that count lookup fail
+  updateError?: any                 // make the later page-details update fail
 }
 
 export function fakeSupabase(opts: FakeOptions = {}) {
   const inserted: any[] = []
+  const updates: { patch: any; filters: [string, any][] }[] = []   // later changes made to a saved row
   const eqCalls: [string, any][] = []   // filters used on the api_keys table
 
   const from = (table: string) => {
     let isInsert = false
+    let currentUpdate: { patch: any; filters: [string, any][] } | null = null
     const chain: any = {
       select: (_cols?: string, o?: { head?: boolean }) => {
         // The save-limit check asks for a count only: select('id', { count, head: true })
@@ -23,7 +26,17 @@ export function fakeSupabase(opts: FakeOptions = {}) {
         return chain
       },
       gte: () => chain,
-      eq: (col: string, val: any) => { if (table === 'api_keys') eqCalls.push([col, val]); return chain },
+      eq: (col: string, val: any) => {
+        if (table === 'api_keys') eqCalls.push([col, val])
+        if (currentUpdate) currentUpdate.filters.push([col, val])
+        return chain
+      },
+      update: (patch: any) => {
+        currentUpdate = { patch, filters: [] }
+        updates.push(currentUpdate)
+        chain.then = (resolve: any) => resolve({ error: opts.updateError ?? null })
+        return chain
+      },
       in: () => chain,
       or: () => chain,
       ilike: () => chain,
@@ -47,5 +60,5 @@ export function fakeSupabase(opts: FakeOptions = {}) {
     from,
     auth: { getUser: async () => ({ data: { user: opts.user ?? null }, error: null }) },
   }
-  return { client, inserted, eqCalls }
+  return { client, inserted, updates, eqCalls }
 }

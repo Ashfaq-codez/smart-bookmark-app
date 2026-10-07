@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
-import * as cheerio from 'cheerio';
 import crypto from 'crypto';
-import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
+import { fetchPageDetails } from '@/lib/pageDetails';
+import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 
 // Most saves one person may make per minute through this route. Counted from the bookmarks table itself,
 // so it needs no extra service. (Notes and links typed in the dashboard also go through here.)
 const MAX_SAVES_PER_MINUTE = 60;
+
+// The page details are read after the answer is sent; give that background work room to finish.
+export const maxDuration = 30;
 
 const ALLOWED_ORIGINS = new Set([
   'https://smart-bookmark-app-lime.vercel.app',
@@ -234,84 +237,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // Save first, read the page afterwards: the person (or the extension) gets "saved" straight away,
+    // and the title / description / cover image are filled in a moment later (they appear live in the dashboard).
     let finalTitle = customTitle;
-    let finalDescription = itemType === 'note' ? null : (customDesc || null);
-    let finalImage = customImg || null;
-
-    if (cleanUrl && isLink) {
-      try {
-        const isSafe = await isSafeUrl(cleanUrl);
-        if (isSafe) {
-          if (detectedType === 'twitter') {
-            const vxUrl = cleanUrl.replace('twitter.com', 'api.vxtwitter.com').replace('x.com', 'api.vxtwitter.com');
-            const response = await safeFetch(vxUrl, { signal: AbortSignal.timeout(5000) });
-            
-            if (response.ok) {
-              const data = await response.json();
-              
-              let finalDesc = data.text || '';
-              if (data.qrtURL && !finalDesc.includes(data.qrtURL)) {
-                 finalDesc += `\n\n${data.qrtURL}`;
-              }
-              
-              let mediaUrl = null;
-              if (data.media_extended && data.media_extended.length > 0) {
-                 mediaUrl = data.media_extended[0].url; 
-              }
-
-              finalTitle = customTitle || `Post by ${data.user_name} (@${data.user_screen_name}) on X`;
-              finalDescription = customDesc || finalDesc || null;
-              finalImage = customImg || mediaUrl || null;
-            } else {
-              finalTitle = customTitle || cleanUrl;
-            }
-          } 
-          else {
-            const response = await safeFetch(cleanUrl, {
-              headers: { 'User-Agent': 'Mozilla/5.0' },
-              signal: AbortSignal.timeout(3000)
-            });
-            if (response.ok) {
-              const html = await response.text();
-              const $ = cheerio.load(html.substring(0, 512 * 1024));
-              const scrapedTitle = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
-              finalTitle = customTitle || scrapedTitle || cleanUrl; 
-              
-              if (detectedType === 'instagram') {
-                const igDesc = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content');
-                if (igDesc) {
-                  finalDescription = igDesc;
-                }
-                if (!finalDescription && finalTitle && finalTitle.includes(' on Instagram:')) {
-                  const match = finalTitle.match(/ on Instagram:\s*"?([^"]+)"?/i);
-                  if (match && match[1]) {
-                    finalDescription = match[1].trim();
-                  }
-                }
-              } else {
-                finalDescription = finalDescription || $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || null;
-              }
-
-              let scrapedImg = $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content');
-              if (scrapedImg) {
-                try {
-                  scrapedImg = new URL(scrapedImg, cleanUrl).href;
-                  if (scrapedImg.startsWith('http://')) scrapedImg = scrapedImg.replace('http://', 'https://');
-                  finalImage = finalImage || scrapedImg;
-                } catch (e) {}
-              }
-            }
-          }
-        }
-      } catch (e) {
-        finalTitle = customTitle || cleanUrl;
-      }
-    }
+    const finalDescription = itemType === 'note' ? null : (customDesc || null);
+    const finalImage = customImg || null;
 
     if (itemType === 'note') {
-      finalTitle = finalTitle || ''; 
+      finalTitle = finalTitle || '';
     } else if (itemType === 'image') {
       finalTitle = finalTitle || 'Saved Image';
+    } else if (cleanUrl && isLink) {
+      finalTitle = finalTitle || cleanUrl;   // placeholder until the real page title is found
     } else {
       finalTitle = finalTitle || 'Saved Item';
     }
@@ -336,6 +273,22 @@ export async function POST(request: Request) {
     if (insertError) {
       if (insertError.code === '23505') return NextResponse.json({ error: 'Duplicate entry' }, { status: 409, headers: corsHeaders(origin) });
       throw insertError;
+    }
+
+    if (cleanUrl && isLink && newBookmark?.id != null) {
+      const savedId = newBookmark.id;
+      const db = supabase;
+      runAfterResponse(async () => {
+        const details = await fetchPageDetails(cleanUrl, detectedType);
+        // Only fill in what the person did not give us themselves.
+        const patch: Record<string, string> = {};
+        if (!customTitle && details.title) patch.title = details.title;
+        if (!customDesc && details.description) patch.description = details.description;
+        if (!customImg && details.image) patch.image_url = details.image;
+        if (Object.keys(patch).length === 0) return;
+        const { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
+        if (error) console.error('[after-save] update failed:', error.message);
+      });
     }
 
     return NextResponse.json({ success: true, data: newBookmark }, { status: 200, headers: corsHeaders(origin) });

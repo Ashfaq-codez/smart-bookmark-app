@@ -5,6 +5,10 @@ import crypto from 'node:crypto'
 vi.mock('@/utils/supabase/server', () => ({ createClient: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }))
 vi.mock('@/utils/safeFetch', () => ({ isSafeUrl: vi.fn(), safeFetch: vi.fn() }))
+// In real life the page is read AFTER the answer is sent. In tests we collect that work and run it on demand.
+const afterTasks: (() => Promise<void>)[] = []
+vi.mock('@/lib/runAfterResponse', () => ({ runAfterResponse: (task: () => Promise<void>) => { afterTasks.push(task) } }))
+async function finishBackgroundWork() { while (afterTasks.length) await afterTasks.shift()!() }
 
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
@@ -36,6 +40,7 @@ const PAGE_HTML = `<html><head><title>Fallback title</title>
 </head><body></body></html>`
 
 beforeEach(() => {
+  afterTasks.length = 0
   vi.mocked(createClient).mockReset()
   vi.mocked(createAdminClient).mockReset()
   vi.mocked(isSafeUrl).mockReset()
@@ -175,37 +180,72 @@ describe('POST /api/save: saving links', () => {
   })
 })
 
-describe('POST /api/save: reading the page', () => {
-  it('takes the title, description and image from the page', async () => {
+describe('POST /api/save: reading the page (after saving)', () => {
+  it('saves straight away with the address as a placeholder title, without reading the page first', async () => {
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(PAGE_HTML, { status: 200 }))
+    const fake = loggedIn()
+
+    const res = await post({ url: 'https://example.com/a' })
+
+    expect(res.status).toBe(200)
+    expect(fake.inserted[0].title).toBe('https://example.com/a')
+    expect(safeFetch).not.toHaveBeenCalled()
+  })
+
+  it('then fills in the title, description and image from the page', async () => {
     vi.mocked(isSafeUrl).mockResolvedValue(true)
     vi.mocked(safeFetch).mockResolvedValue(new Response(PAGE_HTML, { status: 200 }))
     const fake = loggedIn()
 
     await post({ url: 'https://example.com/a' })
+    await finishBackgroundWork()
 
-    const row = fake.inserted[0]
-    expect(row.title).toBe('Great Page')
-    expect(row.description).toBe('About the page')
-    expect(row.image_url).toBe('https://example.com/cover.png')
+    expect(fake.updates).toHaveLength(1)
+    expect(fake.updates[0].patch).toEqual({
+      title: 'Great Page',
+      description: 'About the page',
+      image_url: 'https://example.com/cover.png',
+    })
+    // only ever changes this person's own row
+    expect(fake.updates[0].filters).toEqual([['id', 1], ['user_id', 'user-1']])
   })
 
-  it('prefers the title it was given over the page title', async () => {
+  it('keeps the title it was given and never overwrites it', async () => {
     vi.mocked(isSafeUrl).mockResolvedValue(true)
     vi.mocked(safeFetch).mockResolvedValue(new Response(PAGE_HTML, { status: 200 }))
     const fake = loggedIn()
 
     await post({ url: 'https://example.com/a', title: 'My own title' })
+    await finishBackgroundWork()
+
     expect(fake.inserted[0].title).toBe('My own title')
+    expect(fake.updates[0].patch.title).toBe(undefined)
+    expect(fake.updates[0].patch.description).toBe('About the page')
   })
 
-  it('still saves, using the address as the title, when the page cannot be fetched', async () => {
+  it('keeps the page address as the title when the page cannot be read', async () => {
     vi.mocked(isSafeUrl).mockResolvedValue(true)
     vi.mocked(safeFetch).mockRejectedValue(new Error('network down'))
     const fake = loggedIn()
 
     const res = await post({ url: 'https://example.com/a' })
+    await finishBackgroundWork()
+
     expect(res.status).toBe(200)
     expect(fake.inserted[0].title).toBe('https://example.com/a')
+    expect(fake.updates).toHaveLength(0)
+  })
+
+  it('does not break if the later update fails', async () => {
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(PAGE_HTML, { status: 200 }))
+    const fake = loggedIn({ updateError: { message: 'db hiccup' } })
+
+    const res = await post({ url: 'https://example.com/a' })
+    await finishBackgroundWork()
+    expect(res.status).toBe(200)
+    expect(fake.updates).toHaveLength(1)
   })
 
   it('never fetches private or local addresses, but still saves them', async () => {
@@ -213,9 +253,20 @@ describe('POST /api/save: reading the page', () => {
     const fake = loggedIn()
 
     const res = await post({ url: 'http://192.168.1.10/admin' })
+    await finishBackgroundWork()
     expect(res.status).toBe(200)
     expect(safeFetch).not.toHaveBeenCalled()
-    expect(fake.inserted[0].title).toBe('Saved Item')
+    expect(fake.inserted[0].title).toBe('http://192.168.1.10/admin')
+    expect(fake.updates).toHaveLength(0)
+  })
+
+  it('does not read the page for notes or images', async () => {
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    loggedIn()
+    await post({ type: 'note', content: '<p>x</p>' })
+    await post({ type: 'image', url: 'https://cdn.example.com/a.png' })
+    await finishBackgroundWork()
+    expect(safeFetch).not.toHaveBeenCalled()
   })
 })
 
@@ -270,5 +321,50 @@ describe('cross-origin (CORS) headers', () => {
     loggedIn()
     const res = await post({ url: 'https://example.com/a', title: 'T' })
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ORIGIN)
+  })
+})
+
+describe('POST /api/save: safer saving', () => {
+  it('cleans dangerous HTML out of a note before storing it', async () => {
+    const fake = loggedIn()
+    const res = await post({ type: 'note', content: '<p onclick="x()">Hi</p><script>alert(1)</script><img src=x onerror=alert(1)>' })
+    expect(res.status).toBe(200)
+    expect(fake.inserted[0].content).toBe('<p>Hi</p>')
+  })
+
+  it('refuses a note that is far too long', async () => {
+    const fake = loggedIn()
+    const res = await post({ type: 'note', content: 'a'.repeat(200_001) })
+    expect(res.status).toBe(413)
+    expect(fake.inserted).toHaveLength(0)
+  })
+
+  it('refuses content that is not text', async () => {
+    const fake = loggedIn()
+    const res = await post({ type: 'note', content: { evil: true } })
+    expect(res.status).toBe(400)
+    expect(fake.inserted).toHaveLength(0)
+  })
+
+  it('stops at 60 saves in a minute with a 429 and a Retry-After', async () => {
+    const fake = loggedIn({ recentCount: 60 })
+    const res = await post({ url: 'https://example.com' })
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    expect(fake.inserted).toHaveLength(0)
+  })
+
+  it('still allows the 60th save (59 already made)', async () => {
+    const fake = loggedIn({ recentCount: 59 })
+    const res = await post({ url: 'https://example.com' })
+    expect(res.status).toBe(200)
+    expect(fake.inserted).toHaveLength(1)
+  })
+
+  it('lets the save through if the limit check itself fails', async () => {
+    const fake = loggedIn({ countError: { message: 'db down' }, recentCount: 999 })
+    const res = await post({ url: 'https://example.com' })
+    expect(res.status).toBe(200)
+    expect(fake.inserted).toHaveLength(1)
   })
 })
