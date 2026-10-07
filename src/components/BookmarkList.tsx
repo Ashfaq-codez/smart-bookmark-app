@@ -5,6 +5,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useBookmarks } from '@/hooks/useBookmarks'
+import { usePreferences } from '@/hooks/usePreferences'
+import { Prefs } from '@/lib/preferences'
+import PinIcon from '@/components/PinIcon'
 import { MEDIA_TYPE_MATCHERS, BookmarkStats, ListQuery } from '@/lib/bookmarkQuery'
 import { Bookmark } from '@/types'
 import Sidebar from '@/components/Sidebar'
@@ -198,7 +201,10 @@ const distributeIntoColumns = (items: Bookmark[], count: number): Bookmark[][] =
   return cols
 }
 
-export default function BookmarkList({ initialBookmarks, initialHasMore, initialStats, userEmail }: { initialBookmarks: Bookmark[], initialHasMore: boolean, initialStats: BookmarkStats, userEmail?: string }) {
+export default function BookmarkList({ initialBookmarks, initialPins, initialHasMore, initialStats, initialPrefs, hasSavedPrefs, userId, userEmail }: {
+  initialBookmarks: Bookmark[], initialPins: Bookmark[], initialHasMore: boolean, initialStats: BookmarkStats,
+  initialPrefs: Prefs, hasSavedPrefs: boolean, userId: string, userEmail?: string
+}) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
@@ -208,13 +214,17 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
   const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null)
   const [activeMediaType, setActiveMediaType] = useState<string | null>(null)
 
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
-  const [isGroupedByDate, setIsGroupedByDate] = useState(false)
-  
-  const [userColPreference, setUserColPreference] = useState<'auto' | 5 | 6 | 9>('auto')
+  // How the person likes their saves arranged. Saved to their account, so it follows them to every device.
+  const { prefs, setPref } = usePreferences({ userId, initial: initialPrefs, hasSaved: hasSavedPrefs })
+  const sortOrder = prefs.sort
+  const isGroupedByDate = prefs.groupByDate
+  const userColPreference = prefs.columns
+  const isMinimalist = prefs.minimalist
+  const setSortOrder = (v: 'desc' | 'asc' | ((o: 'desc' | 'asc') => 'desc' | 'asc')) => setPref('sort', typeof v === 'function' ? v(prefs.sort) : v)
+  const setIsGroupedByDate = (v: boolean | ((o: boolean) => boolean)) => setPref('groupByDate', typeof v === 'function' ? v(prefs.groupByDate) : v)
+  const setUserColPreference = (v: 'auto' | 5 | 6 | 9) => setPref('columns', v)
   const [showGridMenu, setShowGridMenu] = useState(false)
   const [columnsCount, setColumnsCount] = useState(2)
-  const [isMinimalist, setIsMinimalist] = useState(false)
 
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -225,9 +235,9 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
     [activeFilter, activeSubFilter, activeMediaType, searchQuery, sortOrder]
   )
   const {
-    bookmarks, pinned, hasMore, isFetching, isLoadingMore, stats,
-    loadMore, updateBookmark, deleteBookmark, pinById, clearPinned, searchSaves,
-  } = useBookmarks({ initialBookmarks, initialHasMore, initialStats, query })
+    bookmarks, pins, pinned, hasMore, isFetching, isLoadingMore, stats,
+    loadMore, updateBookmark, deleteBookmark, togglePin, pinById, clearPinned, searchSaves,
+  } = useBookmarks({ initialBookmarks, initialPins, initialHasMore, initialStats, query })
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadMoreRef = useRef(loadMore)
   loadMoreRef.current = loadMore
@@ -315,12 +325,8 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
     try {
       const savedCats = localStorage.getItem('space_custom_cats')
       const savedSubs = localStorage.getItem('space_custom_subs')
-      const savedGrid = localStorage.getItem('space_grid_pref')
-      const savedMin = localStorage.getItem('space_minimalist')
       if (savedCats) setCustomCategories(JSON.parse(savedCats))
       if (savedSubs) setCustomSubCategories(JSON.parse(savedSubs))
-      if (savedGrid) setUserColPreference(Number(savedGrid) as 5 | 6 | 9)
-      if (savedMin) setIsMinimalist(savedMin === 'true')
     } catch (e) {} finally { setFoldersLoaded(true) }
   }, [])
 
@@ -358,11 +364,7 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
     return () => { observer.disconnect(); clearTimeout(timer) }
   }, [userColPreference])
 
-  const toggleMinimalist = () => {
-    const newVal = !isMinimalist;
-    setIsMinimalist(newVal);
-    localStorage.setItem('space_minimalist', String(newVal));
-  }
+  const toggleMinimalist = () => setPref('minimalist', !prefs.minimalist)
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
@@ -523,6 +525,27 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
     } catch { toast.error('Error.') } finally { setIsSaving(false) }
   }
 
+  // One place that draws a card, used by the pinned strip, the date groups and the plain grid.
+  const renderCard = (bookmark: Bookmark) => (
+    <BookmarkCard
+      key={bookmark.id}
+      bookmark={bookmark}
+      theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
+      isDragged={draggedId === bookmark.id}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      updateBookmark={updateBookmark}
+      deleteBookmark={deleteBookmark}
+      onTogglePin={togglePin}
+      forceOpenModal={forcedInspectId === bookmark.id}
+      onCloseForcedModal={() => setForcedInspectId(null)}
+      folderHierarchy={folderHierarchy}
+      isMinimalist={isMinimalist}
+    />
+  )
+
+  const pinColumns = useMemo(() => distributeIntoColumns(pins, columnsCount), [pins, columnsCount])
+
   const filteredBookmarks = useMemo(() => {
     const loaded = new Set(bookmarks.map(b => b.id))
     return [...pinned.filter(p => !loaded.has(p.id)), ...bookmarks]
@@ -610,7 +633,7 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
     : activeFilter !== 'All' ? (activeMediaType ? null : (getCounts[activeSubFilter ? `${activeFilter}::${activeSubFilter}` : activeFilter] ?? 0))
     : activeMediaType ? (typeCounts[activeMediaType] ?? 0)
     : stats.total
-  const viewCountLabel = knownViewCount !== null ? String(knownViewCount) : `${filteredBookmarks.length}${hasMore ? '+' : ''}`
+  const viewCountLabel = knownViewCount !== null ? String(knownViewCount) : `${filteredBookmarks.length + pins.length}${hasMore ? '+' : ''}`
   const viewIsFiltered = knownViewCount === null ? true : knownViewCount !== stats.total
   const openCapture = () => { setIsExpanded(true); setTimeout(() => captureBarRef.current?.querySelector<HTMLElement>('.tiptap')?.focus(), 120) }
   const chips = [
@@ -792,7 +815,7 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
                       <div className="flex gap-2">
                         {([['auto', 'Auto'], [5, '5'], [6, '6'], [9, '9']] as const).map(([v, label]) => (
                           <Tile key={String(v)} active={userColPreference === v} label={label}
-                            onClick={() => { setUserColPreference(v); if (v === 'auto') localStorage.removeItem('space_grid_pref'); else localStorage.setItem('space_grid_pref', String(v)) }}>
+                            onClick={() => setUserColPreference(v)}>
                             <ColumnsGlyph n={v} />
                           </Tile>
                         ))}
@@ -871,13 +894,31 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
                 </div>
                 <p className="mt-6 text-xs text-[#171A17]/45 dark:text-white/45">Press N to write a note, or {mod} K to search and run commands.</p>
               </div>
-            ) : filteredBookmarks.length === 0 ? (
+            ) : filteredBookmarks.length + pins.length === 0 ? (
               <div className="w-full max-w-md mx-auto mt-[8vh] text-center px-4">
                 <h2 className="font-serif text-xl sm:text-2xl text-[#171A17] dark:text-[#F3F0E9]">No saves match</h2>
                 <p className="mt-2 text-sm text-[#171A17]/60 dark:text-white/60">Try a different search, or remove a filter to see everything again.</p>
                 {hasFilters && <button onClick={clearAll} className={`${BTN} mt-6`}>Clear filters</button>}
               </div>
-            ) : isGroupedByDate && groupedBookmarks ? (
+            ) : (<>
+            {pins.length > 0 && (
+              <section aria-label="Pinned saves" className="w-full mb-10">
+                <div className="flex items-center gap-2 py-2.5 mb-4 text-[#4D6A51] dark:text-[#8FAA91]">
+                  <PinIcon filled className="w-3.5 h-3.5" />
+                  <h3 className="text-sm font-semibold text-[#171A17] dark:text-[#E2E8F0]">Pinned</h3>
+                  <span className="text-xs tabular-nums text-[#171A17]/45 dark:text-white/45">{pins.length}</span>
+                </div>
+                <div className="w-full flex gap-2 sm:gap-4 items-start">
+                  {pinColumns.map((col, colIndex) => (
+                    <div key={colIndex} className="flex flex-col gap-2 sm:gap-4 w-full flex-1 min-w-0">
+                      {col.map(renderCard)}
+                    </div>
+                  ))}
+                </div>
+                {filteredBookmarks.length > 0 && <div className="mt-10 border-t border-black/[0.06] dark:border-white/10" />}
+              </section>
+            )}
+            {isGroupedByDate && groupedBookmarks ? (
               Object.entries(groupedBookmarks).map(([dateLabel, groupBookmarks]) => {
                 const groupCols = distributeIntoColumns(groupBookmarks, columnsCount)
 
@@ -891,22 +932,7 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
                     <div className="w-full flex gap-2 sm:gap-4 items-start">
                       {groupCols.map((colBookmarks, colIndex) => (
                         <div key={colIndex} className="flex flex-col gap-2 sm:gap-4 w-full flex-1 min-w-0">
-                          {colBookmarks.map(bookmark => (
-                            <BookmarkCard
-                              key={bookmark.id}
-                              bookmark={bookmark}
-                              theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
-                              isDragged={draggedId === bookmark.id}
-                              onDragStart={handleDragStart}
-                              onDragEnd={handleDragEnd}
-                              updateBookmark={updateBookmark}
-                              deleteBookmark={deleteBookmark}
-                              forceOpenModal={forcedInspectId === bookmark.id}
-                              onCloseForcedModal={() => setForcedInspectId(null)}
-                              folderHierarchy={folderHierarchy}
-                              isMinimalist={isMinimalist}
-                            />
-                          ))}
+                          {colBookmarks.map(bookmark => renderCard(bookmark))}
                         </div>
                       ))}
                     </div>
@@ -917,26 +943,12 @@ export default function BookmarkList({ initialBookmarks, initialHasMore, initial
               <div className="w-full flex gap-2 sm:gap-4 items-start">
                 {masonryColumns.map((colBookmarks, colIndex) => (
                   <div key={colIndex} className="flex flex-col gap-2 sm:gap-4 w-full flex-1 min-w-0">
-                    {colBookmarks.map(bookmark => (
-                      <BookmarkCard
-                        key={bookmark.id}
-                        bookmark={bookmark}
-                        theme={{ card: 'border border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-[#151815] shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none', btn: '', hover: '' }}
-                        isDragged={draggedId === bookmark.id}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        updateBookmark={updateBookmark}
-                        deleteBookmark={deleteBookmark}
-                        forceOpenModal={forcedInspectId === bookmark.id}
-                        onCloseForcedModal={() => setForcedInspectId(null)}
-                        folderHierarchy={folderHierarchy}
-                        isMinimalist={isMinimalist}
-                      />
-                    ))}
+                    {colBookmarks.map(bookmark => renderCard(bookmark))}
                   </div>
                 ))}
               </div>
             )}
+            </>)}
 
             {/* Infinite scroll: when this line comes near the screen, the next page loads */}
             <div ref={sentinelRef} aria-hidden="true" className="h-px w-full" />

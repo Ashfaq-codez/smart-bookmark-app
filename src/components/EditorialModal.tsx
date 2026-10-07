@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { Bookmark } from '@/types'
 import toast from 'react-hot-toast'
 import TipTapEditor from './TipTapEditor'
+import PinIcon from './PinIcon'
 import { 
   TrashIcon, ExternalLinkIcon, CloseIcon, PlayCircleIcon, InfoIcon, SearchIcon, 
   XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon, 
@@ -24,6 +25,8 @@ interface EditorialModalProps {
   onClose: () => void;
   onSave: (id: number, updates: Partial<Bookmark>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  isPinned?: boolean;
+  onTogglePin?: (id: number, pin: boolean) => void;
   onFullscreenImage: (url: string) => void;
   getDomain: (url: string) => string;
   onCyclePreview?: () => void;
@@ -46,10 +49,11 @@ const toEditorHtml = (raw: string): string => {
 
 export default function EditorialModal({ 
   bookmark, isVisible, displayType, previewImageUrl, folderHierarchy, 
-  onClose, onSave, onDelete, onFullscreenImage, getDomain, onCyclePreview 
+  onClose, onSave, onDelete, isPinned, onTogglePin, onFullscreenImage, getDomain, onCyclePreview 
 }: EditorialModalProps) {
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pinChoice, setPinChoice] = useState(!!isPinned)   // what the person picked here; applied when the editor closes
   const [igLiked, setIgLiked] = useState(false)
   const [igSaved, setIgSaved] = useState(false)
   const [showIgHeartAnim, setShowIgHeartAnim] = useState(false)
@@ -479,6 +483,11 @@ export default function EditorialModal({
                 <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
                    Saved {formatDateTime(bookmark.created_at)}
                 </div>
+                {onTogglePin && (
+                  <button onClick={() => { const next = !pinChoice; setPinChoice(next); onTogglePin(bookmark.id, next) }} className="text-[#171A17]/40 dark:text-white/40 hover:text-[#4D6A51] dark:hover:text-[#8FAA91] font-sans text-[11px] uppercase tracking-widest font-semibold flex items-center gap-2 transition-colors w-fit">
+                    <PinIcon filled={pinChoice} className="w-3.5 h-3.5" /> {pinChoice ? 'Pinned to top' : 'Pin to top'}
+                  </button>
+                )}
                 <button onClick={() => setShowDeleteConfirm(true)} className="text-[#171A17]/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-semibold transition-colors flex items-center gap-2 cursor-pointer w-max">
                   <TrashIcon /> Delete Entry
                 </button>

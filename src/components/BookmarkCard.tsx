@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -14,6 +14,7 @@ import {
   isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta, getGoogleQuery 
 } from '@/utils/bookmarkHelpers';
 import EditorialModal from './EditorialModal'
+import PinIcon from './PinIcon'
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -23,6 +24,7 @@ interface BookmarkCardProps {
   onDragEnd: () => void;
   updateBookmark: (id: number, updates: Partial<Bookmark>) => Promise<void>;
   deleteBookmark: (id: number) => Promise<void>;
+  onTogglePin?: (id: number, pin: boolean) => void;
   forceOpenModal?: boolean;
   onCloseForcedModal?: () => void;
   folderHierarchy?: Record<string, string[]>;
@@ -31,7 +33,7 @@ interface BookmarkCardProps {
 
 export default function BookmarkCard({ 
   bookmark, isDragged, onDragStart, onDragEnd, 
-  updateBookmark, deleteBookmark, forceOpenModal, onCloseForcedModal, 
+  updateBookmark, deleteBookmark, onTogglePin, forceOpenModal, onCloseForcedModal, 
   folderHierarchy, isMinimalist 
 }: BookmarkCardProps) {
   
@@ -47,6 +49,16 @@ export default function BookmarkCard({
 
   useEffect(() => { setMounted(true) }, [])
 
+  const isPinned = !!bookmark.pinned_at
+  // A pin chosen inside the open editor is applied when it closes: pinning moves the card to the Pinned strip,
+  // which would otherwise close the editor under the person's hands.
+  const pendingPin = useRef<boolean | null>(null)
+  const applyPendingPin = () => {
+    const want = pendingPin.current
+    pendingPin.current = null
+    if (want !== null && want !== isPinned) onTogglePin?.(bookmark.id, want)
+  }
+
   useEffect(() => {
     if (!mounted) return;
     const params = new URLSearchParams(window.location.search);
@@ -58,7 +70,7 @@ export default function BookmarkCard({
         setIsModalOpen(true);
       } else if (isModalOpen) {
         setIsVisible(false);
-        setTimeout(() => setIsModalOpen(false), 300);
+        setTimeout(() => { setIsModalOpen(false); applyPendingPin(); }, 300);
       }
     };
 
@@ -94,6 +106,7 @@ export default function BookmarkCard({
       setIsModalOpen(false)
       setIsFullscreenImage(false)
       if (onCloseForcedModal) onCloseForcedModal()
+      applyPendingPin()
     }, 300) 
 
     const params = new URLSearchParams(window.location.search);
@@ -164,6 +177,18 @@ export default function BookmarkCard({
       `}} />
 
       <div draggable onDragStart={(e) => onDragStart(e, bookmark.id)} onDragEnd={onDragEnd} onClick={openModal} className={`group relative flex flex-col w-full min-w-0 cursor-pointer gap-1 sm:gap-2.5 select-none transition-transform duration-300 ${isDragged ? 'opacity-40' : 'hover:-translate-y-1'}`}>
+        {onTogglePin && (
+          <button
+            type="button"
+            aria-label={isPinned ? 'Unpin from top' : 'Pin to top'}
+            title={isPinned ? 'Unpin' : 'Pin to top'}
+            onClick={(e) => { e.stopPropagation(); onTogglePin(bookmark.id, !isPinned) }}
+            onDragStart={(e) => e.preventDefault()}
+            className={`absolute top-2 right-2 z-40 h-8 w-8 inline-flex items-center justify-center rounded-full bg-white/90 dark:bg-black/60 backdrop-blur shadow-sm transition-opacity hover:bg-white dark:hover:bg-black/80 focus-visible:opacity-100 ${isPinned ? 'opacity-100 text-[#4D6A51] dark:text-[#8FAA91]' : 'opacity-0 group-hover:opacity-100 text-[#171A17]/70 dark:text-white/80'}`}
+          >
+            <PinIcon filled={isPinned} />
+          </button>
+        )}
         
         {displayType === 'note' ? (
           <div className="w-full bg-white dark:bg-[#151815] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col min-w-0 shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 relative overflow-hidden max-h-[260px] sm:max-h-[340px]">
@@ -325,6 +350,8 @@ export default function BookmarkCard({
           onClose={handleCloseModal} 
           onSave={updateBookmark} 
           onDelete={handleDelete} 
+          isPinned={isPinned}
+          onTogglePin={onTogglePin ? (_id, pin) => { pendingPin.current = pin } : undefined}
           onFullscreenImage={(url) => { setFullscreenImageUrl(url); setIsFullscreenImage(true); }}
           getDomain={getDomain}
           onCyclePreview={() => setFallbackStep(prev => prev + 1)}

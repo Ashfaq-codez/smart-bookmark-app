@@ -4,9 +4,12 @@ import type { Bookmark } from '@/types'
 
 export const PAGE_SIZE = 60
 
+// How many saves a person can keep pinned at the top (keeps the strip tidy and the extra query tiny).
+export const MAX_PINS = 12
+
 // Everything a card needs, WITHOUT the full note body (content_preview is a trimmed copy made by the database).
 export const LIST_COLUMNS =
-  'id,created_at,updated_at,title,url,user_id,category,sub_category,description,image_url,tags,type,file_path,file_type,content_preview'
+  'id,created_at,updated_at,title,url,user_id,category,sub_category,description,image_url,tags,type,file_path,file_type,content_preview,pinned_at'
 
 export type SortOrder = 'desc' | 'asc'
 
@@ -37,10 +40,17 @@ export const MEDIA_TYPE_MATCHERS: Record<string, string[]> = {
 
 export const escapeLike = (s: string) => s.replace(/[\\%_]/g, (m) => '\\' + m)
 
-// Builds the paged, filtered list request. `client` is a supabase-js client.
-// cursor = the last card currently on screen; the next page starts right after it (keyset paging).
-export function buildListQuery(client: any, q: ListQuery, cursor: { created_at: string; id: number } | null, limit: number) {
+// Builds the filtered list request. `client` is a supabase-js client.
+//   which = 'unpinned' (default): the normal paged list, pinned saves are NOT in it.
+//           cursor = the last card currently on screen; the next page starts right after it (keyset paging).
+//   which = 'pinned': the pinned strip, most recently pinned first, at most MAX_PINS, no paging.
+// Both obey the same folder / type / search filters, so a folder view shows that folder's pins first.
+export function buildListQuery(
+  client: any, q: ListQuery, cursor: { created_at: string; id: number } | null, limit: number,
+  which: 'unpinned' | 'pinned' = 'unpinned'
+) {
   let req = client.from('bookmarks').select(LIST_COLUMNS)
+  req = which === 'pinned' ? req.not('pinned_at', 'is', null) : req.is('pinned_at', null)
 
   if (q.category !== 'All') {
     req = q.category === 'Uncategorized'
@@ -58,6 +68,8 @@ export function buildListQuery(client: any, q: ListQuery, cursor: { created_at: 
 
   const s = q.search.trim().toLowerCase()
   if (s) req = req.ilike('search_text', `%${escapeLike(s)}%`)
+
+  if (which === 'pinned') return req.order('pinned_at', { ascending: false }).limit(MAX_PINS)
 
   const asc = q.sort === 'asc'
   if (cursor) {
@@ -83,4 +95,4 @@ export function rowMatchesQuery(b: Partial<Bookmark> & { search_text?: string | 
   const s = q.search.trim().toLowerCase()
   if (s && typeof b.search_text === 'string' && !b.search_text.includes(s)) return false
   return true
-}   
+}

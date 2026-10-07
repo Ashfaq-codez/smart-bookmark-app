@@ -18,4 +18,6 @@ export type Bookmark = {
   type?: 'link' | 'note' | 'image' | 'video' | 'pdf' | 'file' | 'twitter' | 'instagram' | 'youtube' | 'pinterest' | 'github' | 'linkedin' | string;
   file_path?: string | null; 
   file_type?: string | null;
+  // Set when the save is pinned to the top; the time it was pinned. null / missing = not pinned.
+  pinned_at?: string | null;
 };

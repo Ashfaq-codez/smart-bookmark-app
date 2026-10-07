@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildListQuery, rowMatchesQuery, escapeLike, DEFAULT_QUERY, PAGE_SIZE } from '@/lib/bookmarkQuery'
+import { buildListQuery, rowMatchesQuery, escapeLike, DEFAULT_QUERY, PAGE_SIZE, MAX_PINS, LIST_COLUMNS } from '@/lib/bookmarkQuery'
 
 // A fake query builder that records every call, so we can check what would be asked of the database.
 function recorder() {
@@ -67,6 +67,31 @@ describe('buildListQuery', () => {
     buildListQuery(client, { ...DEFAULT_QUERY, sort: 'asc' }, { created_at: '2026-10-05T10:00:00+00:00', id: 7 }, 10)
     expect(calls).toContainEqual(['order', 'created_at', { ascending: true }])
     expect(calls.find(c => c[0] === 'or')![1]).toContain('id.gt.7')
+  })
+})
+
+describe('buildListQuery: pinned saves', () => {
+  it('keeps pinned saves out of the normal list', () => {
+    const { client, calls } = recorder()
+    buildListQuery(client, DEFAULT_QUERY, null, 10)
+    expect(calls).toContainEqual(['is', 'pinned_at', null])
+  })
+  it('the pinned strip asks for pinned saves only, latest pin first, capped, with the same filters', () => {
+    const { client, calls } = recorder()
+    buildListQuery(client, { ...DEFAULT_QUERY, category: 'Design', search: 'Logo' }, null, 999, 'pinned')
+    expect(calls).toContainEqual(['not', 'pinned_at', 'is', null])
+    expect(calls).toContainEqual(['eq', 'category', 'Design'])
+    expect(calls).toContainEqual(['ilike', 'search_text', '%logo%'])
+    expect(calls).toContainEqual(['order', 'pinned_at', { ascending: false }])
+    expect(calls[calls.length - 1]).toEqual(['limit', MAX_PINS])
+  })
+  it('does not page the pinned strip', () => {
+    const { client, calls } = recorder()
+    buildListQuery(client, DEFAULT_QUERY, { created_at: '2026-10-05T10:00:00+00:00', id: 42 }, 10, 'pinned')
+    expect(names(calls)).not.toContain('or')
+  })
+  it('asks for the pinned_at column', () => {
+    expect(LIST_COLUMNS).toContain('pinned_at')
   })
 })
 

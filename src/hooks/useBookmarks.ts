@@ -4,8 +4,9 @@ import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
 import { normalizeUrl } from '@/utils/normalizeUrl'
 import {
-  PAGE_SIZE, LIST_COLUMNS, ListQuery, BookmarkStats, buildListQuery, rowMatchesQuery, escapeLike,
+  PAGE_SIZE, MAX_PINS, LIST_COLUMNS, ListQuery, BookmarkStats, buildListQuery, rowMatchesQuery, escapeLike,
 } from '@/lib/bookmarkQuery'
+import { applyToList, applyToPins } from '@/lib/bookmarkOrder'
 import toast from 'react-hot-toast'
 
 // Realtime keeps the list in sync while the tab is open. After a long sleep the websocket may have missed events,
@@ -24,9 +25,10 @@ const withoutUndefined = (o: Record<string, any>) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
 
 export const useBookmarks = ({
-  initialBookmarks, initialHasMore, initialStats, query,
+  initialBookmarks, initialPins, initialHasMore, initialStats, query,
 }: {
   initialBookmarks: Bookmark[]
+  initialPins: Bookmark[]      // saves the person pinned to the top (matching the first view)
   initialHasMore: boolean
   initialStats: BookmarkStats
   query: ListQuery
@@ -38,6 +40,9 @@ export const useBookmarks = ({
   const [isFetching, setIsFetching] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [stats, setStats] = useState<BookmarkStats>(initialStats)
+  // `pins` = saves the person PINNED to the top on purpose (shown in the "Pinned" strip).
+  const [pins, setPins] = useState<Bookmark[]>(initialPins)
+  // `pinned` (older name) = extra saves shown only because they were opened by link / search / "already saved".
   const [pinned, setPinned] = useState<Bookmark[]>([])
 
   // --- search is debounced so we don't hit the database on every keystroke ---
@@ -57,10 +62,13 @@ export const useBookmarks = ({
   // Refs let long-lived callbacks (realtime, observers) always see the latest values without re-subscribing.
   const queryRef = useRef(effectiveQuery); queryRef.current = effectiveQuery
   const bookmarksRef = useRef(bookmarks); bookmarksRef.current = bookmarks
+  const pinsRef = useRef(pins); pinsRef.current = pins
+  const extraRef = useRef(pinned); extraRef.current = pinned
   const hasMoreRef = useRef(hasMore); hasMoreRef.current = hasMore
   const busyRef = useRef(false)
   const requestId = useRef(0)
-  const loadedKey = useRef(JSON.stringify({ category: 'All', sub: null, mediaType: null, search: '', sort: 'desc' }))
+  // The server already sent the first view (using the person's saved sort order), so remember which one it was.
+  const loadedKey = useRef(JSON.stringify({ category: 'All', sub: null, mediaType: null, search: '', sort: query.sort }))
 
   // ---------- counts for the sidebar ----------
   const refreshStats = useCallback(async () => {
@@ -78,12 +86,16 @@ export const useBookmarks = ({
   const loadFirstPage = useCallback(async (q: ListQuery) => {
     const id = ++requestId.current
     setIsFetching(true)
-    const { data, error } = await buildListQuery(supabase, q, null, PAGE_SIZE + 1)
+    const [{ data, error }, pinRes] = await Promise.all([
+      buildListQuery(supabase, q, null, PAGE_SIZE + 1),
+      buildListQuery(supabase, q, null, MAX_PINS, 'pinned'),
+    ])
     if (id !== requestId.current) return // a newer request replaced this one
     setIsFetching(false)
     if (error || !data) { toast.error('Could not load your saves'); return }
     setHasMore(data.length > PAGE_SIZE)
     setBookmarks(data.slice(0, PAGE_SIZE) as Bookmark[])
+    if (!pinRes.error && pinRes.data) setPins(pinRes.data as Bookmark[])
   }, [supabase])
 
   useEffect(() => {
@@ -115,6 +127,20 @@ export const useBookmarks = ({
       return [...prev, ...(data.slice(0, PAGE_SIZE) as Bookmark[]).filter((b) => !seen.has(b.id))]
     })
   }, [supabase])
+
+  // ---------- one place that decides where a changed save belongs: normal list, pinned strip, or neither ----------
+  const findAnywhere = useCallback((id: number): Bookmark | undefined =>
+    bookmarksRef.current.find((b) => b.id === id) || pinsRef.current.find((b) => b.id === id) || extraRef.current.find((b) => b.id === id), [])
+
+  // `item` must be the complete, up-to-date copy of the save.
+  const applyChange = useCallback((item: Bookmark, searchText?: string | null) => {
+    const q = queryRef.current
+    const matches = rowMatchesQuery({ ...item, search_text: searchText ?? undefined }, q)
+    const wasPinned = pinsRef.current.some((b) => b.id === item.id)
+    setPins((prev) => applyToPins(prev, item, matches))
+    setBookmarks((prev) => applyToList(prev, item, { matches, wasPinned, sort: q.sort, hasMore: hasMoreRef.current }))
+    setPinned((prev) => prev.map((b) => (b.id === item.id ? { ...b, ...item } : b)))
+  }, [])
 
   // ---------- live updates (Realtime) + reload after a long sleep ----------
   useEffect(() => {
@@ -150,16 +176,7 @@ export const useBookmarks = ({
             } else if (payload.eventType === 'UPDATE') {
               scheduleStats()
               const row = payload.new as any
-              const patch = withoutUndefined(toLight(row))
-              setPinned((prev) => prev.map((b) => (b.id === row.id ? { ...b, ...patch } : b)))
-              setBookmarks((prev) => {
-                const idx = prev.findIndex((b) => b.id === row.id)
-                if (idx === -1) return prev
-                const merged = { ...prev[idx], ...patch } as Bookmark
-                // moved to another folder / no longer matches the open view -> leave this view
-                if (!rowMatchesQuery({ ...merged, search_text: row.search_text }, q)) return prev.filter((b) => b.id !== row.id)
-                const next = prev.slice(); next[idx] = merged; return next
-              })
+              applyChange({ ...(findAnywhere(row.id) || {}), ...withoutUndefined(toLight(row)) } as Bookmark, row.search_text)
             }
           }
         )
@@ -173,6 +190,7 @@ export const useBookmarks = ({
             if (id == null) return
             scheduleStats()
             setBookmarks((prev) => prev.filter((b) => b.id !== id))
+            setPins((prev) => prev.filter((b) => b.id !== id))
             setPinned((prev) => prev.filter((b) => b.id !== id))
           }
         )
@@ -195,13 +213,14 @@ export const useBookmarks = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       clearTimeout(statsTimer.current)
     }
-  }, [supabase, loadFirstPage, refreshStats, scheduleStats])
+  }, [supabase, loadFirstPage, refreshStats, scheduleStats, findAnywhere, applyChange])
 
   // ---------- delete ----------
   const deleteBookmark = async (id: number) => {
     const { error } = await supabase.from('bookmarks').delete().eq('id', id)
     if (error) { toast.error('Failed to delete'); return }
     setBookmarks((prev) => prev.filter((b) => b.id !== id))
+    setPins((prev) => prev.filter((b) => b.id !== id))
     setPinned((prev) => prev.filter((b) => b.id !== id))
     scheduleStats()
     toast.success('Bookmark removed')
@@ -223,17 +242,28 @@ export const useBookmarks = ({
     const localPatch: Partial<Bookmark> = { ...payload }
     if ('content' in payload) { localPatch.content_preview = payload.content ?? null; delete localPatch.content }
 
-    const q = queryRef.current
-    setPinned((prev) => prev.map((b) => (b.id === id ? { ...b, ...localPatch } : b)))
-    setBookmarks((prev) => {
-      const idx = prev.findIndex((b) => b.id === id)
-      if (idx === -1) return prev
-      const merged = { ...prev[idx], ...localPatch }
-      if (!rowMatchesQuery(merged, q)) return prev.filter((b) => b.id !== id)
-      const next = prev.slice(); next[idx] = merged; return next
-    })
+    const current = findAnywhere(id)
+    if (current) applyChange({ ...current, ...localPatch } as Bookmark)
     scheduleStats()
   }
+
+  // ---------- pin / unpin ----------
+  const togglePin = useCallback(async (id: number, pin: boolean) => {
+    const current = findAnywhere(id)
+    if (!current) return
+    if (pin && !current.pinned_at && pinsRef.current.length >= MAX_PINS) {
+      toast.error(`You can pin up to ${MAX_PINS} saves. Unpin one first.`)
+      return
+    }
+    const before = current
+    const pinned_at = pin ? new Date().toISOString() : null
+    applyChange({ ...current, pinned_at })                      // instant, then confirm with the database
+    const { error } = await supabase.from('bookmarks').update({ pinned_at }).eq('id', id)
+    if (error) {
+      applyChange(before)                                        // put it back
+      toast.error(pin ? 'Could not pin' : 'Could not unpin')
+    }
+  }, [supabase, findAnywhere, applyChange])
 
   // ---------- open a save that is not on the loaded pages (deep link, command palette, "already saved") ----------
   const pinById = useCallback(async (id: number) => {
@@ -257,7 +287,7 @@ export const useBookmarks = ({
   }, [supabase])
 
   return {
-    bookmarks, pinned, hasMore, isFetching, isLoadingMore, stats,
-    loadMore, updateBookmark, deleteBookmark, pinById, clearPinned, searchSaves,
+    bookmarks, pins, pinned, hasMore, isFetching, isLoadingMore, stats,
+    loadMore, updateBookmark, deleteBookmark, togglePin, pinById, clearPinned, searchSaves,
   }
 }
