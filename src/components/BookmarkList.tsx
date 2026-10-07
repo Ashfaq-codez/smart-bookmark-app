@@ -17,6 +17,8 @@ import TipTapEditor from '@/components/TipTapEditor'
 import { toast } from 'react-hot-toast'
 import { deriveDisplayType } from '@/utils/bookmarkHelpers'
 import { normalizeUrl } from '@/utils/normalizeUrl'
+import WelcomeGuide from '@/components/WelcomeGuide'
+import { TYPE_META } from '@/components/TypeIcons'
 
 // --- Existing Icons ---
 const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -169,6 +171,20 @@ const CardGlyph = ({ detailed }: { detailed: boolean }) => (
   </svg>
 )
 
+const GroupGlyph = ({ grouped }: { grouped: boolean }) => (
+  <svg width="30" height="20" viewBox="0 0 30 20" fill="currentColor" aria-hidden="true">
+    {grouped ? (<>
+      <rect x="0" y="0" width="12" height="2" rx="1" opacity="0.5" />
+      <rect x="0" y="4" width="9" height="5" rx="1.2" /><rect x="10.5" y="4" width="9" height="5" rx="1.2" /><rect x="21" y="4" width="9" height="5" rx="1.2" />
+      <rect x="0" y="11" width="8" height="2" rx="1" opacity="0.5" />
+      <rect x="0" y="15" width="9" height="5" rx="1.2" /><rect x="10.5" y="15" width="9" height="5" rx="1.2" />
+    </>) : (<>
+      <rect x="0" y="0" width="9" height="9" rx="1.2" /><rect x="10.5" y="0" width="9" height="9" rx="1.2" /><rect x="21" y="0" width="9" height="9" rx="1.2" />
+      <rect x="0" y="11" width="9" height="9" rx="1.2" /><rect x="10.5" y="11" width="9" height="9" rx="1.2" /><rect x="21" y="11" width="9" height="9" rx="1.2" />
+    </>)}
+  </svg>
+)
+
 // --- Masonry: place each card in the currently shortest column (cards keep their newest-first order) ---
 // Real heights aren't known before images load, so each card gets a height estimate relative to column width (=100).
 const estimateCardHeight = (b: Bookmark): number => {
@@ -254,6 +270,16 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
   const [duplicateMatch, setDuplicateMatch] = useState<Bookmark | null>(null)
   const [forcedInspectId, setForcedInspectId] = useState<number | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
+// Show the tour once, automatically, to someone whose library is empty
+useEffect(() => {
+  try {
+    if (initialStats.total === 0 && !localStorage.getItem('inntoit_guide_seen')) {
+      setGuideOpen(true)
+      localStorage.setItem('inntoit_guide_seen', '1')
+    }
+  } catch {}
+}, [])
   const [mod, setMod] = useState('⌘')
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -647,6 +673,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
     { id: 'upload', group: 'Create', label: 'Upload a file', run: () => fileInputRef.current?.click() },
     { id: 'group', group: 'View', label: isGroupedByDate ? 'Ungroup by date' : 'Group by date', run: () => setIsGroupedByDate(v => !v) },
     { id: 'details', group: 'View', label: isMinimalist ? 'Show card details' : 'Hide card details', run: toggleMinimalist },
+    { id: 'guide', group: 'Help', label: 'How inntoit works', run: () => setGuideOpen(true) },
     { id: 'all', group: 'Go to', label: 'All saves', run: clearAll },
     ...Object.entries(mediaTypeLabels).map(([t, label]) => ({ id: `type-${t}`, group: 'Go to', label, run: () => setActiveMediaType(t) })),
     ...Object.keys(folderHierarchy).map(f => ({ id: `folder-${f}`, group: 'Folders', label: f, run: () => { setActiveFilter(f); setActiveSubFilter(null) } })),
@@ -728,8 +755,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
           activeSubFilter={activeSubFilter}
           setActiveSubFilter={setActiveSubFilter}
 
-          activeMediaType={activeMediaType}
-          setActiveMediaType={setActiveMediaType}
+          onOpenGuide={() => { setGuideOpen(true); if (window.innerWidth < 1024) setIsSidebarOpen(false) }}
 
           getCounts={getCounts}
           folderHierarchy={folderHierarchy}
@@ -828,8 +854,13 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
                         <Tile active={isMinimalist} label="Just the save" onClick={() => { if (!isMinimalist) toggleMinimalist() }}><CardGlyph detailed={false} /></Tile>
                       </div>
                     </div>
-                    <label className="flex items-center justify-between text-sm text-[#171A17] dark:text-[#F3F0E9]">Group by date
-                      <input type="checkbox" role="switch" checked={isGroupedByDate} onChange={() => setIsGroupedByDate(v => !v)} className="w-4 h-4 accent-[#4D6A51]" /></label>
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-[#171A17]/50 dark:text-white/50">Arrange</p>
+                      <div className="flex gap-2">
+                        <Tile active={!isGroupedByDate} label="One grid" onClick={() => setIsGroupedByDate(false)}><GroupGlyph grouped={false} /></Tile>
+                        <Tile active={isGroupedByDate} label="By date" onClick={() => setIsGroupedByDate(true)}><GroupGlyph grouped /></Tile>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
@@ -850,13 +881,22 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
             </button>
           </div>
 
-          <div role="tablist" aria-label="Filter by type" className="mt-5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div role="tablist" aria-label="Filter by type" className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[{ k: null as string | null, label: 'All' }, ...Object.entries(mediaTypeLabels).map(([k, label]) => ({ k: k as string | null, label }))].map(t => {
               const on = activeMediaType === t.k
+              const meta = TYPE_META[t.k ?? 'all'] ?? TYPE_META.all
+              const Icon = meta.Icon
+              const count = t.k === null ? stats.total : (typeCounts[t.k] ?? 0)
               return (
                 <button key={t.label} role="tab" aria-selected={on} onClick={() => setActiveMediaType(t.k)}
-                  className={`shrink-0 flex items-center gap-2 px-3.5 h-9 rounded-full text-sm font-medium border transition-colors ${on ? 'bg-[#4D6A51] border-[#4D6A51] text-white dark:bg-[#8FAA91] dark:border-[#8FAA91] dark:text-[#151815]' : 'border-black/10 dark:border-white/10 text-[#171A17]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5'}`}>
-                  {t.label}<span className={`text-xs tabular-nums ${on ? 'opacity-75' : 'opacity-50'}`}>{t.k === null ? stats.total : typeCounts[t.k]}</span>
+                  className={`group/pill shrink-0 inline-flex items-center gap-2 h-10 pl-1.5 pr-2 rounded-full text-sm font-medium border transition-all duration-200 ${on
+                    ? 'bg-[#171A17] border-[#171A17] text-white shadow-[0_6px_18px_rgba(23,26,23,0.18)] dark:bg-[#F3F0E9] dark:border-[#F3F0E9] dark:text-[#151815]'
+                    : `bg-white dark:bg-[#151815] border-black/[0.07] dark:border-white/10 text-[#171A17]/75 dark:text-white/75 hover:border-black/20 dark:hover:border-white/25 hover:text-[#171A17] dark:hover:text-white ${count === 0 ? 'opacity-55' : ''}`}`}>
+                  <span className={`w-7 h-7 inline-flex items-center justify-center rounded-full transition-colors ${on ? `bg-white/10 dark:bg-black/[0.07] ${meta.tintOn}` : `bg-black/[0.04] dark:bg-white/[0.06] group-hover/pill:bg-black/[0.07] dark:group-hover/pill:bg-white/[0.1] ${meta.tint}`}`}>
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <span>{t.label}</span>
+                  <span className={`min-w-6 h-6 px-1.5 inline-flex items-center justify-center rounded-full text-[11px] tabular-nums ${on ? 'bg-white/15 text-white/85 dark:bg-black/10 dark:text-[#151815]/75' : 'bg-black/[0.05] dark:bg-white/[0.07] text-[#171A17]/55 dark:text-white/55'}`}>{count}</span>
                 </button>
               )
             })}
@@ -891,6 +931,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                   <button onClick={openCapture} className="h-10 px-5 rounded-lg bg-[#4D6A51] dark:bg-[#8FAA91] text-white dark:text-[#151815] text-sm font-medium hover:opacity-90 transition-opacity">Add your first save</button>
                   <button onClick={() => fileInputRef.current?.click()} className={`${BTN} h-10 px-5`}>Upload a file</button>
+                  <button onClick={() => setGuideOpen(true)} className={`${BTN} h-10 px-5`}>How it works</button>
                 </div>
                 <p className="mt-6 text-xs text-[#171A17]/45 dark:text-white/45">Press N to write a note, or {mod} K to search and run commands.</p>
               </div>
@@ -1014,7 +1055,10 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
           </div>
         </div>
       </div>
-
+      
+      
+      {guideOpen && <WelcomeGuide mod={mod} onClose={() => setGuideOpen(false)} onStart={openCapture} />}
+        
       {paletteOpen && <CommandPalette commands={commands} search={searchSaves} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); pinById(b.id); setTimeout(() => setForcedInspectId(b.id), 100) }} />}
 
       {/* DUPLICATE MODAL */}
