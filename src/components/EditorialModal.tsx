@@ -415,6 +415,17 @@ export default function EditorialModal({
                 </div>
 
                 <div className="flex flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04] pb-6 md:pb-8">
+                   {onTogglePin && (
+                    <button
+                      type="button"
+                      aria-pressed={pinChoice}
+                      onClick={() => { const next = !pinChoice; setPinChoice(next); onTogglePin(bookmark.id, next) }}
+                      className={`self-start inline-flex items-center gap-2 h-9 px-3.5 rounded-full border font-sans text-xs font-semibold transition-colors ${pinChoice ? 'border-[#4D6A51] bg-[#4D6A51]/10 text-[#4D6A51] dark:border-[#8FAA91] dark:bg-[#8FAA91]/15 dark:text-[#8FAA91]' : 'border-black/10 dark:border-white/15 text-[#171A17]/60 dark:text-white/60 hover:text-[#4D6A51] dark:hover:text-[#8FAA91]'}`}
+                    >
+                      <PinIcon filled={pinChoice} className="w-3.5 h-3.5" />
+                      {pinChoice ? 'Pinned to top' : 'Pin to top'}
+                    </button>
+                  )}
                   <label className="text-[10px] font-sans text-[#171A17]/50 dark:text-white/50 uppercase tracking-widest font-semibold">Folder Structure</label>
                   <div className="flex flex-col gap-4">
                     
@@ -483,11 +494,7 @@ export default function EditorialModal({
                 <div className="text-[13px] font-medium font-sans text-[#171A17]/50 dark:text-white/50">
                    Saved {formatDateTime(bookmark.created_at)}
                 </div>
-                {onTogglePin && (
-                  <button onClick={() => { const next = !pinChoice; setPinChoice(next); onTogglePin(bookmark.id, next) }} className="text-[#171A17]/40 dark:text-white/40 hover:text-[#4D6A51] dark:hover:text-[#8FAA91] font-sans text-[11px] uppercase tracking-widest font-semibold flex items-center gap-2 transition-colors w-fit">
-                    <PinIcon filled={pinChoice} className="w-3.5 h-3.5" /> {pinChoice ? 'Pinned to top' : 'Pin to top'}
-                  </button>
-                )}
+                
                 <button onClick={() => setShowDeleteConfirm(true)} className="text-[#171A17]/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 font-sans text-[11px] uppercase tracking-widest font-semibold transition-colors flex items-center gap-2 cursor-pointer w-max">
                   <TrashIcon /> Delete Entry
                 </button>
