@@ -1,0 +1,64 @@
+/* src/app/admin/admin.css
+   Admin page only. Everything is scoped to pages that contain [data-admin-root],
+   so the dashboard and the rest of the app are not affected. */
+
+.admin-serif {
+  font-family: var(--font-admin-serif), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Page background behind overscroll + custom page scrollbar (Firefox, Chrome, Edge) */
+html:has([data-admin-root]) {
+  background: #FBF9F4;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(77, 106, 81, 0.35) transparent;
+  scrollbar-gutter: stable;
+}
+html.dark:has([data-admin-root]),
+html:has(.dark [data-admin-root]) {
+  background: #151815;
+  scrollbar-color: rgba(143, 170, 145, 0.3) transparent;
+}
+
+/* Custom scrollbar for Safari */
+html:has([data-admin-root])::-webkit-scrollbar,
+[data-admin-root] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html:has([data-admin-root])::-webkit-scrollbar-track,
+[data-admin-root] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+html:has([data-admin-root])::-webkit-scrollbar-thumb,
+[data-admin-root] ::-webkit-scrollbar-thumb {
+  background-color: rgba(77, 106, 81, 0.35);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+html.dark:has([data-admin-root])::-webkit-scrollbar-thumb,
+html:has(.dark [data-admin-root])::-webkit-scrollbar-thumb,
+.dark [data-admin-root] ::-webkit-scrollbar-thumb {
+  background-color: rgba(143, 170, 145, 0.3);
+}
+
+/* Rows that swipe sideways on phones: no visible bar at all */
+.admin-no-scrollbar {
+  scrollbar-width: none;
+}
+.admin-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* No grey flash when tapping on phones; brand-coloured text selection */
+[data-admin-root] {
+  -webkit-tap-highlight-color: transparent;
+}
+[data-admin-root] ::selection {
+  background: rgba(77, 106, 81, 0.22);
+}
+.dark [data-admin-root] ::selection {
+  background: rgba(143, 170, 145, 0.3);
+}

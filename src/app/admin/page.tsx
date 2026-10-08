@@ -1,27 +1,48 @@
-import Link from 'next/link'
+// src/app/admin/page.tsx
+// Server side only: checks you're the admin, reads the numbers with the secret key, and hands
+// plain data to <AdminView /> (the screen you see). No titles, notes or page content are read.
 import { notFound, redirect } from 'next/navigation'
+import { Instrument_Serif } from 'next/font/google'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { isAdmin } from '@/lib/admin'
-import AdminAutoRefresh from '@/components/AdminAutoRefresh'
+import { MEDIA_TYPE_MATCHERS } from '@/lib/bookmarkQuery'
+import AdminView from '@/components/admin/AdminView'
+import {
+  ADMIN_TABS,
+  FEEDBACK_TYPES,
+  GROUP_KEYS,
+  emptyGroups,
+  type AdminData,
+  type AdminTab,
+  type AdminUser,
+  type FeedbackItem,
+  type FeedbackType,
+  type GroupKey,
+} from '@/components/admin/adminTypes'
+import './admin.css'
 
 // Always fresh, never cached, never indexed by search engines.
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Admin · inntoit', robots: { index: false, follow: false } }
 
+const serif = Instrument_Serif({ weight: '400', subsets: ['latin'], variable: '--font-admin-serif', display: 'swap' })
+
 const FEEDBACK_PAGE_SIZE = 50
-const USERS_PAGE_SIZE = 25
 const MAX_SAVES = 20000 // safety cap. Long before this, move the counting into a SQL function.
 const DAY = 24 * 60 * 60 * 1000
+const NOT_A_FOLDER = new Set(['Inbox', 'Uncategorized'])
 
-const TABS = ['overview', 'users', 'feedback'] as const
-type Tab = (typeof TABS)[number]
-const SORTS = ['active', 'saves', 'joined'] as const
-type Sort = (typeof SORTS)[number]
-const TYPES = ['idea', 'problem', 'other'] as const
-type FeedbackType = (typeof TYPES)[number]
+// type value -> dashboard group, built from the dashboard's own matcher list so the two never drift apart.
+const TYPE_TO_GROUP = new Map<string, GroupKey>()
+for (const [group, types] of Object.entries(MEDIA_TYPE_MATCHERS)) {
+  if ((GROUP_KEYS as readonly string[]).includes(group)) {
+    for (const t of types) TYPE_TO_GROUP.set(t, group as GroupKey)
+  }
+}
 
+type SaveRow = { user_id: string; type: string | null; category: string | null; created_at: string }
 type FeedbackRow = {
   id: number
   user_id: string
@@ -31,96 +52,34 @@ type FeedbackRow = {
   created_at: string
 }
 
-// Only these columns are read. Titles, notes and page content are never loaded.
-type SaveRow = { user_id: string; type: string | null; url: string | null; created_at: string }
+// ---------- formatting (done here, in India time, so the browser never disagrees) ----------
+const tz = 'Asia/Kolkata'
+const fullFmt = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: tz })
+const shortFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: tz })
+const timeFmt = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: tz })
+const keyFmt = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz })
+const dayKey = (ms: number) => keyFmt.format(new Date(ms))
 
-// ---------------------------------------------------------------------------
-// Categories: worked out from the save's type and the website's domain only.
-// ---------------------------------------------------------------------------
-const CATEGORIES = ['Article', 'Video', 'Social', 'Design', 'Code', 'Shopping', 'Note', 'Image', 'File', 'Other'] as const
-type Category = (typeof CATEGORIES)[number]
-
-const CATEGORY_COLORS: Record<Category, string> = {
-  Article: '#4D6A51',
-  Video: '#C0503F',
-  Social: '#3E6E9E',
-  Design: '#A86B9A',
-  Code: '#5B6470',
-  Shopping: '#C08A2E',
-  Note: '#7A9A6B',
-  Image: '#2E8C8C',
-  File: '#8A7560',
-  Other: '#A9B0A9',
-}
-
-const DOMAIN_RULES: [Category, string[]][] = [
-  ['Video', ['youtube.com', 'youtu.be', 'vimeo.com', 'loom.com', 'twitch.tv', 'tiktok.com']],
-  ['Social', ['x.com', 'twitter.com', 'instagram.com', 'linkedin.com', 'threads.net', 'reddit.com', 'facebook.com', 'bsky.app', 'mastodon.social']],
-  ['Design', ['dribbble.com', 'behance.net', 'figma.com', 'pinterest.com', 'awwwards.com', 'mobbin.com', 'framer.com', 'savee.it']],
-  ['Code', ['github.com', 'gitlab.com', 'stackoverflow.com', 'dev.to', 'npmjs.com', 'vercel.com', 'developer.mozilla.org', 'codepen.io']],
-  ['Shopping', ['amazon.in', 'amazon.com', 'flipkart.com', 'myntra.com', 'etsy.com', 'meesho.com', 'ajio.com']],
-]
-
-function emptyCounts(): Record<Category, number> {
-  return Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<Category, number>
-}
-
-function categorize(type: string | null, url: string | null): Category {
-  const t = (type ?? '').toLowerCase()
-  if (t.includes('note') || t === 'text') return 'Note'
-  if (t.includes('image') || t.includes('photo')) return 'Image'
-  if (t.includes('file') || t.includes('pdf') || t.includes('doc')) return 'File'
-  if (!url) return 'Other'
-
-  let host: string
-  let path: string
-  try {
-    const u = new URL(url)
-    host = u.hostname.replace(/^www\./, '').toLowerCase()
-    path = u.pathname.toLowerCase()
-  } catch {
-    return 'Other'
-  }
-  if (/\.(png|jpe?g|gif|webp|avif|svg)$/.test(path)) return 'Image'
-  if (/\.(pdf|docx?|pptx?|xlsx?|zip)$/.test(path)) return 'File'
-  for (const [cat, domains] of DOMAIN_RULES) {
-    if (domains.some((d) => host === d || host.endsWith('.' + d))) return cat
-  }
-  return 'Article'
-}
-
-// ---------------------------------------------------------------------------
-// Small helpers
-// ---------------------------------------------------------------------------
-const dateFmt = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })
-const shortDateFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
-const dayKeyFmt = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Kolkata' })
-const dayKey = (ms: number) => dayKeyFmt.format(new Date(ms)) // "2026-10-08" in India time
-const shortDay = (key: string) => shortDateFmt.format(new Date(`${key}T12:00:00+05:30`))
-
-function ago(ms: number | null) {
-  if (!ms) return '—'
-  const s = Math.max(0, (Date.now() - ms) / 1000)
-  if (s < 60) return 'just now'
+function ago(ms: number | null, now: number) {
+  if (!ms) return 'Never'
+  const s = Math.max(0, (now - ms) / 1000)
+  if (s < 60) return 'Just now'
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`
   if (s < 30 * 86400) return `${Math.floor(s / 86400)}d ago`
-  return shortDateFmt.format(new Date(ms))
+  return shortFmt.format(new Date(ms))
 }
 
-function displayName(u: User): string | null {
+function meta(u: User, ...keys: string[]) {
   const m = (u.user_metadata ?? {}) as Record<string, unknown>
-  const name = m.full_name ?? m.name
-  return typeof name === 'string' && name.trim() ? name.trim() : null
+  for (const k of keys) {
+    const v = m[k]
+    if (typeof v === 'string' && v.trim()) return v.trim()
+  }
+  return null
 }
 
-function avatarOf(u: User): string | null {
-  const m = (u.user_metadata ?? {}) as Record<string, unknown>
-  const pic = m.avatar_url ?? m.picture
-  return typeof pic === 'string' ? pic : null
-}
-
-// Turns a long user-agent string into something short like "iPhone · Safari".
+// "iPhone · Safari" from a long user-agent string.
 function shortDevice(ua: string | null) {
   if (!ua) return 'Unknown device'
   const device =
@@ -141,23 +100,13 @@ function shortDevice(ua: string | null) {
   return `${device} · ${browser}`
 }
 
-function adminHref(q: { tab?: Tab; type?: FeedbackType | null; sort?: Sort; page?: number }) {
-  const p = new URLSearchParams()
-  if (q.tab && q.tab !== 'overview') p.set('tab', q.tab)
-  if (q.type) p.set('type', q.type)
-  if (q.sort && q.sort !== 'active') p.set('sort', q.sort)
-  if (q.page && q.page > 1) p.set('page', String(q.page))
-  const s = p.toString()
-  return s ? `/admin?${s}` : '/admin'
-}
-
 async function fetchAllSaves(admin: ReturnType<typeof createAdminClient>) {
   const rows: SaveRow[] = []
   const STEP = 1000 // Supabase returns at most 1000 rows per request
   for (let from = 0; from < MAX_SAVES; from += STEP) {
     const { data, error } = await admin
       .from('bookmarks')
-      .select('user_id, type, url, created_at')
+      .select('user_id, type, category, created_at')
       .order('created_at', { ascending: false })
       .range(from, from + STEP - 1)
     if (error) {
@@ -170,42 +119,10 @@ async function fetchAllSaves(admin: ReturnType<typeof createAdminClient>) {
   return { rows, capped: rows.length >= MAX_SAVES }
 }
 
-type UserStat = {
-  id: string
-  email: string | null
-  name: string | null
-  avatar: string | null
-  joinedMs: number
-  lastSignInMs: number | null
-  total: number
-  week: number
-  lastSaveMs: number | null
-  byCat: Record<Category, number>
-}
-
-// ---------------------------------------------------------------------------
-// Shared styles
-// ---------------------------------------------------------------------------
-const CARD = 'p-5 rounded-2xl bg-white dark:bg-[#1A1D1A] border border-black/[0.04] dark:border-white/[0.04]'
-const EYEBROW = 'text-[10px] uppercase tracking-[0.2em] text-[#737B73] dark:text-[#8F998F] font-bold'
-const MUTED = 'text-[#737B73] dark:text-[#8F998F]'
-const PILL = 'px-3 py-1.5 rounded-full text-[10px] uppercase tracking-widest border transition-colors'
-const PILL_ON = 'bg-[#4D6A51] text-white border-[#4D6A51] dark:bg-[#E2E8F0] dark:text-[#1A202C] dark:border-[#E2E8F0]'
-const PILL_OFF = 'border-black/[0.06] dark:border-white/[0.08] text-[#737B73] dark:text-[#8F998F] hover:bg-black/5 dark:hover:bg-white/5'
-
-const TYPE_STYLES: Record<FeedbackType, string> = {
-  idea: 'bg-[#E8EFE5] text-[#4D6A51] dark:bg-[#202820] dark:text-[#8FAA91]',
-  problem: 'bg-[#FBE9E7] text-[#B23A2E] dark:bg-[#2A1B19] dark:text-[#E8907F]',
-  other: 'bg-[#F1EEE6] text-[#737B73] dark:bg-[#22251F] dark:text-[#A9B0A9]',
-}
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; type?: string; sort?: string; page?: string }>
+  searchParams: Promise<{ tab?: string; type?: string; page?: string }>
 }) {
   // 1. Who is asking? Normal (cookie) client, exactly like the dashboard.
   const supabase = await createClient()
@@ -213,507 +130,191 @@ export default async function AdminPage({
   if (!user) redirect('/login')
   if (!isAdmin(user.id)) notFound() // non-admins see a plain 404
 
-  // 2. Read the URL (?tab=users&sort=saves&page=2).
+  // 2. Read the URL (?tab=feedback&type=problem&page=2).
   const params = await searchParams
-  const tab: Tab = TABS.includes(params.tab as Tab) ? (params.tab as Tab) : 'overview'
-  const sort: Sort = SORTS.includes(params.sort as Sort) ? (params.sort as Sort) : 'active'
-  const type = TYPES.includes(params.type as FeedbackType) ? (params.type as FeedbackType) : null
+  const tab: AdminTab = (ADMIN_TABS as readonly string[]).includes(params.tab ?? '') ? (params.tab as AdminTab) : 'overview'
+  const fbType: FeedbackType | null = (FEEDBACK_TYPES as readonly string[]).includes(params.type ?? '')
+    ? (params.type as FeedbackType)
+    : null
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
 
   // 3. Everything below uses the secret key and skips RLS. Safe only because of the check above.
   const admin = createAdminClient()
   const now = Date.now()
   const weekAgoMs = now - 7 * DAY
-  const weekAgoIso = new Date(weekAgoMs).toISOString()
 
   let feedbackQuery = admin
     .from('feedback')
     .select('id, user_id, type, message, user_agent, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * FEEDBACK_PAGE_SIZE, page * FEEDBACK_PAGE_SIZE - 1)
-  if (type) feedbackQuery = feedbackQuery.eq('type', type)
+  if (fbType) feedbackQuery = feedbackQuery.eq('type', fbType)
 
   const [usersRes, savesRes, saveCountRes, feedbackRes, weekFeedbackRes, typeCountRes] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     fetchAllSaves(admin),
     admin.from('bookmarks').select('*', { count: 'exact', head: true }),
     feedbackQuery,
-    admin.from('feedback').select('*', { count: 'exact', head: true }).gte('created_at', weekAgoIso),
-    Promise.all(TYPES.map((t) => admin.from('feedback').select('*', { count: 'exact', head: true }).eq('type', t))),
+    admin.from('feedback').select('*', { count: 'exact', head: true }).gte('created_at', new Date(weekAgoMs).toISOString()),
+    Promise.all(FEEDBACK_TYPES.map((t) => admin.from('feedback').select('*', { count: 'exact', head: true }).eq('type', t))),
   ])
 
-  // 4. Build per-user stats.
+  // 4. Per-person numbers.
   const userList: User[] = usersRes.error ? [] : usersRes.data.users
-  const stats = new Map<string, UserStat>()
+  type Acc = { user: AdminUser; folderSet: Set<string>; organized: number; lastSignInMs: number | null }
+  const acc = new Map<string, Acc>()
   for (const u of userList) {
-    stats.set(u.id, {
-      id: u.id,
-      email: u.email ?? null,
-      name: displayName(u),
-      avatar: avatarOf(u),
-      joinedMs: new Date(u.created_at).getTime(),
+    acc.set(u.id, {
+      user: {
+        id: u.id,
+        email: u.email ?? null,
+        name: meta(u, 'full_name', 'name'),
+        avatar: meta(u, 'avatar_url', 'picture'),
+        total: 0,
+        week: 0,
+        groups: emptyGroups(),
+        folders: 0,
+        organizedPct: 0,
+        lastSaveMs: null,
+        joinedMs: new Date(u.created_at).getTime(),
+        lastSaveLabel: '',
+        joinedLabel: '',
+        lastSignInLabel: '',
+      },
+      folderSet: new Set(),
+      organized: 0,
       lastSignInMs: u.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : null,
-      total: 0,
-      week: 0,
-      lastSaveMs: null,
-      byCat: emptyCounts(),
     })
   }
 
-  const catTotals = emptyCounts()
+  const groupTotals = emptyGroups()
+  const rawByGroup = new Map<GroupKey, Map<string, number>>()
   const savesByDay = new Map<string, number>()
-  let savesThisWeek = 0
+  let savesWeek = 0
+  let organized = 0
+  let inbox = 0
+  let unsorted = 0
+
   for (const s of savesRes.rows) {
-    const cat = categorize(s.type, s.url)
+    const raw = (s.type || 'link').toLowerCase() // null is treated as link, same as the dashboard
+    const group = TYPE_TO_GROUP.get(raw) ?? 'other'
+    groupTotals[group]++
+    const inner = rawByGroup.get(group) ?? new Map<string, number>()
+    inner.set(raw, (inner.get(raw) ?? 0) + 1)
+    rawByGroup.set(group, inner)
+
+    const folder = s.category?.trim() || 'Uncategorized'
+    const inFolder = !NOT_A_FOLDER.has(folder)
+    if (inFolder) organized++
+    else if (folder === 'Inbox') inbox++
+    else unsorted++
+
     const ms = new Date(s.created_at).getTime()
     const inWeek = ms >= weekAgoMs
-    catTotals[cat]++
-    if (inWeek) savesThisWeek++
+    if (inWeek) savesWeek++
     const k = dayKey(ms)
     savesByDay.set(k, (savesByDay.get(k) ?? 0) + 1)
-    const st = stats.get(s.user_id)
-    if (st) {
-      st.total++
-      if (inWeek) st.week++
-      st.byCat[cat]++
-      if (!st.lastSaveMs || ms > st.lastSaveMs) st.lastSaveMs = ms
+
+    const a = acc.get(s.user_id)
+    if (a) {
+      a.user.total++
+      if (inWeek) a.user.week++
+      a.user.groups[group]++
+      if (inFolder) {
+        a.organized++
+        a.folderSet.add(folder)
+      }
+      if (!a.user.lastSaveMs || ms > a.user.lastSaveMs) a.user.lastSaveMs = ms
     }
   }
+
+  const users: AdminUser[] = [...acc.values()].map((a) => ({
+    ...a.user,
+    folders: a.folderSet.size,
+    organizedPct: a.user.total ? Math.round((a.organized / a.user.total) * 100) : 0,
+    lastSaveLabel: ago(a.user.lastSaveMs, now),
+    joinedLabel: shortFmt.format(new Date(a.user.joinedMs)),
+    lastSignInLabel: ago(a.lastSignInMs, now),
+  }))
 
   const signupsByDay = new Map<string, number>()
-  for (const st of stats.values()) {
-    const k = dayKey(st.joinedMs)
-    signupsByDay.set(k, (signupsByDay.get(k) ?? 0) + 1)
-  }
+  for (const u of users) signupsByDay.set(dayKey(u.joinedMs), (signupsByDay.get(dayKey(u.joinedMs)) ?? 0) + 1)
 
-  const allUsers = [...stats.values()]
-  const userTotal = usersRes.error ? null : (usersRes.data as { total?: number }).total || userList.length
-  const newUsersWeek = allUsers.filter((u) => u.joinedMs >= weekAgoMs).length
-  const activeWeek = allUsers.filter((u) => u.week > 0).length
-  const everSaved = allUsers.filter((u) => u.total > 0).length
-  const saveTotal = saveCountRes.count ?? savesRes.rows.length
+  const last30 = Array.from({ length: 30 }, (_, i) => now - (29 - i) * DAY)
+  const series = (m: Map<string, number>) =>
+    last30.map((ms) => {
+      const day = dayKey(ms)
+      return { day, label: shortFmt.format(new Date(ms)), count: m.get(day) ?? 0 }
+    })
 
-  const last30 = Array.from({ length: 30 }, (_, i) => dayKey(now - (29 - i) * DAY))
-  const savesSeries = last30.map((d) => ({ day: d, count: savesByDay.get(d) ?? 0 }))
-  const signupSeries = last30.map((d) => ({ day: d, count: signupsByDay.get(d) ?? 0 }))
+  // 5. Feedback.
+  if (feedbackRes.error) console.error('admin feedback failed:', feedbackRes.error.message)
+  const fbRows = feedbackRes.error ? [] : ((feedbackRes.data ?? []) as FeedbackRow[])
+  const emails = new Map<string, string | null>(users.map((u) => [u.id, u.email]))
+  const missing = [...new Set(fbRows.map((r) => r.user_id))].filter((id) => !emails.has(id))
+  await Promise.all(
+    missing.map(async (id) => {
+      const { data } = await admin.auth.admin.getUserById(id)
+      emails.set(id, data.user?.email ?? null)
+    }),
+  )
+  const feedbackItems: FeedbackItem[] = fbRows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    message: r.message,
+    email: emails.get(r.user_id) ?? null,
+    dateLabel: fullFmt.format(new Date(r.created_at)),
+    device: shortDevice(r.user_agent),
+    userAgent: r.user_agent,
+  }))
+  const fbCounts = Object.fromEntries(
+    FEEDBACK_TYPES.map((t, i) => [t, typeCountRes[i].count ?? 0]),
+  ) as Record<FeedbackType, number>
 
-  const catList = CATEGORIES.map((c) => ({ cat: c, count: catTotals[c] }))
-    .filter((c) => c.count > 0)
-    .sort((a, b) => b.count - a.count)
-  const catSum = catList.reduce((n, c) => n + c.count, 0)
-
-  const sortedUsers = [...allUsers].sort((a, b) => {
-    if (sort === 'saves') return b.total - a.total || (b.lastSaveMs ?? 0) - (a.lastSaveMs ?? 0)
-    if (sort === 'joined') return b.joinedMs - a.joinedMs
-    return (b.lastSaveMs ?? 0) - (a.lastSaveMs ?? 0) || (b.lastSignInMs ?? 0) - (a.lastSignInMs ?? 0)
-  })
-  const topThisWeek = [...allUsers].filter((u) => u.week > 0).sort((a, b) => b.week - a.week).slice(0, 5)
-
-  // Feedback numbers
-  const typeCounts = Object.fromEntries(TYPES.map((t, i) => [t, typeCountRes[i].count ?? 0])) as Record<FeedbackType, number>
-  const allFeedback = TYPES.reduce((n, t) => n + typeCounts[t], 0)
-  const weekFeedback = weekFeedbackRes.count ?? 0
-
-  // Emails for feedback authors outside the first 1000 users (rare).
-  const emails = new Map<string, string | null>(allUsers.map((u) => [u.id, u.email]))
-  const feedbackRows = tab === 'feedback' && !feedbackRes.error ? ((feedbackRes.data ?? []) as FeedbackRow[]) : []
-  if (tab === 'feedback') {
-    if (feedbackRes.error) {
-      console.error('admin feedback failed:', feedbackRes.error.message)
-      throw new Error('Could not load feedback')
-    }
-    const missing = [...new Set(feedbackRows.map((r) => r.user_id))].filter((id) => !emails.has(id))
-    await Promise.all(
-      missing.map(async (id) => {
-        const { data } = await admin.auth.admin.getUserById(id)
-        emails.set(id, data.user?.email ?? null)
-      }),
-    )
-  }
-
-  const headline = [
-    { label: 'Users', value: userTotal, sub: `+${newUsersWeek} this week` },
-    {
-      label: 'Active · 7 days',
-      value: activeWeek,
-      sub: userTotal ? `${Math.round((activeWeek / userTotal) * 100)}% of users saved something` : '',
+  const data: AdminData = {
+    tab,
+    updatedLabel: timeFmt.format(new Date(now)),
+    capped: savesRes.capped,
+    maxSaves: MAX_SAVES,
+    headline: {
+      users: usersRes.error ? null : (usersRes.data as { total?: number }).total || userList.length,
+      newUsersWeek: users.filter((u) => u.joinedMs >= weekAgoMs).length,
+      activeWeek: users.filter((u) => u.week > 0).length,
+      saves: saveCountRes.count ?? savesRes.rows.length,
+      savesWeek,
+      everSaved: users.filter((u) => u.total > 0).length,
     },
-    { label: 'Saves', value: saveTotal, sub: `+${savesThisWeek} this week` },
-    {
-      label: 'Saves per user',
-      value: everSaved ? Math.round(saveTotal / everSaved) : 0,
-      sub: `${everSaved} of ${userTotal ?? '—'} have saved`,
+    savesSeries: series(savesByDay),
+    signupSeries: series(signupsByDay),
+    groups: GROUP_KEYS.map((key) => ({
+      key,
+      total: groupTotals[key],
+      raw: [...(rawByGroup.get(key) ?? new Map<string, number>()).entries()]
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count),
+    })),
+    groupTotal: savesRes.rows.length,
+    folders: {
+      organized,
+      inbox,
+      unsorted,
+      usersWithFolders: [...acc.values()].filter((a) => a.folderSet.size > 0).length,
     },
-  ]
-
-  const tabs: { value: Tab; label: string; badge?: number }[] = [
-    { value: 'overview', label: 'Overview' },
-    { value: 'users', label: 'Users', badge: userTotal ?? undefined },
-    { value: 'feedback', label: 'Feedback', badge: weekFeedback || undefined },
-  ]
-
-  return (
-    <div className="min-h-screen font-sans bg-[#FBF9F4] dark:bg-[#151815] text-[#171A17] dark:text-[#F3F0E9] transition-colors">
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-10 sm:py-14">
-        {/* Header */}
-        <div className="flex items-end justify-between gap-4 mb-8">
-          <div>
-            <p className={`${EYEBROW} mb-2`}>inntoit</p>
-            <h1 className="text-3xl sm:text-4xl font-serif">Admin</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <AdminAutoRefresh />
-            <Link
-              href="/dashboard"
-              className={`text-[10px] uppercase tracking-widest ${MUTED} hover:text-[#171A17] dark:hover:text-[#F3F0E9] transition-colors`}
-            >
-              ← Dashboard
-            </Link>
-          </div>
-        </div>
-
-        {/* Headline numbers */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          {headline.map((s) => (
-            <div key={s.label} className={CARD}>
-              <p className={`${EYEBROW} mb-2`}>{s.label}</p>
-              <p className="text-3xl font-serif tabular-nums">{s.value === null ? '—' : s.value.toLocaleString('en-IN')}</p>
-              {s.sub && <p className={`text-[11px] mt-1 ${MUTED}`}>{s.sub}</p>}
-            </div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <nav className="flex gap-6 border-b border-black/[0.06] dark:border-white/[0.08] mb-8">
-          {tabs.map((t) => {
-            const active = t.value === tab
-            return (
-              <Link
-                key={t.value}
-                href={adminHref({ tab: t.value })}
-                className={`pb-3 -mb-px text-[11px] uppercase tracking-widest border-b-2 transition-colors ${
-                  active
-                    ? 'border-[#4D6A51] dark:border-[#8FAA91] text-[#171A17] dark:text-[#F3F0E9] font-bold'
-                    : `border-transparent ${MUTED} hover:text-[#171A17] dark:hover:text-[#F3F0E9]`
-                }`}
-              >
-                {t.label}
-                {t.badge !== undefined && <span className="ml-1.5 tabular-nums opacity-60">{t.badge}</span>}
-              </Link>
-            )
-          })}
-        </nav>
-
-        {savesRes.capped && (
-          <p className="mb-6 text-[11px] text-[#B23A2E] dark:text-[#E8907F]">
-            Showing stats for the newest {MAX_SAVES.toLocaleString('en-IN')} saves only. Time to move these counts into a SQL function.
-          </p>
-        )}
-
-        {/* ---------------- Overview ---------------- */}
-        {tab === 'overview' && (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <DailyBars label="Saves per day" data={savesSeries} />
-              <DailyBars label="New users per day" data={signupSeries} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <div className={`${CARD} md:col-span-3`}>
-                <p className={`${EYEBROW} mb-4`}>What people save</p>
-                {catSum === 0 ? (
-                  <p className={`text-sm ${MUTED}`}>No saves yet.</p>
-                ) : (
-                  <>
-                    <StackedBar counts={catTotals} total={catSum} height="h-2.5" />
-                    <ul className="mt-5 flex flex-col gap-2.5">
-                      {catList.map((c) => (
-                        <li key={c.cat} className="flex items-center gap-3 text-sm">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[c.cat] }} />
-                          <span className="w-20 shrink-0">{c.cat}</span>
-                          <div className="flex-1 h-1.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${(c.count / catSum) * 100}%`, backgroundColor: CATEGORY_COLORS[c.cat] }}
-                            />
-                          </div>
-                          <span className="w-24 text-right tabular-nums text-[12px]">
-                            {c.count.toLocaleString('en-IN')}
-                            <span className={`ml-1.5 ${MUTED}`}>{Math.round((c.count / catSum) * 100)}%</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-
-              <div className={`${CARD} md:col-span-2`}>
-                <p className={`${EYEBROW} mb-4`}>Most active this week</p>
-                {topThisWeek.length === 0 ? (
-                  <p className={`text-sm ${MUTED}`}>Nobody has saved anything in the last 7 days.</p>
-                ) : (
-                  <ul className="flex flex-col gap-3">
-                    {topThisWeek.map((u) => (
-                      <li key={u.id} className="flex items-center gap-3">
-                        <Avatar user={u} size="w-8 h-8" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm truncate">{u.name ?? u.email ?? 'Unknown'}</p>
-                          <StackedBar counts={u.byCat} total={u.total} height="h-1 mt-1" />
-                        </div>
-                        <span className="text-sm tabular-nums">{u.week}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link
-                  href={adminHref({ tab: 'users' })}
-                  className={`inline-block mt-5 text-[10px] uppercase tracking-widest ${MUTED} hover:text-[#171A17] dark:hover:text-[#F3F0E9]`}
-                >
-                  All users →
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ---------------- Users ---------------- */}
-        {tab === 'users' && (() => {
-          const totalPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PAGE_SIZE))
-          const pageUsers = sortedUsers.slice((page - 1) * USERS_PAGE_SIZE, page * USERS_PAGE_SIZE)
-          const sorts: { value: Sort; label: string }[] = [
-            { value: 'active', label: 'Last active' },
-            { value: 'saves', label: 'Most saves' },
-            { value: 'joined', label: 'Newest' },
-          ]
-          return (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                <h2 className="text-xl font-serif">Users</h2>
-                <div className="flex flex-wrap gap-2">
-                  {sorts.map((s) => (
-                    <Link key={s.value} href={adminHref({ tab: 'users', sort: s.value })} className={`${PILL} ${s.value === sort ? PILL_ON : PILL_OFF}`}>
-                      {s.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {pageUsers.length === 0 ? (
-                <div className={`p-10 rounded-2xl border border-dashed border-black/[0.08] dark:border-white/[0.08] text-center text-sm ${MUTED}`}>
-                  No users yet.
-                </div>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {pageUsers.map((u) => (
-                    <UserCard key={u.id} u={u} />
-                  ))}
-                </ul>
-              )}
-
-              <Pager
-                page={page}
-                totalPages={totalPages}
-                prev={adminHref({ tab: 'users', sort, page: page - 1 })}
-                next={adminHref({ tab: 'users', sort, page: page + 1 })}
-              />
-            </>
-          )
-        })()}
-
-        {/* ---------------- Feedback ---------------- */}
-        {tab === 'feedback' && (() => {
-          const filteredTotal = feedbackRes.count ?? 0
-          const totalPages = Math.max(1, Math.ceil(filteredTotal / FEEDBACK_PAGE_SIZE))
-          const filters: { label: string; value: FeedbackType | null; count: number }[] = [
-            { label: 'All', value: null, count: allFeedback },
-            { label: 'Ideas', value: 'idea', count: typeCounts.idea },
-            { label: 'Problems', value: 'problem', count: typeCounts.problem },
-            { label: 'Other', value: 'other', count: typeCounts.other },
-          ]
-          return (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                <h2 className="text-xl font-serif">
-                  Feedback <span className={`text-sm ${MUTED}`}>· {weekFeedback} in the last 7 days</span>
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {filters.map((f) => (
-                    <Link
-                      key={f.label}
-                      href={adminHref({ tab: 'feedback', type: f.value })}
-                      className={`${PILL} ${f.value === type ? PILL_ON : PILL_OFF}`}
-                    >
-                      {f.label} <span className="tabular-nums opacity-70">{f.count}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {feedbackRows.length === 0 ? (
-                <div className={`p-10 rounded-2xl border border-dashed border-black/[0.08] dark:border-white/[0.08] text-center text-sm ${MUTED}`}>
-                  No feedback here yet.
-                </div>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {feedbackRows.map((r) => {
-                    const email = emails.get(r.user_id)
-                    return (
-                      <li key={r.id} className={CARD}>
-                        <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-[11px] ${MUTED}`}>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest font-bold ${TYPE_STYLES[r.type]}`}>
-                            {r.type}
-                          </span>
-                          {email ? (
-                            <a href={`mailto:${email}`} className="hover:text-[#4D6A51] dark:hover:text-[#8FAA91] underline-offset-2 hover:underline">
-                              {email}
-                            </a>
-                          ) : (
-                            <span>Deleted user</span>
-                          )}
-                          <span aria-hidden>·</span>
-                          <time dateTime={r.created_at}>{dateFmt.format(new Date(r.created_at))}</time>
-                          <span aria-hidden>·</span>
-                          <span title={r.user_agent ?? undefined}>{shortDevice(r.user_agent)}</span>
-                        </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{r.message}</p>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-
-              <Pager
-                page={page}
-                totalPages={totalPages}
-                prev={adminHref({ tab: 'feedback', type, page: page - 1 })}
-                next={adminHref({ tab: 'feedback', type, page: page + 1 })}
-              />
-            </>
-          )
-        })()}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Pieces
-// ---------------------------------------------------------------------------
-function Avatar({ user, size }: { user: Pick<UserStat, 'avatar' | 'name' | 'email'>; size: string }) {
-  const initial = (user.name ?? user.email ?? '?').charAt(0).toUpperCase()
-  if (user.avatar) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={user.avatar} alt="" referrerPolicy="no-referrer" className={`${size} rounded-full object-cover shrink-0`} />
-    )
+    users,
+    feedback: {
+      rows: feedbackItems,
+      type: fbType,
+      page,
+      totalPages: Math.max(1, Math.ceil((feedbackRes.count ?? 0) / FEEDBACK_PAGE_SIZE)),
+      counts: fbCounts,
+      all: FEEDBACK_TYPES.reduce((n, t) => n + fbCounts[t], 0),
+      week: weekFeedbackRes.count ?? 0,
+    },
   }
+
   return (
-    <span className={`${size} rounded-full shrink-0 grid place-items-center text-xs font-bold bg-[#E8EFE5] text-[#4D6A51] dark:bg-[#202820] dark:text-[#8FAA91]`}>
-      {initial}
-    </span>
-  )
-}
-
-function StackedBar({ counts, total, height }: { counts: Record<Category, number>; total: number; height: string }) {
-  if (total === 0) return <div className={`${height} rounded-full bg-black/[0.04] dark:bg-white/[0.06]`} />
-  return (
-    <div className={`${height} flex rounded-full overflow-hidden bg-black/[0.04] dark:bg-white/[0.06]`}>
-      {CATEGORIES.filter((c) => counts[c] > 0).map((c) => (
-        <div key={c} title={`${c}: ${counts[c]}`} style={{ width: `${(counts[c] / total) * 100}%`, backgroundColor: CATEGORY_COLORS[c] }} />
-      ))}
-    </div>
-  )
-}
-
-function DailyBars({ label, data }: { label: string; data: { day: string; count: number }[] }) {
-  const max = Math.max(1, ...data.map((d) => d.count))
-  const total = data.reduce((n, d) => n + d.count, 0)
-  return (
-    <div className={CARD}>
-      <div className="flex items-baseline justify-between mb-4">
-        <p className={EYEBROW}>{label}</p>
-        <p className={`text-[11px] tabular-nums ${MUTED}`}>{total.toLocaleString('en-IN')} in 30 days</p>
-      </div>
-      <div className="flex items-end gap-[3px] h-28">
-        {data.map((d) => (
-          <div key={d.day} title={`${shortDay(d.day)}: ${d.count}`} className="flex-1 h-full flex items-end">
-            <div
-              className="w-full rounded-sm bg-[#4D6A51] dark:bg-[#8FAA91]"
-              style={{ height: d.count ? `${Math.max(6, (d.count / max) * 100)}%` : '2px', opacity: d.count ? 1 : 0.2 }}
-            />
-          </div>
-        ))}
-      </div>
-      <div className={`flex justify-between mt-2 text-[10px] ${MUTED}`}>
-        <span>{shortDay(data[0].day)}</span>
-        <span>Today</span>
-      </div>
-    </div>
-  )
-}
-
-function UserCard({ u }: { u: UserStat }) {
-  const top = CATEGORIES.filter((c) => u.byCat[c] > 0)
-    .sort((a, b) => u.byCat[b] - u.byCat[a])
-    .slice(0, 3)
-  const cells = [
-    { label: 'Saves', value: u.total.toLocaleString('en-IN') },
-    { label: '7 days', value: u.week.toLocaleString('en-IN') },
-    { label: 'Last save', value: ago(u.lastSaveMs) },
-    { label: 'Joined', value: shortDateFmt.format(new Date(u.joinedMs)) },
-  ]
-  return (
-    <li className={CARD}>
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-        {/* Who */}
-        <div className="flex items-center gap-3 min-w-0 lg:w-64 shrink-0">
-          <Avatar user={u} size="w-10 h-10" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate" title={u.lastSignInMs ? `Last signed in ${dateFmt.format(new Date(u.lastSignInMs))}` : undefined}>
-              {u.name ?? 'No name'}
-            </p>
-            {u.email ? (
-              <a href={`mailto:${u.email}`} className={`block text-[11px] truncate ${MUTED} hover:text-[#4D6A51] dark:hover:text-[#8FAA91]`}>
-                {u.email}
-              </a>
-            ) : (
-              <p className={`text-[11px] ${MUTED}`}>No email</p>
-            )}
-          </div>
-        </div>
-
-        {/* Numbers */}
-        <div className="grid grid-cols-4 gap-3 lg:w-80 shrink-0">
-          {cells.map((c) => (
-            <div key={c.label}>
-              <p className={`text-[9px] uppercase tracking-widest ${MUTED}`}>{c.label}</p>
-              <p className="text-sm tabular-nums mt-0.5">{c.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* What they save */}
-        <div className="flex-1 min-w-0">
-          <StackedBar counts={u.byCat} total={u.total} height="h-1.5" />
-          <p className={`mt-2 text-[11px] ${MUTED} truncate`}>
-            {top.length === 0
-              ? 'No saves yet'
-              : top.map((c) => `${c} ${Math.round((u.byCat[c] / u.total) * 100)}%`).join(' · ')}
-          </p>
-        </div>
-      </div>
-    </li>
-  )
-}
-
-function Pager({ page, totalPages, prev, next }: { page: number; totalPages: number; prev: string; next: string }) {
-  if (totalPages <= 1) return null
-  return (
-    <div className={`flex items-center justify-between mt-8 text-[10px] uppercase tracking-widest ${MUTED}`}>
-      {page > 1 ? <Link href={prev} className="hover:text-[#171A17] dark:hover:text-[#F3F0E9]">← Previous</Link> : <span />}
-      <span className="tabular-nums">Page {page} of {totalPages}</span>
-      {page < totalPages ? <Link href={next} className="hover:text-[#171A17] dark:hover:text-[#F3F0E9]">Next →</Link> : <span />}
+    <div className={serif.variable}>
+      <AdminView data={data} />
     </div>
   )
 }
