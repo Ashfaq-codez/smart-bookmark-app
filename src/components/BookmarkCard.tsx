@@ -144,24 +144,25 @@ export default function BookmarkCard({
   const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;
 
-  const initialStep = (bookmark.image_url || ytHighResThumbnail) ? 0 : 1;
+  const imageSrc = bookmark.image_url || (bookmark.type === 'image' ? bookmark.url : null);
+  const initialStep = (imageSrc || ytHighResThumbnail) ? 0 : 1;
   const [fallbackStep, setFallbackStep] = useState(initialStep);
 
   useEffect(() => {
-    setFallbackStep((bookmark.image_url || ytHighResThumbnail) ? 0 : 1);
-  }, [bookmark.image_url, ytHighResThumbnail]);
+    setFallbackStep((imageSrc || ytHighResThumbnail) ? 0 : 1);
+  }, [imageSrc, ytHighResThumbnail]);
 
  const previewImageUrl = useMemo(() => {
     if (displayType === 'google') return undefined;
 
     // Step 0: DB Image or YouTube Thumb
     if (fallbackStep === 0) {
-      return ytHighResThumbnail || bookmark.image_url || undefined;
+      return ytHighResThumbnail || imageSrc || undefined;
     }
     // No more third-party screenshot services (they showed "not authorized" and leaked saved addresses).
     // Without a saved image the card shows the site's icon instead.
     return undefined; // Triggers Favicon UI
-  }, [bookmark.image_url, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
+  }, [imageSrc, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const previewHtml = bookmark.content_preview ?? bookmark.content ?? '';

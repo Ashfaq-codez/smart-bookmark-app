@@ -376,7 +376,8 @@ useEffect(() => {
       else if (file.type === 'application/pdf') type = 'pdf'
 
       const { error: dbError } = await supabase.from('bookmarks').insert([{
-        user_id: user.id, title: file.name, url: publicUrl, type: type, file_path: fileName, file_type: file.type
+        user_id: user.id, title: file.name, url: publicUrl, type: type, file_path: fileName, file_type: file.type,
+        ...(type === 'image' && { image_url: publicUrl })
       }])
 
       if (dbError) throw dbError
