@@ -36,9 +36,17 @@ const TOOLBAR_COMMANDS = [
 const SLASH_COMMANDS = [
   ...TOOLBAR_COMMANDS.map(cmd => ({
     ...cmd,
-    command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range); cmd.command({ editor }); }
+    command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).run(); cmd.command({ editor }); }
   }))
 ]
+
+// Resolve the "/query" trigger range from the live selection at the moment a command is chosen
+const getSlashRange = (editor: any) => {
+  const { $head, from } = editor.state.selection
+  const textBefore = $head.parent.textBetween(0, $head.parentOffset, undefined, '\ufffc')
+  const match = textBefore.match(/(?:^|\s)(\/([a-zA-Z]*))$/)
+  return match ? { from: from - match[1].length, to: from } : { from, to: from }
+}
 
 export default function TipTapEditor({ 
   value, 
@@ -157,7 +165,7 @@ export default function TipTapEditor({
         e.preventDefault()
         e.stopPropagation()
         if (filteredCommands.length > 0 && editor) {
-          filteredCommands[selectedIndex].command({ editor, range })
+          filteredCommands[selectedIndex].command({ editor, range: getSlashRange(editor) })
         }
         setMenuOpen(false)
       } else if (e.key === 'Escape') {
@@ -226,7 +234,7 @@ export default function TipTapEditor({
               onMouseDown={(e) => {
                 e.preventDefault()
                 if (editor) {
-                  cmd.command({ editor, range })
+                  cmd.command({ editor, range: getSlashRange(editor) })
                 }
                 setMenuOpen(false)
               }}
