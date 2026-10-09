@@ -176,7 +176,7 @@ export default function EditorialModal({
                   <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
                   <div className="p-6 md:p-8 flex flex-col gap-5 relative z-20 pointer-events-auto">
                     <div className="text-[15px] font-sans text-[#F3F0E9] leading-relaxed whitespace-pre-wrap relative z-20 pointer-events-auto">
-                      {renderTwitterText(bookmark.description || bookmark.content || bookmark.title || '', true)}
+                      {renderTwitterText(bookmark.description || bookmark.title || '', true)}
                     </div>
                     {bookmark.image_url && (
                       <div className="w-full relative rounded-xl overflow-hidden border border-white/5 bg-black/20">

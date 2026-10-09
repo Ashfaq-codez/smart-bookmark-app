@@ -220,7 +220,7 @@ export default function BookmarkCard({
             <div className="absolute top-0 left-0 w-full h-[3px] bg-[#1DA1F2]" />
             <div className="text-[#0f1419] dark:text-[#e7e9ea] mt-1 pl-1"><XIcon /></div>
             <div className="text-[13px] sm:text-[14px] font-sans text-[#171A17] dark:text-[#F3F0E9] line-clamp-6 w-full leading-relaxed whitespace-pre-wrap px-1 relative z-20 pointer-events-auto">
-              {renderTwitterText(bookmark.description || previewHtml || bookmark.title || '', false)}
+              {renderTwitterText(bookmark.description || bookmark.title || '', false)}
             </div>
             {bookmark.image_url && (
               <div className="w-full mt-1 relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
