@@ -30,6 +30,11 @@ const compat = new FlatCompat({
 const eslintConfig = [
   // This safely loads the Next.js rules without triggering module resolution errors
   ...compat.extends("next/core-web-vitals"),
+  // Folders made by tools (builds, installed packages) are not our source code, so lint skips them.
+  // The browser extension (smart-bookmarks-ext) has no build output: its files are plain source, so it is still linted.
+  {
+    ignores: [".next/**", "node_modules/**", "out/**", "build/**", "next-env.d.ts"],
+  },
 ];
 
 export default eslintConfig;
