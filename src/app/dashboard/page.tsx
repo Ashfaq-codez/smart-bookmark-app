@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import BookmarkList from '@/components/BookmarkList'
+import BookmarkList from '@/components/bookmark-list/BookmarkList'
 import { Bookmark } from '@/types'
 import { LIST_COLUMNS, PAGE_SIZE, MAX_PINS, EMPTY_STATS, BookmarkStats } from '@/lib/bookmarkQuery'
 import { sanitizePrefs } from '@/lib/preferences'

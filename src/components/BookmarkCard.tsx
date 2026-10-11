@@ -13,7 +13,7 @@ import {
 import { 
   isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta, getGoogleQuery 
 } from '@/utils/bookmarkHelpers';
-import EditorialModal from './EditorialModal'
+import EditorialModal from './editorial-modal/EditorialModal'
 import PinIcon from './PinIcon'
 import { TYPE_META } from './TypeIcons'
 
