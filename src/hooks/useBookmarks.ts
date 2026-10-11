@@ -7,6 +7,7 @@ import {
   PAGE_SIZE, MAX_PINS, LIST_COLUMNS, ListQuery, BookmarkStats, buildListQuery, rowMatchesQuery, escapeLike,
 } from '@/lib/bookmarkQuery'
 import { applyToList, applyToPins } from '@/lib/bookmarkOrder'
+import { requestDelete, requestContentUpdate } from '@/lib/bookmarkRequests'
 import toast from 'react-hot-toast'
 
 // Realtime keeps the list in sync while the tab is open. After a long sleep the websocket may have missed events,
@@ -217,8 +218,8 @@ export const useBookmarks = ({
 
   // ---------- delete ----------
   const deleteBookmark = async (id: number) => {
-    const { error } = await supabase.from('bookmarks').delete().eq('id', id)
-    if (error) { toast.error('Failed to delete'); return }
+    // The server removes the row and its uploaded file. "gone" = already deleted elsewhere, so no error.
+    if ((await requestDelete(id)) === 'failed') { toast.error('Failed to delete'); return }
     setBookmarks((prev) => prev.filter((b) => b.id !== id))
     setPins((prev) => prev.filter((b) => b.id !== id))
     setPinned((prev) => prev.filter((b) => b.id !== id))
@@ -231,16 +232,33 @@ export const useBookmarks = ({
     const payload = { ...updates }
     if (payload.url) payload.url = normalizeUrl(payload.url)
 
-    const { error } = await supabase.from('bookmarks').update(payload).eq('id', id)
-    if (error) {
-      if (error.code === '23505') { toast.error('A bookmark with this URL already exists.'); return }
-      toast.error('Failed to update')
-      return
+    // The note body goes through the server first, which cleans the HTML and sends back what it stored.
+    // If that fails, nothing else is saved.
+    let savedContent: string | null | undefined
+    if ('content' in payload) {
+      const result = await requestContentUpdate(id, payload.content ?? null)
+      if (!result.ok) {
+        toast.error(result.tooLong ? 'Note is too long' : 'Failed to update')
+        return
+      }
+      savedContent = result.content
+      delete payload.content
+    }
+
+    // Everything else is saved directly. If this fails, the content change above is kept.
+    let failed = false
+    if (Object.keys(payload).length > 0) {
+      const { error } = await supabase.from('bookmarks').update(payload).eq('id', id)
+      if (error) {
+        failed = true
+        toast.error(error.code === '23505' ? 'A bookmark with this URL already exists.' : 'Failed to update')
+      }
     }
 
     // The list holds only a trimmed copy of the note body, so keep it that way locally.
-    const localPatch: Partial<Bookmark> = { ...payload }
-    if ('content' in payload) { localPatch.content_preview = payload.content ?? null; delete localPatch.content }
+    const localPatch: Partial<Bookmark> = failed ? {} : { ...payload }
+    if (savedContent !== undefined) localPatch.content_preview = savedContent
+    if (failed && savedContent === undefined) return
 
     const current = findAnywhere(id)
     if (current) applyChange({ ...current, ...localPatch } as Bookmark)

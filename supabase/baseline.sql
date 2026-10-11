@@ -1,5 +1,5 @@
 -- inntoit: RECONSTRUCTED baseline of the Supabase database (public schema + "attachments" bucket).
--- Built by hand from your schema dump of 2026-10-03 plus 0001 to 0003 (so it shows the state AFTER those files).
+-- Built by hand from your schema dump of 2026-10-03 plus 0001 to 0004 (so it shows the state AFTER those files).
 -- Use it as documentation and to create an empty staging project. It is not a byte-exact dump of production.
 -- Items marked (assumed) could not be read from the dump.
 
@@ -19,7 +19,11 @@ create table if not exists public.bookmarks (
   content      text,
   file_path    text,
   file_type    text,
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+  -- added by 0004: short fingerprint of a note's text, kept up to date by the database (never written by the app)
+  content_fp   text generated always as (
+    case when type = 'note' and content is not null
+         then left(encode(extensions.digest(content, 'sha256'), 'hex'), 16) end) stored
 );
 
 create table if not exists public.api_keys (
@@ -32,6 +36,8 @@ create table if not exists public.api_keys (
 -- ---------- indexes ----------
 create unique index if not exists unique_user_link_url
   on public.bookmarks (user_id, url) where (type = 'link' or type is null);
+-- added by 0004: fast duplicate-note lookup (not unique)
+create index if not exists bookmarks_user_content_fp_idx on public.bookmarks (user_id, content_fp) where content_fp is not null;
 create index if not exists bookmarks_user_created_idx on public.bookmarks (user_id, created_at desc, id desc);
 create index if not exists bookmarks_user_category_idx on public.bookmarks (user_id, category, sub_category);
 create index if not exists bookmarks_tags_gin_idx on public.bookmarks using gin (tags);

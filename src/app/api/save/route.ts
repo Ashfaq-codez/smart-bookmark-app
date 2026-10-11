@@ -129,10 +129,11 @@ export async function POST(request: Request) {
     
     const detectedType: string = (cleanUrl && isLink && detectSiteType(cleanUrl)) || itemType;
 
-    if (cleanUrl) {
+    // Notes are checked by their text even when they arrive without an address.
+    if (cleanUrl || (itemType === 'note' && finalContent)) {
       let existingRecord = null;
 
-      if (isLink) {
+      if (isLink && cleanUrl) {
         const rawFlexiblePath = cleanUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('#')[0];
 
         // Safe candidate URLs matching without PostgREST syntax injection risk
@@ -180,11 +181,12 @@ export async function POST(request: Request) {
           .select('id, title, url')
           .eq('user_id', userId)
           .eq('type', 'note')
-          .eq('content', finalContent)
+          // content_fp is a short fingerprint the database keeps up to date from the stored text (never written here)
+          .eq('content_fp', sha256(finalContent).slice(0, 16))
           .limit(1)
           .maybeSingle();
         existingRecord = data;
-      } else {
+      } else if (cleanUrl) {
         const { data } = await supabase
           .from('bookmarks')
           .select('id, title, url')

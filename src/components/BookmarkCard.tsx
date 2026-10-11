@@ -132,7 +132,6 @@ export default function BookmarkCard({
   }, [isModalOpen, bookmark.id])
 
   const handleDelete = async (id: number) => {
-    if (bookmark.file_path) await supabase.storage.from('attachments').remove([bookmark.file_path])
     await deleteBookmark(id);
     handleCloseModal();
   }

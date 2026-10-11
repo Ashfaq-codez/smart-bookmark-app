@@ -306,6 +306,34 @@ describe('POST /api/save: notes and files', () => {
     expect(fake.inserted).toHaveLength(0)
   })
 
+  it('finds duplicate notes by their short fingerprint, not by comparing the whole text', async () => {
+    const fake = loggedIn()
+    await post({ type: 'note', url: 'https://example.com/a', content: '<p>x</p>' })
+    const fp = crypto.createHash('sha256').update('<p>x</p>').digest('hex').slice(0, 16)
+    expect(fake.bookmarkFilters).toContainEqual(['content_fp', fp])
+    expect(fake.bookmarkFilters.some(([col]) => col === 'content')).toBe(false)
+  })
+
+  it('also checks for duplicates when a note arrives without an address', async () => {
+    const fake = loggedIn({ existing: { id: 3, title: '', url: 'https://smart-bookmark.internal/note-1' } })
+    const res = await post({ type: 'note', content: '<p>x</p>' })
+    expect(res.status).toBe(409)
+    expect(fake.inserted).toHaveLength(0)
+  })
+
+  it('fingerprints the cleaned text, because that is what gets stored', async () => {
+    const fake = loggedIn()
+    await post({ type: 'note', content: '<p onclick="x()">Hi</p><script>alert(1)</script>' })
+    const fp = crypto.createHash('sha256').update('<p>Hi</p>').digest('hex').slice(0, 16)
+    expect(fake.bookmarkFilters).toContainEqual(['content_fp', fp])
+  })
+
+  it('never writes content_fp (the database fills it in)', async () => {
+    const fake = loggedIn()
+    await post({ type: 'note', content: '<p>x</p>' })
+    expect(fake.inserted[0]).not.toHaveProperty('content_fp')
+  })
+
   it('gives saved images a default title', async () => {
     const fake = loggedIn()
     await post({ type: 'image', url: 'https://cdn.example.com/a.png' })
