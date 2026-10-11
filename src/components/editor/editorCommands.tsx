@@ -1,22 +1,29 @@
+import { ReactNode } from 'react'
+import type { Editor } from '@tiptap/core'
 import { H1Icon, H2Icon, ListIcon, TaskIcon, QuoteIcon, CodeIcon, TableIcon, DividerIcon } from './EditorIcons'
 
-export const TOOLBAR_COMMANDS = [
-  { title: 'Heading 1', icon: <H1Icon />, command: ({ editor }: any) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-  { title: 'Heading 2', icon: <H2Icon />, command: ({ editor }: any) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-  { title: 'Bullet List', icon: <ListIcon />, command: ({ editor }: any) => editor.chain().focus().toggleBulletList().run() },
-  { title: 'Task List', icon: <TaskIcon />, command: ({ editor }: any) => editor.chain().focus().toggleTaskList().run() },
-  { title: 'Blockquote', icon: <QuoteIcon />, command: ({ editor }: any) => editor.chain().focus().toggleBlockquote().run() },
-  { title: 'Code Block', icon: <CodeIcon />, command: ({ editor }: any) => editor.chain().focus().toggleCodeBlock().run() },
-  { title: 'Table', icon: <TableIcon />, command: ({ editor }: any) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
-  { title: 'Divider', icon: <DividerIcon />, command: ({ editor }: any) => editor.chain().focus().setHorizontalRule().run() },
+// Each block adds its own step to a chain that already holds "delete the typed /text".
+// The slash menu then runs the whole chain once, so it is ONE edit and ONE Ctrl+Z undoes all of it.
+type Chain = ReturnType<Editor['chain']>
+
+const BLOCK_COMMANDS: { title: string; icon: ReactNode; apply: (chain: Chain) => Chain }[] = [
+  { title: 'Heading 1', icon: <H1Icon />, apply: chain => chain.toggleHeading({ level: 1 }) },
+  { title: 'Heading 2', icon: <H2Icon />, apply: chain => chain.toggleHeading({ level: 2 }) },
+  { title: 'Bullet List', icon: <ListIcon />, apply: chain => chain.toggleBulletList() },
+  { title: 'Task List', icon: <TaskIcon />, apply: chain => chain.toggleTaskList() },
+  { title: 'Blockquote', icon: <QuoteIcon />, apply: chain => chain.toggleBlockquote() },
+  { title: 'Code Block', icon: <CodeIcon />, apply: chain => chain.toggleCodeBlock() },
+  { title: 'Table', icon: <TableIcon />, apply: chain => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }) },
+  { title: 'Divider', icon: <DividerIcon />, apply: chain => chain.setHorizontalRule() },
 ]
 
-export const SLASH_COMMANDS = [
-  ...TOOLBAR_COMMANDS.map(cmd => ({
-    ...cmd,
-    command: ({ editor, range }: any) => { editor.chain().focus().deleteRange(range).run(); cmd.command({ editor }); }
-  }))
-]
+export const SLASH_COMMANDS = BLOCK_COMMANDS.map(cmd => ({
+  title: cmd.title,
+  icon: cmd.icon,
+  // `range` is the "/text" to remove; it must be read at the moment of choosing (see getSlashRange).
+  command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
+    cmd.apply(editor.chain().focus().deleteRange(range)).run(),
+}))
 
 export type SlashCommand = (typeof SLASH_COMMANDS)[number]
 
