@@ -6,10 +6,7 @@ import { normalizeUrl, detectSiteType } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
-
-// Most saves one person may make per minute through this route. Counted from the bookmarks table itself,
-// so it needs no extra service. (Notes and links typed in the dashboard also go through here.)
-const MAX_SAVES_PER_MINUTE = 60;
+import { isOverSaveLimit } from '@/lib/saveLimit';
 
 // The page details are read after the answer is sent; give that background work room to finish.
 export const maxDuration = 30;
@@ -112,13 +109,8 @@ export async function POST(request: Request) {
       userId = user.id;
     }
 
-    // Save limit per person. If the count itself fails we let the save through rather than block a real user.
-    const { count: recentSaves, error: countError } = await supabase
-      .from('bookmarks')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', new Date(Date.now() - 60_000).toISOString());
-    if (!countError && (recentSaves ?? 0) >= MAX_SAVES_PER_MINUTE) {
+    // Save limit per person (shared with file uploads).
+    if (await isOverSaveLimit(supabase, userId)) {
       return NextResponse.json(
         { error: 'Too many saves. Please wait a minute and try again.' },
         { status: 429, headers: { ...corsHeaders(origin), 'Retry-After': '60' } }

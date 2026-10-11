@@ -30,3 +30,23 @@ export async function requestContentUpdate(id: number, content: string | null, d
     return { ok: false, tooLong: false }
   }
 }
+
+export type UploadResult = 'saved' | 'limited' | 'failed'
+
+// Step 2 of a file upload: the file is already in storage, now ask the server to create its bookmark (it checks the save limit).
+export async function requestUploadBookmark(
+  file: { path: string; type: string; title: string },
+  doFetch: typeof fetch = fetch,
+): Promise<UploadResult> {
+  try {
+    const res = await doFetch('/api/bookmarks/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_path: file.path, file_type: file.type, title: file.title }),
+    })
+    if (res.ok) return 'saved'
+    return res.status === 429 ? 'limited' : 'failed'
+  } catch {
+    return 'failed'
+  }
+}

@@ -15,6 +15,7 @@ import BookmarkCard from '@/components/BookmarkCard'
 import BookmarkSkeleton from '@/components/BookmarkSkeleton'
 import TipTapEditor from '@/components/TipTapEditor'
 import { toast } from 'react-hot-toast'
+import { requestUploadBookmark } from '@/lib/bookmarkRequests'
 import { deriveDisplayType } from '@/utils/bookmarkHelpers'
 import { normalizeUrl } from '@/utils/normalizeUrl'
 import WelcomeGuide from '@/components/WelcomeGuide'
@@ -368,19 +369,15 @@ useEffect(() => {
       const { error: uploadError } = await supabase.storage.from('attachments').upload(fileName, file)
       if (uploadError) throw uploadError
 
-      const { data: { publicUrl } } = supabase.storage.from('attachments').getPublicUrl(fileName)
-
-      let type = 'file'
-      if (file.type.startsWith('image/')) type = 'image'
-      else if (file.type.startsWith('video/')) type = 'video'
-      else if (file.type === 'application/pdf') type = 'pdf'
-
-      const { error: dbError } = await supabase.from('bookmarks').insert([{
-        user_id: user.id, title: file.name, url: publicUrl, type: type, file_path: fileName, file_type: file.type,
-        ...(type === 'image' && { image_url: publicUrl })
-      }])
-
-      if (dbError) throw dbError
+      // The server checks the save limit and creates the bookmark. If it says no, the file is not kept.
+      const result = await requestUploadBookmark({ path: fileName, type: file.type, title: file.name })
+      if (result !== 'saved') {
+        await supabase.storage.from('attachments').remove([fileName])
+        toast.error(result === 'limited'
+          ? 'You are saving very fast. Please wait a minute, then try again.'
+          : 'Upload failed.')
+        return
+      }
       toast.success('Document archived successfully')
     } catch (err) {
       toast.error('Upload failed.')

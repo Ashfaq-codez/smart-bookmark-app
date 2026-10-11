@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { requestDelete, requestContentUpdate } from '@/lib/bookmarkRequests'
+import { requestDelete, requestContentUpdate, requestUploadBookmark } from '@/lib/bookmarkRequests'
 
 const reply = (status: number, body: any = {}) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })) as unknown as typeof fetch
 
@@ -42,5 +42,23 @@ describe('requestContentUpdate', () => {
     expect(await requestContentUpdate(7, 'x', reply(413))).toEqual({ ok: false, tooLong: true })
     expect(await requestContentUpdate(7, 'x', reply(500))).toEqual({ ok: false, tooLong: false })
     expect(await requestContentUpdate(7, 'x', vi.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch)).toEqual({ ok: false, tooLong: false })
+  })
+})
+
+describe('requestUploadBookmark', () => {
+  const file = { path: 'user-1/a.png', type: 'image/png', title: 'a.png' }
+
+  it('posts the file details and reports success', async () => {
+    const f = reply(200, { success: true })
+    expect(await requestUploadBookmark(file, f)).toBe('saved')
+    const [url, init] = (f as any).mock.calls[0]
+    expect(url).toBe('/api/bookmarks/upload')
+    expect(JSON.parse(init.body)).toEqual({ file_path: 'user-1/a.png', file_type: 'image/png', title: 'a.png' })
+  })
+
+  it('reports "limited" for 429 and "failed" for anything else', async () => {
+    expect(await requestUploadBookmark(file, reply(429))).toBe('limited')
+    expect(await requestUploadBookmark(file, reply(500))).toBe('failed')
+    expect(await requestUploadBookmark(file, vi.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch)).toBe('failed')
   })
 })
