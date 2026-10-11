@@ -16,6 +16,7 @@ import {
   InstaShareIcon,
   InstaSaveIcon
 } from '@/components/BookmarkIcons'
+import { Sun, Moon } from 'lucide-react'
 
 const IMG = {
   reel: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=700&auto=format&fit=crop&q=80',
@@ -431,9 +432,9 @@ export default function HomePage() {
               className="w-9 h-9 rounded-full flex items-center justify-center border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all text-[#111311] dark:text-white bg-white/50 dark:bg-black/40"
             >
               {isDarkMode ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                <Sun size={14} strokeWidth={2} />
               ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <Moon size={14} strokeWidth={2} />
               )}
             </button>
 

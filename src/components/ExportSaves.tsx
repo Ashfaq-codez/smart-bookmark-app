@@ -5,13 +5,14 @@ import { useState, type ReactNode } from 'react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/utils/supabase/client'
 import { fetchAllSaves, buildJson, buildBookmarksHtml, downloadFile, stamp } from '@/lib/exportSaves'
+import { Archive, Globe, Download, LoaderCircle } from 'lucide-react'
 
 type Kind = 'json' | 'html'
 
-const ArchiveIcon = () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1.5" /><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>
-const GlobeIcon = () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" /></svg>
-const DownloadIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11" /><path d="M7 10l5 5 5-5" /><path d="M5 20h14" /></svg>
-const Spinner = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+const ArchiveIcon = () => <Archive size={17} strokeWidth={1.9} />
+const GlobeIcon = () => <Globe size={17} strokeWidth={1.9} />
+const DownloadIcon = () => <Download size={15} strokeWidth={2} />
+const Spinner = () => <LoaderCircle size={16} strokeWidth={2} className="animate-spin" />
 
 const OPTIONS: { kind: Kind; title: string; hint: string; icon: ReactNode; tile: string }[] = [
   { kind: 'json', title: 'Full backup', hint: 'Saves and notes · .json', icon: <ArchiveIcon />, tile: 'bg-[#4D6A51]/10 text-[#4D6A51] dark:bg-[#8FAA91]/15 dark:text-[#8FAA91]' },

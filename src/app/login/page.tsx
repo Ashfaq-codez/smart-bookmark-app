@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { Bookmark } from 'lucide-react'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -44,9 +45,7 @@ export default function LoginPage() {
         
         <div className="flex flex-col items-center text-center">
           <div className="w-12 h-12 mb-6 rounded-2xl bg-[#FAF9F5] dark:bg-[#0F120F] border border-black/[0.04] dark:border-white/[0.04] flex items-center justify-center shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-[#171A17] dark:stroke-[#F3F0E9] stroke-[1.5px]">
-              <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinejoin="round" strokeLinecap="round"/>
-            </svg>
+            <Bookmark strokeWidth={1.5} className="w-6 h-6 text-[#171A17] dark:text-[#F3F0E9]" />
           </div>
           
           <h2 className="text-2xl md:text-3xl font-serif text-[#171A17] dark:text-[#F3F0E9] leading-tight">

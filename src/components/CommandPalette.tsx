@@ -5,20 +5,18 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TYPE_META } from './TypeIcons'
+import { Search, Plus, Upload, Calendar, Captions, Compass, Folder } from 'lucide-react'
 
 export type Command = { id: string; group: string; label: string; hint?: string; run: () => void }
 export type SaveHit = { id: number; title: string; url: string }
 
-const Svg = ({ children }: { children: ReactNode }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
-)
-const SearchI = () => <Svg><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></Svg>
-const PlusI = () => <Svg><path d="M12 5v14M5 12h14" /></Svg>
-const UploadI = () => <Svg><path d="M12 16V4" /><path d="M7 9l5-5 5 5" /><path d="M5 20h14" /></Svg>
-const CalendarI = () => <Svg><rect x="3" y="4" width="18" height="17" rx="2.5" /><path d="M16 2v4M8 2v4M3 10h18" /></Svg>
-const CardI = () => <Svg><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M7 14h8M7 17h5" /></Svg>
-const CompassI = () => <Svg><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></Svg>
-const FolderI = () => <Svg><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></Svg>
+const SearchI = () => <Search size={16} strokeWidth={1.9} />
+const PlusI = () => <Plus size={16} strokeWidth={1.9} />
+const UploadI = () => <Upload size={16} strokeWidth={1.9} />
+const CalendarI = () => <Calendar size={16} strokeWidth={1.9} />
+const CardI = () => <Captions size={16} strokeWidth={1.9} />
+const CompassI = () => <Compass size={16} strokeWidth={1.9} />
+const FolderI = () => <Folder size={16} strokeWidth={1.9} />
 
 const KBD = 'inline-flex items-center justify-center min-w-[1.4rem] h-5 px-1.5 rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-white/[0.06] text-[10px] font-medium text-[#171A17]/55 dark:text-white/55'
 const neutral = 'text-[#171A17]/60 dark:text-white/60'

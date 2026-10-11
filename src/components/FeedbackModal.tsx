@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { X } from 'lucide-react'
 
 const MAX_CHARS = 2000
 
@@ -80,7 +81,7 @@ export default function FeedbackModal({ onClose, mod = 'Ctrl' }: { onClose: () =
             aria-label="Close"
             className="p-1.5 -mr-1.5 rounded-lg text-[#171A17]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            <X size={16} strokeWidth={2} />
           </button>
         </div>
 

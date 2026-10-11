@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TYPE_META } from './TypeIcons'
 import PinIcon from './PinIcon'
+import { Folder, Search, Paperclip, X } from 'lucide-react'
 
 const Kbd = ({ children }: { children: ReactNode }) => (
   <kbd className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-md border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/[0.06] text-[11px] font-sans font-medium text-[#171A17]/70 dark:text-white/70 align-middle">{children}</kbd>
@@ -12,18 +13,10 @@ const Kbd = ({ children }: { children: ReactNode }) => (
 
 const panel = 'rounded-xl bg-white dark:bg-[#151815] border border-black/[0.06] dark:border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.06)]'
 
-const FolderGlyph = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-)
-const SearchGlyph = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-)
-const ClipGlyph = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-)
-const CloseGlyph = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
-)
+const FolderGlyph = () => <Folder size={14} strokeWidth={1.8} />
+const SearchGlyph = () => <Search size={15} strokeWidth={2} />
+const ClipGlyph = () => <Paperclip size={18} strokeWidth={2} />
+const CloseGlyph = () => <X size={16} strokeWidth={2} />
 
 const TypeTile = ({ k, label }: { k: string; label?: string }) => {
   const { Icon, tint } = TYPE_META[k]
