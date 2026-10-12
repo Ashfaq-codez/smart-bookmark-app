@@ -216,6 +216,12 @@ export const useBookmarks = ({
     }
   }, [supabase, loadFirstPage, refreshStats, scheduleStats, findAnywhere, applyChange])
 
+  // ---------- reload (after a change made outside this hook, e.g. moving many saves to another folder) ----------
+  const reload = useCallback(() => {
+    loadFirstPage(queryRef.current)
+    refreshStats()
+  }, [loadFirstPage, refreshStats])
+
   // ---------- delete ----------
   const deleteBookmark = async (id: number) => {
     // The server removes the row and its uploaded file. "gone" = already deleted elsewhere, so no error.
@@ -306,6 +312,6 @@ export const useBookmarks = ({
 
   return {
     bookmarks, pins, pinned, hasMore, isFetching, isLoadingMore, stats,
-    loadMore, updateBookmark, deleteBookmark, togglePin, pinById, clearPinned, searchSaves,
+    loadMore, updateBookmark, deleteBookmark, togglePin, pinById, clearPinned, searchSaves, reload,
   }
 }

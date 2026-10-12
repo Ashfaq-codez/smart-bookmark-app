@@ -160,8 +160,8 @@ export default function Sidebar(props: SidebarProps) {
                     <span className="text-sm truncate">{parentFolder}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {props.customCategories.includes(parentFolder) && (
-                      <button aria-label={`Delete folder ${parentFolder}`} onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="opacity-0 group-hover:opacity-100 text-[#E53E3E] transition-opacity">
+                    {parentFolder !== 'Uncategorized' && (
+                      <button aria-label={`Delete folder ${parentFolder}`} onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="p-1 -m-1 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 text-[#E53E3E] transition-opacity">
                         <SmallXIcon />
                       </button>
                     )}

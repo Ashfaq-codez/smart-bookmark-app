@@ -22,6 +22,7 @@ import PageHeader from './PageHeader'
 import BookmarkGrid from './BookmarkGrid'
 import CaptureComposer from './CaptureComposer'
 import DuplicateDialog from './DuplicateDialog'
+import DeleteFolderDialog from './DeleteFolderDialog'
 import { FilterChip } from './FilterChips'
 import { mediaTypeLabels } from './listHelpers'
 
@@ -66,14 +67,14 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
   )
   const {
     bookmarks, pins, pinned, hasMore, isFetching, isLoadingMore, stats,
-    loadMore, updateBookmark, deleteBookmark, togglePin, pinById, clearPinned, searchSaves,
+    loadMore, updateBookmark, deleteBookmark, togglePin, pinById, clearPinned, searchSaves, reload,
   } = useBookmarks({ initialBookmarks, initialPins, initialHasMore, initialStats, query })
 
   const { gridRef, columnsCount, isLoading } = useGridColumns(userColPreference)
   const { isUploading, fileInputRef, handleFileUpload } = useFileUpload()
   const capture = useQuickCapture({ bookmarks, onDuplicate: setDuplicateMatch })
   const { openCapture } = capture
-  const folders = useFolders({ stats, activeFilter, setActiveFilter, setActiveSubFilter, updateBookmark })
+  const folders = useFolders({ stats, activeFilter, setActiveFilter, setActiveSubFilter, updateBookmark, onItemsChanged: reload })
   const { folderHierarchy, getCounts } = folders
 
   const mod = useListShortcuts({
@@ -232,6 +233,8 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
       {feedbackOpen && <FeedbackModal mod={mod} onClose={() => setFeedbackOpen(false)} />}
 
       {paletteOpen && <CommandPalette commands={commands} search={searchSaves} onClose={() => setPaletteOpen(false)} onPick={(b) => { clearAll(); showSave(b.id) }} />}
+
+      <DeleteFolderDialog {...folders.deleteFolderDialog} />
 
       {duplicateMatch && (
         <DuplicateDialog
