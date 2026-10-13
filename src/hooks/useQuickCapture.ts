@@ -16,17 +16,20 @@ export function useQuickCapture({ bookmarks, onDuplicate, isEscapeBlocked }: {
   const captureBarRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)     // the main "Paste a link or write a note" button
   const openerRef = useRef<HTMLElement | null>(null)     // whatever had focus when the pop-up was opened
+  const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)   // the short wait before the editor is focused
 
   const openCapture = useCallback(() => {
     const active = document.activeElement
     openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null
     setIsExpanded(true)
-    setTimeout(() => captureBarRef.current?.querySelector<HTMLElement>('.tiptap')?.focus(), 120)
+    clearTimeout(focusTimer.current)
+    focusTimer.current = setTimeout(() => captureBarRef.current?.querySelector<HTMLElement>('.tiptap')?.focus(), 120)
   }, [])
 
   // Closes the pop-up and hands focus back to the button that opened it (or the main capture button if that is gone).
   // The text stays in `inputValue`, so it is still there as a draft when the pop-up is opened again.
   const closeCapture = useCallback(() => {
+    clearTimeout(focusTimer.current)     // closed before the editor was focused: do not focus it (and reopen) afterwards
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     setIsExpanded(false)
     const opener = openerRef.current
@@ -174,12 +177,14 @@ export function useQuickCapture({ bookmarks, onDuplicate, isEscapeBlocked }: {
 
   // Esc closes the pop-up. It only listens while the pop-up is open.
   // If a slash menu, palette, dropdown or dialog is open, Esc was meant for that one, so the pop-up stays.
+  // (Do not skip Esc events that are "already handled": the editor engine marks EVERY Esc typed in it that way.
+  // The slash menu stops its own Esc from getting here, and the palette and dialogs are covered by isEscapeBlocked.)
   const blockedRef = useRef(isEscapeBlocked)
   useEffect(() => { blockedRef.current = isEscapeBlocked })
   useEffect(() => {
     if (!isExpanded) return
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented || blockedRef.current()) return
+      if (e.key !== 'Escape' || e.isComposing || blockedRef.current()) return
       e.preventDefault()
       closeCapture()
     }
