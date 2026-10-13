@@ -3,6 +3,7 @@
 import React from 'react'
 import { useTheme } from '@/context/ThemeContext'
 import ProfileDropdown from './ProfileDropdown'
+import FolderRow, { ROW_END_SLOT } from './FolderRow'
 import { Plus, X, Folder, House, Moon, Sun, PanelLeftOpen, PanelLeftClose, Compass, ArrowRight } from 'lucide-react'
 
 const PlusIcon = () => <Plus size={14} strokeWidth={1.5} />
@@ -134,13 +135,16 @@ export default function Sidebar(props: SidebarProps) {
         <div className="flex flex-col flex-1 mt-2">
           <div
             onClick={() => { props.setActiveFilter('All'); props.setActiveSubFilter(null); props.setIsMobileMenuOpen(false); }}
-            className={`flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${props.activeFilter === 'All' ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
+            className={`flex items-center justify-between gap-2 px-6 py-2 cursor-pointer transition-colors ${props.activeFilter === 'All' ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
           >
             <div className="flex items-center gap-3">
                <HomeIcon />
                <span className="text-sm">All</span>
             </div>
-            <span className="text-[10px] text-[#A0A6A0]">{props.getCounts['All'] || 0}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="min-w-[2ch] text-right tabular-nums text-[10px] text-[#A0A6A0]">{props.getCounts['All'] || 0}</span>
+              <span className={ROW_END_SLOT} aria-hidden="true" />
+            </div>
           </div>
 
           {Object.keys(props.folderHierarchy).map(parentFolder => {
@@ -150,24 +154,16 @@ export default function Sidebar(props: SidebarProps) {
 
             return (
               <div key={parentFolder} className="flex flex-col">
-                <div
-                  onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder)}
-                  onClick={() => { props.setActiveFilter(parentFolder); props.setActiveSubFilter(null); props.toggleFolderExpand(parentFolder); }}
-                  className={`group flex items-center justify-between px-6 py-2 cursor-pointer transition-colors ${isParentActive && !props.activeSubFilter ? 'text-[#171A17] dark:text-white font-medium bg-black/[0.03] dark:bg-white/[0.03]' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'}`}
-                >
-                  <div className="flex items-center gap-3 overflow-hidden flex-1">
-                    <SmallFolderIcon />
-                    <span className="text-sm truncate">{parentFolder}</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {parentFolder !== 'Uncategorized' && (
-                      <button aria-label={`Delete folder ${parentFolder}`} onClick={(e) => { e.stopPropagation(); props.handleDeleteCategory(parentFolder); }} className="p-1 -m-1 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 text-[#E53E3E] transition-opacity">
-                        <SmallXIcon />
-                      </button>
-                    )}
-                    <span className="text-[10px] text-[#A0A6A0]">{props.getCounts[parentFolder] || 0}</span>
-                  </div>
-                </div>
+                <FolderRow
+                  name={parentFolder}
+                  count={props.getCounts[parentFolder] || 0}
+                  active={isParentActive && !props.activeSubFilter}
+                  icon={<SmallFolderIcon />}
+                  onOpen={() => { props.setActiveFilter(parentFolder); props.setActiveSubFilter(null); props.toggleFolderExpand(parentFolder); }}
+                  onDelete={parentFolder !== 'Uncategorized' ? () => props.handleDeleteCategory(parentFolder) : undefined}
+                  onDragOver={props.handleDragOver}
+                  onDrop={(e) => props.handleDrop(e, parentFolder)}
+                />
 
                 {isExpanded && (
                   <div className="flex flex-col">
@@ -175,8 +171,11 @@ export default function Sidebar(props: SidebarProps) {
                       const isSubActive = isParentActive && props.activeSubFilter === sub;
                       return (
                         <div key={sub} onDragOver={props.handleDragOver} onDrop={(e) => props.handleDrop(e, parentFolder, sub)} onClick={(e) => { e.stopPropagation(); props.setActiveFilter(parentFolder); props.setActiveSubFilter(sub); props.setIsMobileMenuOpen(false); }} className={`flex items-center justify-between pl-12 pr-6 py-1.5 cursor-pointer transition-colors ${isSubActive ? 'text-[#4D6A51] dark:text-[#8FAA91] font-medium' : 'text-[#737B73] hover:text-[#171A17] dark:hover:text-white'}`}>
-                          <span className="text-xs truncate text-[#737B73]">- {sub}</span>
-                          <span className="text-[9px] text-[#A0A6A0]">{props.getCounts[`${parentFolder}::${sub}`] || 0}</span>
+                          <span className="text-xs truncate text-[#737B73]" title={sub}>- {sub}</span>
+                          <div className="flex items-center gap-2 shrink-0 pl-2">
+                            <span className="min-w-[2ch] text-right tabular-nums text-[9px] text-[#A0A6A0]">{props.getCounts[`${parentFolder}::${sub}`] || 0}</span>
+                            <span className={ROW_END_SLOT} aria-hidden="true" />
+                          </div>
                         </div>
                       )
                     })}
