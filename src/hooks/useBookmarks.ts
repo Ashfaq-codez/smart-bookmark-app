@@ -8,12 +8,12 @@ import {
 } from '@/lib/bookmarkQuery'
 import { applyToList, applyToPins } from '@/lib/bookmarkOrder'
 import { requestDelete, requestContentUpdate } from '@/lib/bookmarkRequests'
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import toast from 'react-hot-toast'
 
 // Realtime keeps the list in sync while the tab is open. After a long sleep the websocket may have missed events,
 // so we reload the FIRST PAGE only (never the whole table).
 const STALE_AFTER_MS = 5 * 60 * 1000
-const SEARCH_DEBOUNCE_MS = 250
 
 type SaveHit = { id: number; title: string; url: string }
 
@@ -47,12 +47,7 @@ export const useBookmarks = ({
   const [pinned, setPinned] = useState<Bookmark[]>([])
 
   // --- search is debounced so we don't hit the database on every keystroke ---
-  const [debouncedSearch, setDebouncedSearch] = useState(query.search)
-  useEffect(() => {
-    if (query.search === '') { setDebouncedSearch(''); return }
-    const t = setTimeout(() => setDebouncedSearch(query.search), SEARCH_DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [query.search])
+  const debouncedSearch = useDebouncedSearch(query.search)
 
   const effectiveQuery = useMemo<ListQuery>(
     () => ({ category: query.category, sub: query.sub, mediaType: query.mediaType, search: debouncedSearch, sort: query.sort }),
