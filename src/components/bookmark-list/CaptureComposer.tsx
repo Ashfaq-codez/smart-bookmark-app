@@ -5,11 +5,12 @@ import { KBD } from './listStyles'
 
 // The pop-up where you paste a link, write a note or attach a file (opens from the capture row, N, or the command palette).
 export default function CaptureComposer({
-  isExpanded, setIsExpanded, captureBarRef, inputValue, setInputValue, setIsInputFocused,
+  isExpanded, setIsExpanded, closeCapture, captureBarRef, inputValue, setInputValue, setIsInputFocused,
   fileInputRef, handleFileUpload, isUploading, mod, handleQuickCapture, isSaving,
 }: {
   isExpanded: boolean
   setIsExpanded: (open: boolean) => void
+  closeCapture: () => void      // closes and gives focus back to the button that opened the pop-up
   captureBarRef: RefObject<HTMLDivElement | null>
   inputValue: string
   setInputValue: (html: string) => void
@@ -77,7 +78,7 @@ export default function CaptureComposer({
           </div>
           <button
             aria-label="Close"
-            onClick={() => { setIsExpanded(false); if (document.activeElement instanceof HTMLElement) document.activeElement.blur() }}
+            onClick={closeCapture}
             className="p-2 -mr-2 rounded-lg text-[#171A17]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#171A17] dark:hover:text-white transition-colors"
           ><ClearIcon /></button>
         </div>

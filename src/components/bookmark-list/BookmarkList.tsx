@@ -72,7 +72,12 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
 
   const { gridRef, columnsCount, isLoading } = useGridColumns(userColPreference)
   const { isUploading, fileInputRef, handleFileUpload } = useFileUpload()
-  const capture = useQuickCapture({ bookmarks, onDuplicate: setDuplicateMatch })
+  const capture = useQuickCapture({
+    bookmarks,
+    onDuplicate: setDuplicateMatch,
+    // Esc belongs to whatever is open on top of the pop-up
+    isEscapeBlocked: () => paletteOpen || showGridMenu || guideOpen || feedbackOpen || !!duplicateMatch || !!folders.deleteFolderDialog.folder,
+  })
   const { openCapture } = capture
   const folders = useFolders({ stats, activeFilter, setActiveFilter, setActiveSubFilter, updateBookmark, onItemsChanged: reload })
   const { folderHierarchy, getCounts } = folders
@@ -204,7 +209,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
         <PageHeader
           viewTitle={viewTitle} viewCountLabel={viewCountLabel} viewIsFiltered={viewIsFiltered} stats={stats}
           viewMenu={{ sortOrder, setSortOrder, showGridMenu, setShowGridMenu, userColPreference, setUserColPreference, isMinimalist, toggleMinimalist, isGroupedByDate, setIsGroupedByDate }}
-          openCapture={openCapture} fileInputRef={fileInputRef} isUploading={isUploading}
+          openCapture={openCapture} captureTriggerRef={capture.triggerRef} fileInputRef={fileInputRef} isUploading={isUploading}
           typeTabs={{ activeMediaType, setActiveMediaType, stats, typeCounts }}
           chips={chips} clearAll={clearAll}
         />
@@ -221,7 +226,7 @@ export default function BookmarkList({ initialBookmarks, initialPins, initialHas
         </main>
 
         <CaptureComposer
-          isExpanded={capture.isExpanded} setIsExpanded={capture.setIsExpanded} captureBarRef={capture.captureBarRef}
+          isExpanded={capture.isExpanded} setIsExpanded={capture.setIsExpanded} closeCapture={capture.closeCapture} captureBarRef={capture.captureBarRef}
           inputValue={capture.inputValue} setInputValue={capture.setInputValue} setIsInputFocused={capture.setIsInputFocused}
           fileInputRef={fileInputRef} handleFileUpload={handleFileUpload} isUploading={isUploading}
           mod={mod} handleQuickCapture={capture.handleQuickCapture} isSaving={capture.isSaving}

@@ -6,13 +6,14 @@ import TypeTabs from './TypeTabs'
 import FilterChips, { FilterChip } from './FilterChips'
 
 // Title and count, the sort/view controls, the capture row, the type tabs and the active filter chips.
-export default function PageHeader({ viewTitle, viewCountLabel, viewIsFiltered, stats, viewMenu, openCapture, fileInputRef, isUploading, typeTabs, chips, clearAll }: {
+export default function PageHeader({ viewTitle, viewCountLabel, viewIsFiltered, stats, viewMenu, openCapture, captureTriggerRef, fileInputRef, isUploading, typeTabs, chips, clearAll }: {
   viewTitle: string
   viewCountLabel: string
   viewIsFiltered: boolean
   stats: BookmarkStats
   viewMenu: ComponentProps<typeof ViewMenu>
   openCapture: () => void
+  captureTriggerRef: RefObject<HTMLButtonElement | null>
   fileInputRef: RefObject<HTMLInputElement | null>
   isUploading: boolean
   typeTabs: ComponentProps<typeof TypeTabs>
@@ -31,7 +32,7 @@ export default function PageHeader({ viewTitle, viewCountLabel, viewIsFiltered, 
       </div>
 
       {/* CAPTURE: the one place to add something */}
-      <CaptureRow openCapture={openCapture} fileInputRef={fileInputRef} isUploading={isUploading} />
+      <CaptureRow openCapture={openCapture} triggerRef={captureTriggerRef} fileInputRef={fileInputRef} isUploading={isUploading} />
 
       <TypeTabs {...typeTabs} />
 

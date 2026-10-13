@@ -47,6 +47,7 @@ export function useSlashMenu() {
       setMenuOpen(false)
     } else if (e.key === 'Escape') {
       e.preventDefault()
+      e.stopPropagation()   // this Esc only closes the menu; the pop-up around the editor stays open
       setMenuOpen(false)
     }
   }

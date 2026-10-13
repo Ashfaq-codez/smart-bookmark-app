@@ -4,16 +4,34 @@ import { Bookmark } from '@/types'
 import { normalizeUrl } from '@/utils/normalizeUrl'
 
 // Everything about the "save something" pop-up: what is typed, opening/closing it, and saving it through /api/save.
-export function useQuickCapture({ bookmarks, onDuplicate }: { bookmarks: Bookmark[]; onDuplicate: (existing: Bookmark) => void }) {
+export function useQuickCapture({ bookmarks, onDuplicate, isEscapeBlocked }: {
+  bookmarks: Bookmark[]
+  onDuplicate: (existing: Bookmark) => void
+  isEscapeBlocked: () => boolean     // true while a menu, palette or dialog is open: Esc then belongs to that
+}) {
   const [inputValue, setInputValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const captureBarRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)     // the main "Paste a link or write a note" button
+  const openerRef = useRef<HTMLElement | null>(null)     // whatever had focus when the pop-up was opened
 
   const openCapture = useCallback(() => {
+    const active = document.activeElement
+    openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null
     setIsExpanded(true)
     setTimeout(() => captureBarRef.current?.querySelector<HTMLElement>('.tiptap')?.focus(), 120)
+  }, [])
+
+  // Closes the pop-up and hands focus back to the button that opened it (or the main capture button if that is gone).
+  // The text stays in `inputValue`, so it is still there as a draft when the pop-up is opened again.
+  const closeCapture = useCallback(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    setIsExpanded(false)
+    const opener = openerRef.current
+    const target = opener && opener.isConnected ? opener : triggerRef.current
+    target?.focus({ preventScroll: true })
   }, [])
 
   const handleQuickCapture = async () => {
@@ -154,6 +172,21 @@ export function useQuickCapture({ bookmarks, onDuplicate }: { bookmarks: Bookmar
     return () => window.removeEventListener('keydown', handleShortcut)
   }, [isExpanded])
 
+  // Esc closes the pop-up. It only listens while the pop-up is open.
+  // If a slash menu, palette, dropdown or dialog is open, Esc was meant for that one, so the pop-up stays.
+  const blockedRef = useRef(isEscapeBlocked)
+  useEffect(() => { blockedRef.current = isEscapeBlocked })
+  useEffect(() => {
+    if (!isExpanded) return
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented || blockedRef.current()) return
+      e.preventDefault()
+      closeCapture()
+    }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [isExpanded, closeCapture])
+
   // Smart Scroll Listener: scrolling the page while typing closes the pop-up and drops the keyboard.
   useEffect(() => {
     let startY = 0;
@@ -193,6 +226,6 @@ export function useQuickCapture({ bookmarks, onDuplicate }: { bookmarks: Bookmar
 
   return {
     inputValue, setInputValue, isSaving, isExpanded, setIsExpanded, setIsInputFocused,
-    captureBarRef, openCapture, handleQuickCapture,
+    captureBarRef, triggerRef, openCapture, closeCapture, handleQuickCapture,
   }
 }
