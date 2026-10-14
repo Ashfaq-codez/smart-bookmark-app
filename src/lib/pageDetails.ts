@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
 
-export type PageDetails = { title: string | null; description: string | null; image: string | null };
+export type PageDetails = { title: string | null; description: string | null; image: string | null; canonicalUrl?: string | null };
 
 const EMPTY: PageDetails = { title: null, description: null, image: null };
 
@@ -22,7 +22,11 @@ export async function fetchPageDetails(cleanUrl: string, detectedType: string): 
       let description = data.text || '';
       if (data.qrtURL && !description.includes(data.qrtURL)) description += `\n\n${data.qrtURL}`;
       const media = data.media_extended && data.media_extended.length > 0 ? data.media_extended[0].url : null;
+      // With the handle known, an /i/status/<id> address can become the full x.com/<handle>/status/<id> one.
+      const id = vx.pathname.match(/\/status\/(\d+)/)?.[1];
+      const handle = typeof data.user_screen_name === 'string' && /^[A-Za-z0-9_]{1,15}$/.test(data.user_screen_name) ? data.user_screen_name : null;
       return {
+        canonicalUrl: id && handle ? `https://x.com/${handle}/status/${id}` : null,
         title: `Post by ${data.user_name} (@${data.user_screen_name}) on X`,
         description: description || null,
         image: media || null,

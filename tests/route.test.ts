@@ -486,3 +486,49 @@ describe('POST /api/save: API-key path is scoped to the key\'s user', () => {
     expect(admin.updates[0].filters).toContainEqual(['id', 1])
   })
 })
+
+describe('POST /api/save: X duplicates by status ID', () => {
+  it('looks for the same status ID under any handle, /i/ and twitter.com included', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://x.com/jack/status/20' })
+    const or = fake.orFilters.find(f => f.includes('/status/20'))!
+    expect(or).toBeTruthy()
+    for (const h of ['x.com', 'twitter.com', 'mobile.twitter.com'])
+      expect(or).toContain(`url.ilike.%://${h}/%/status/20`)
+    expect(or).toContain('/status/20?%')
+  })
+
+  it('a /i/status/<id> save is a duplicate of a saved handle URL', async () => {
+    loggedIn({ existing: { id: 5, title: 'Old', url: 'https://x.com/jack/status/20' } })
+    const res = await post({ url: 'https://x.com/i/status/20' })
+    expect(res.status).toBe(409)
+  })
+
+  it('upgrades an /i/status/<id> address to the full handle form once the post is read', async () => {
+    const fake = loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    await post({ url: 'https://x.com/i/status/20' })
+    await finishBackgroundWork()
+    expect(fake.updates[0].patch.url).toBe('https://x.com/jack/status/20')
+    expect(fake.updates[0].filters).toContainEqual(['user_id', 'user-1'])
+  })
+
+  it('leaves a handle address as it is', async () => {
+    const fake = loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    await post({ url: 'https://x.com/jack/status/20' })
+    await finishBackgroundWork()
+    expect(fake.updates[0].patch.url).toBe(undefined)
+  })
+
+  it('ignores a handle that is not a valid X handle', async () => {
+    const fake = loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'J', user_screen_name: 'bad/handle' })))
+    await post({ url: 'https://x.com/i/status/20' })
+    await finishBackgroundWork()
+    expect(fake.updates[0].patch.url).toBe(undefined)
+  })
+})

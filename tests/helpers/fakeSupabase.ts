@@ -15,6 +15,7 @@ export function fakeSupabase(opts: FakeOptions = {}) {
   const inserted: any[] = []
   const updates: { patch: any; filters: [string, any][] }[] = []   // later changes made to a saved row
   const eqCalls: [string, any][] = []   // filters used on the api_keys table
+  const orFilters: string[] = []   // raw .or(...) filter strings used on bookmarks
   const bookmarkFilters: [string, any][] = []   // filters used when looking up bookmarks
 
   const from = (table: string) => {
@@ -40,7 +41,7 @@ export function fakeSupabase(opts: FakeOptions = {}) {
         return chain
       },
       in: () => chain,
-      or: () => chain,
+      or: (f: string) => { orFilters.push(f); return chain },
       ilike: () => chain,
       limit: () => chain,
       insert: (rows: any[]) => { isInsert = true; inserted.push(...rows); return chain },
@@ -62,5 +63,5 @@ export function fakeSupabase(opts: FakeOptions = {}) {
     from,
     auth: { getUser: async () => ({ data: { user: opts.user ?? null }, error: null }) },
   }
-  return { client, inserted, updates, eqCalls, bookmarkFilters }
+  return { client, inserted, updates, eqCalls, bookmarkFilters, orFilters }
 }

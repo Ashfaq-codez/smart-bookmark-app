@@ -271,6 +271,7 @@ export async function POST(request: Request) {
         if (!givenTitle && details.title) patch.title = details.title;
         if (!customDesc && details.description) patch.description = details.description;
         if (!customImg && details.image) patch.image_url = details.image;
+        if (details.canonicalUrl && cleanUrl.startsWith('https://x.com/i/status/')) patch.url = details.canonicalUrl;
         if (Object.keys(patch).length === 0) return;
         const { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
         if (error) console.error('[after-save] update failed:', error.message);

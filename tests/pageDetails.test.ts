@@ -33,7 +33,7 @@ describe('fetchPageDetails', () => {
       media_extended: [{ url: 'https://pbs.example/pic.jpg' }],
     }), { status: 200 }))
     const d = await fetchPageDetails('https://x.com/ann/status/1', 'twitter')
-    expect(d).toEqual({ title: 'Post by Ann (@ann) on X', description: 'hello world', image: 'https://pbs.example/pic.jpg' })
+    expect(d).toEqual({ title: 'Post by Ann (@ann) on X', description: 'hello world', image: 'https://pbs.example/pic.jpg', canonicalUrl: 'https://x.com/ann/status/1' })
     expect(vi.mocked(safeFetch).mock.calls[0][0]).toBe('https://api.vxtwitter.com/ann/status/1')
   })
 
