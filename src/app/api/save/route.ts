@@ -198,7 +198,9 @@ export async function POST(request: Request) {
 
     // Save first, read the page afterwards: the person (or the extension) gets "saved" straight away,
     // and the title / description / cover image are filled in a moment later (they appear live in the dashboard).
-    let finalTitle = customTitle;
+    // Social posts always get their title from the post itself; other titles lose browser-tab noise.
+    const givenTitle = isSocialType(detectedType) ? '' : cleanTitle(customTitle);
+    let finalTitle = givenTitle;
     const finalDescription = itemType === 'note' ? null : (customDesc || null);
     const finalImage = customImg || null;
 
@@ -241,7 +243,7 @@ export async function POST(request: Request) {
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Only fill in what the person did not give us themselves.
         const patch: Record<string, string> = {};
-        if (!customTitle && details.title) patch.title = details.title;
+        if (!givenTitle && details.title) patch.title = details.title;
         if (!customDesc && details.description) patch.description = details.description;
         if (!customImg && details.image) patch.image_url = details.image;
         if (Object.keys(patch).length === 0) return;
