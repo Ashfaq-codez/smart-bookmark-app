@@ -514,6 +514,18 @@ describe('POST /api/save: X duplicates by status ID', () => {
     expect(fake.updates[0].filters).toContainEqual(['user_id', 'user-1'])
   })
 
+  it('keeps the /i/status address but still fills details when the handle URL is already saved', async () => {
+    const fake = loggedIn({ updateError: (p: any) => (p.url ? { code: '23505', message: 'dup' } : null) })
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    await post({ url: 'https://x.com/i/status/20' })
+    await finishBackgroundWork()
+    expect(fake.updates).toHaveLength(2)
+    expect(fake.updates[1].patch.url).toBe(undefined)
+    expect(fake.updates[1].patch.title).toContain('jack')
+    expect(fake.updates[1].filters).toContainEqual(['user_id', 'user-1'])
+  })
+
   it('leaves a handle address as it is', async () => {
     const fake = loggedIn()
     vi.mocked(isSafeUrl).mockResolvedValue(true)

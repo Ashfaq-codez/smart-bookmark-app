@@ -8,7 +8,7 @@ export type FakeOptions = {
   keyError?: any
   recentCount?: number              // how many saves this user already made in the last minute
   countError?: any                  // make that count lookup fail
-  updateError?: any                 // make the later page-details update fail
+  updateError?: any                 // make the later page-details update fail (or a function of the patch)
 }
 
 export function fakeSupabase(opts: FakeOptions = {}) {
@@ -37,7 +37,8 @@ export function fakeSupabase(opts: FakeOptions = {}) {
       update: (patch: any) => {
         currentUpdate = { patch, filters: [] }
         updates.push(currentUpdate)
-        chain.then = (resolve: any) => resolve({ error: opts.updateError ?? null })
+        const err = typeof opts.updateError === 'function' ? opts.updateError(patch) : opts.updateError
+        chain.then = (resolve: any) => resolve({ error: err ?? null })
         return chain
       },
       in: () => chain,

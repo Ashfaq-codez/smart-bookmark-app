@@ -273,7 +273,13 @@ export async function POST(request: Request) {
         if (!customImg && details.image) patch.image_url = details.image;
         if (details.canonicalUrl && cleanUrl.startsWith('https://x.com/i/status/')) patch.url = details.canonicalUrl;
         if (Object.keys(patch).length === 0) return;
-        const { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
+        let { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
+        // The handle address is already saved as another row: keep the /i/status one, still fill in the details.
+        if (error?.code === '23505' && patch.url) {
+          delete patch.url;
+          if (Object.keys(patch).length === 0) return;
+          ({ error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId));
+        }
         if (error) console.error('[after-save] update failed:', error.message);
       });
     }
