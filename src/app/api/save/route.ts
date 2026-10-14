@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { normalizeUrl, detectSiteType } from '@/lib/urlTools';
+import { normalizeUrl, detectSiteType, isSocialType, cleanTitle } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
@@ -56,7 +56,8 @@ export async function POST(request: Request) {
       sub_category
     } = body;
 
-    const itemType = customType || 'link';
+    // A social type from the client is not trusted: it is a plain link, and the real type comes from the address below.
+    const itemType: string = isSocialType(customType) ? 'link' : (customType || 'link');
     const isLink = itemType === 'link';
 
     const rawContent = customContent || (itemType === 'note' ? customDesc : null);
