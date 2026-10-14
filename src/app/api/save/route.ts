@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { normalizeUrl, detectSiteType, isSocialType, cleanTitle } from '@/lib/urlTools';
+import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
@@ -153,6 +153,22 @@ export async function POST(request: Request) {
           .maybeSingle();
 
         existingRecord = exactMatch;
+
+        // X posts: older saves may carry ?s=20 or live on twitter.com. Match them by handle-less post id.
+        const xPost = detectedType === 'twitter' ? canonicalizeXUrl(cleanUrl) : null;
+        if (!existingRecord && xPost) {
+          const id = xPost.split('/status/')[1];
+          const { data: xMatch } = await supabase
+            .from('bookmarks')
+            .select('id, title, url')
+            .eq('user_id', userId)
+            .eq('type', 'twitter')
+            .or(['x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'].map(h => `url.ilike.%://${h}/%/status/${id}`).concat(
+              ['x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'].map(h => `url.ilike.%://${h}/%/status/${id}?%`)).join(','))
+            .limit(1)
+            .maybeSingle();
+          existingRecord = xMatch;
+        }
 
         // Fallback for URLs stored with fragment hashes (#...)
         // Strictly sanitize path to prevent PostgREST syntax manipulation
