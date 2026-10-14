@@ -6,6 +6,7 @@ import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitl
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
+import { htmlToPlainText } from '@/lib/htmlToPlainText';
 import { isOverSaveLimit } from '@/lib/saveLimit';
 
 // The page details are read after the answer is sent; give that background work room to finish.
@@ -57,8 +58,8 @@ export async function POST(request: Request) {
     } = body;
 
     // A social type from the client is not trusted: it is a plain link, and the real type comes from the address below.
-    const itemType: string = isSocialType(customType) ? 'link' : (customType || 'link');
-    const isLink = itemType === 'link';
+    let itemType: string = isSocialType(customType) ? 'link' : (customType || 'link');
+    let isLink = itemType === 'link';
 
     const rawContent = customContent || (itemType === 'note' ? customDesc : null);
     if (rawContent != null && typeof rawContent !== 'string') {
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Note is too long' }, { status: 413, headers: corsHeaders(origin) });
     }
     // Only allow-listed HTML is ever stored (no scripts, event handlers, images or unsafe links).
-    const finalContent = rawContent ? (sanitizeNoteHtml(rawContent) || null) : null;
+    let finalContent = rawContent ? (sanitizeNoteHtml(rawContent) || null) : null;
 
     if (!rawUrl && !finalContent) {
       return NextResponse.json(
@@ -116,6 +117,14 @@ export async function POST(request: Request) {
         { error: 'Too many saves. Please wait a minute and try again.' },
         { status: 429, headers: { ...corsHeaders(origin), 'Retry-After': '60' } }
       );
+    }
+
+    // A selection sent together with a social address is the person's own note on the post, never the post's content.
+    // The save becomes a normal link, so the post is still read and filled in afterwards.
+    if (rawUrl && finalContent && (itemType === 'note' || isLink) && isSocialType(detectSiteType(rawUrl))) {
+      itemType = 'link';
+      isLink = true;
+      finalContent = htmlToPlainText(finalContent) || null;
     }
 
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
