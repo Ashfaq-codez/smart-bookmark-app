@@ -5,6 +5,8 @@
 export function normalizeUrl(rawUrl: string, type: string = 'link'): string {
   const trimmed = (rawUrl ?? '').trim();
   if (!trimmed) return '';
+  const xPost = canonicalizeXUrl(trimmed);
+  if (xPost) return xPost;
   try {
     const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     const parsed = new URL(withProto);
@@ -46,4 +48,33 @@ export function detectSiteType(url: string): SiteType | null {
   if (hostIs(host, 'github.com')) return 'github';
   if (hostIs(host, 'linkedin.com')) return 'linkedin';
   return null;
+}
+
+// Sites whose posts we read ourselves. For these the server decides the type from the address;
+// a type or title sent by the client is never trusted.
+export const SOCIAL_TYPES: readonly string[] = ['twitter', 'instagram', 'youtube', 'pinterest'];
+
+export function isSocialType(type: string | null | undefined): boolean {
+  return !!type && SOCIAL_TYPES.includes(type);
+}
+
+// One address per X post: https://x.com/<handle>/status/<id>.
+// twitter.com, mobile.twitter.com, www and any query (?s=20, ?t=...) or extra path (/photo/1) are dropped.
+// "/i/status/<id>" has no handle and stays as x.com/i/status/<id>. Returns null when it is not an X post.
+export function canonicalizeXUrl(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`);
+    if (!hostIs(parsed.hostname, 'x.com') && !hostIs(parsed.hostname, 'twitter.com')) return null;
+    const m = parsed.pathname.match(/^\/(?:(i)|([A-Za-z0-9_]{1,15}))\/status(?:es)?\/(\d{1,25})(?:\/|$)/);
+    if (!m) return null;
+    return `https://x.com/${m[1] ? 'i' : m[2]}/status/${m[3]}`;
+  } catch {
+    return null;
+  }
+}
+
+// Page titles from the browser tab carry noise on X: a leading "(3) " notification count and a trailing " / X".
+export function cleanTitle(title: unknown): string {
+  if (typeof title !== 'string') return '';
+  return title.trim().replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').trim();
 }
