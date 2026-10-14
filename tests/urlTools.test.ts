@@ -51,3 +51,47 @@ describe('hostIs', () => {
     expect(hostIs('dropbox.com', 'x.com')).toBe(false)
   })
 })
+
+import { canonicalizeXUrl, cleanTitle, isSocialType } from '@/lib/urlTools'
+
+describe('canonicalizeXUrl', () => {
+  it('turns every X / Twitter form into x.com/<handle>/status/<id>', () => {
+    for (const u of [
+      'https://x.com/jack/status/20',
+      'https://twitter.com/jack/status/20',
+      'https://www.twitter.com/jack/status/20',
+      'https://mobile.twitter.com/jack/status/20',
+      'https://x.com/jack/status/20?s=20',
+      'https://x.com/jack/status/20?s=46&t=abc#frag',
+      'https://x.com/jack/status/20/photo/1',
+      'x.com/jack/status/20/',
+    ]) expect(canonicalizeXUrl(u)).toBe('https://x.com/jack/status/20')
+  })
+  it('accepts /i/status/<id>', () => {
+    expect(canonicalizeXUrl('https://x.com/i/status/99?s=1')).toBe('https://x.com/i/status/99')
+  })
+  it('returns null for anything that is not an X post', () => {
+    for (const u of ['https://x.com/jack', 'https://x.com/home', 'https://example.com/jack/status/20', 'https://x.com.evil.com/jack/status/20', 'https://dropbox.com/a/status/1', 'not a url'])
+      expect(canonicalizeXUrl(u)).toBe(null)
+  })
+  it('is used by normalizeUrl', () => {
+    expect(normalizeUrl('https://twitter.com/jack/status/20?s=20')).toBe('https://x.com/jack/status/20')
+  })
+})
+
+describe('cleanTitle / isSocialType', () => {
+  it('strips a leading "(n) " and a trailing " / X"', () => {
+    expect(cleanTitle('(3) Jack on X: "hi" / X')).toBe('Jack on X: "hi"')
+    expect(cleanTitle('  (12) Hello  ')).toBe('Hello')
+    expect(cleanTitle('Plain title')).toBe('Plain title')
+    expect(cleanTitle('Fix (3) bugs')).toBe('Fix (3) bugs')
+  })
+  it('handles non-strings', () => {
+    expect(cleanTitle(undefined)).toBe('')
+    expect(cleanTitle(5)).toBe('')
+  })
+  it('knows the four social types only', () => {
+    for (const t of ['twitter', 'instagram', 'youtube', 'pinterest']) expect(isSocialType(t)).toBe(true)
+    for (const t of ['link', 'note', 'github', 'image', '', undefined]) expect(isSocialType(t as any)).toBe(false)
+  })
+})

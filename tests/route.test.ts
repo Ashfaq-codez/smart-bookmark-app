@@ -405,3 +405,84 @@ describe('POST /api/save: safer saving', () => {
     expect(fake.inserted).toHaveLength(1)
   })
 })
+
+describe('POST /api/save: social types, titles and notes', () => {
+  it('treats a client-sent social type on a normal URL as a plain link', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://example.com/a', type: 'twitter', title: 'T' })
+    expect(fake.inserted[0].type).toBe('link')
+  })
+
+  it('derives the type from the URL, ignoring a wrong client type', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://x.com/jack/status/20', type: 'youtube' })
+    expect(fake.inserted[0].type).toBe('twitter')
+  })
+
+  it('ignores the client title for social links and stores the canonical X address', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://twitter.com/jack/status/20?s=20', title: '(3) Jack on X / X' })
+    expect(fake.inserted[0].url).toBe('https://x.com/jack/status/20')
+    expect(fake.inserted[0].title).toBe('https://x.com/jack/status/20')
+  })
+
+  it('fills in a social title from the post even though the client sent one', async () => {
+    const fake = loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    await post({ url: 'https://x.com/jack/status/20', title: 'Tab title / X' })
+    await finishBackgroundWork()
+    expect(fake.updates[0].patch.title).toBe('Post by Jack (@jack) on X')
+  })
+
+  it('cleans titles of other links', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://example.com/a', title: '(2) My page / X' })
+    expect(fake.inserted[0].title).toBe('My page')
+  })
+
+  it('saves a selection sent with a social URL as the personal note and still enriches', async () => {
+    const fake = loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'post text', user_name: 'Jack', user_screen_name: 'jack' })))
+    await post({ url: 'https://x.com/jack/status/20?s=20', type: 'note', content: '<p>my <b>thought</b></p>', title: 'x' })
+    const row = fake.inserted[0]
+    expect(row.type).toBe('twitter')
+    expect(row.content).toBe('my thought')
+    expect(row.description).toBe(null)
+    await finishBackgroundWork()
+    expect(fake.updates[0].patch.description).toBe('post text')
+  })
+
+  it('still saves a selection on a normal page as a note', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://example.com/a', type: 'note', content: '<p>x</p>' })
+    expect(fake.inserted[0].type).toBe('note')
+  })
+
+  it('treats an older ?s= save of the same X post as a duplicate', async () => {
+    loggedIn({ existing: { id: 5, title: 'Old', url: 'https://x.com/jack/status/20?s=20' } })
+    const res = await post({ url: 'https://x.com/jack/status/20' })
+    expect(res.status).toBe(409)
+  })
+})
+
+describe('POST /api/save: API-key path is scoped to the key\'s user', () => {
+  it('scopes every bookmark read, insert and update by the key\'s user_id', async () => {
+    loggedIn({ user: null })
+    const admin = fakeSupabase({ keyRow: { user_id: 'key-user' } })
+    vi.mocked(createAdminClient).mockReturnValue(admin.client as any)
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response(PAGE_HTML))
+
+    await post({ url: 'https://example.com/a' }, { 'x-api-key': 'k' })
+    await finishBackgroundWork()
+
+    expect(admin.bookmarkFilters.length).toBeGreaterThan(0)
+    expect(admin.bookmarkFilters.every(([c, v]) => c !== 'user_id' || v === 'key-user')).toBe(true)
+    expect(admin.bookmarkFilters.some(([c]) => c === 'user_id')).toBe(true)
+    expect(admin.inserted[0].user_id).toBe('key-user')
+    expect(admin.updates[0].filters).toContainEqual(['user_id', 'key-user'])
+    expect(admin.updates[0].filters).toContainEqual(['id', 1])
+  })
+})
