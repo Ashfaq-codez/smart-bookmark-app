@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useXSnapshotRepair } from '@/hooks/useXSnapshotRepair'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -139,6 +140,7 @@ export default function BookmarkCard({
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
   
   const displayType = deriveDisplayType(bookmark);
+  useXSnapshotRepair(bookmark, displayType || 'link');
   const ytVideoId = getYouTubeId(bookmark.url);
   const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;
@@ -360,7 +362,11 @@ export default function BookmarkCard({
 
       {mounted && isModalOpen && fullBookmark && (
         <EditorialModal 
-          bookmark={fullBookmark} 
+          // A snapshot that arrives (live update) while the editor is open is shown straight away;
+          // the person's own fields stay as the editor loaded them.
+          bookmark={bookmark.post_data && !fullBookmark.post_data
+            ? { ...fullBookmark, post_data: bookmark.post_data, post_data_fetched_at: bookmark.post_data_fetched_at }
+            : fullBookmark} 
           isVisible={isVisible} 
           displayType={displayType || 'link'} 
           previewImageUrl={previewImageUrl} 
