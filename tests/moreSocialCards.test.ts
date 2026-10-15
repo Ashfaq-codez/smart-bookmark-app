@@ -179,3 +179,56 @@ describe('cards and full views', () => {
     expect(getRedditPost({ post_data: hn as any })).toBe(null)
   })
 })
+
+describe('fixes from the second round of iPhone tests', () => {
+  it('Threads short links (/t/<code>) from the app are read through the embed page', async () => {
+    expect(threadsPostRef('https://www.threads.com/t/C4BT8ilPsxy')).toEqual({ handle: '', code: 'C4BT8ilPsxy' })
+    expect(threadsPostRef('https://www.threads.net/t/C4BT8ilPsxy?xmt=1')).toEqual({ handle: '', code: 'C4BT8ilPsxy' })
+    expect(normalizeUrl('https://www.threads.net/t/C4BT8ilPsxy?xmt=1')).toBe('https://www.threads.com/t/C4BT8ilPsxy')
+    const sharp = (await import('sharp')).default
+    const jpg = await sharp({ create: { width: 400, height: 500, channels: 3, background: '#444' } }).jpeg().toBuffer()
+    vi.mocked(safeFetch).mockImplementation(async (u: any) => String(u).includes('/embed')
+      ? new Response(fx('threads/photo-post.html'))
+      : new Response(jpg, { headers: { 'content-type': 'image/jpeg' } }))
+    const f = fakeSupabase()
+    expect(await enrichSocialPost(f.client as any, 'user-1', { id: 9, type: 'threads', url: 'https://www.threads.com/t/C4BT8ilPsxy' }, 'save')).toBe('stored')
+    expect(String(vi.mocked(safeFetch).mock.calls[0][0])).toBe('https://www.threads.com/t/C4BT8ilPsxy/embed')
+    // once read, the short link becomes the full address (so a desktop save of the same post matches)
+    expect(f.updates[0].patch.url).toBe('https://www.threads.com/@zuck/post/C4BT8ilPsxy')
+    expect(f.updates[0].patch.post_data.text).toBe('The setup. The shot. Ray-Ban edition 😎')
+  })
+})
+
+describe('Medium RSS fallback', () => {
+  it('finds the post id in every Medium address form and the feeds to look in', async () => {
+    const { mediumPostId, mediumFeedUrls } = await import('@/lib/mediumFeed')
+    expect(mediumPostId('https://ai.plainenglish.io/10-ai-tools-everyone-will-be-using-in-six-months-but-almost-nobodys-found-yet-735a5471ea22')).toBe('735a5471ea22')
+    expect(mediumPostId('https://medium.com/p/735a5471ea22')).toBe('735a5471ea22')
+    expect(mediumPostId('https://example.com/about')).toBe(null)
+    expect(mediumFeedUrls('https://ai.plainenglish.io/x-735a5471ea22')).toEqual(['https://ai.plainenglish.io/feed'])
+    expect(mediumFeedUrls('https://medium.com/ai-in-plain-english/x-735a5471ea22')).toEqual(['https://medium.com/feed/ai-in-plain-english'])
+    expect(mediumFeedUrls('https://medium.com/@ev/welcome-9e53ca408c48')).toEqual(['https://medium.com/feed/@ev'])
+  })
+
+  it('reads a real feed: the post when it is there, nothing when it isn\'t', async () => {
+    const { readMediumFeed } = await import('@/lib/mediumFeed')
+    const xml = fx('medium/feed.xml')
+    const id = xml.match(/medium\.com\/p\/([0-9a-f]{10,12})/)![1]
+    const m = readMediumFeed(xml, id)!
+    expect(m).toMatchObject({ site_name: 'Medium', publisher: 'Artificial Intelligence in Plain English' })
+    expect(m.title).toBeTruthy()
+    expect(m.author).toBeTruthy()
+    expect(m.image).toMatch(/^https:\/\/cdn-images-1\.medium\.com\//)
+    expect(m.subtitle).not.toMatch(/Continue reading/)
+    expect(readMediumFeed(xml, '000000000000')).toBe(null)
+  })
+
+  it('a Medium post on its own domain, refused to the server, gets the Medium card from the feed', async () => {
+    const { articleFromMeta } = await import('@/lib/articleMeta')
+    const { readMediumFeed } = await import('@/lib/mediumFeed')
+    const xml = fx('medium/feed.xml')
+    const id = xml.match(/medium\.com\/p\/([0-9a-f]{10,12})/)![1]
+    const a = articleFromMeta(`https://ai.plainenglish.io/some-post-${id}`, readMediumFeed(xml, id)!)!
+    expect(a).toMatchObject({ platform: 'medium', publication: 'Artificial Intelligence in Plain English' })
+  })
+})

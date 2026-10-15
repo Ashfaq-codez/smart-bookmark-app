@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:cc="http://cyber.law.harvard.edu/rss/creativeCommonsRssModule.html">
+    <channel>
+        <title><![CDATA[Artificial Intelligence in Plain English - Medium]]></title>
+        <description><![CDATA[New AI, ML and Data Science articles every day. Follow to join our 3.5M+ monthly readers. - Medium]]></description>
+        <link>https://ai.plainenglish.io?source=rss----78d064101951---4</link>
+        <image>
+            <url>https://cdn-images-1.medium.com/proxy/1*TGH72Nnw24QL3iV9IOm4VA.png</url>
+            <title>Artificial Intelligence in Plain English - Medium</title>
+            <link>https://ai.plainenglish.io?source=rss----78d064101951---4</link>
+        </image>
+        <generator>Medium</generator>
+        <lastBuildDate>Thu, 15 Oct 2026 16:27:12 GMT</lastBuildDate>
+        <atom:link href="https://ai.plainenglish.io/feed" rel="self" type="application/rss+xml"/>
+        <webMaster><![CDATA[yourfriends@medium.com]]></webMaster>
+        <atom:link href="http://medium.superfeedr.com" rel="hub"/>
+        <item>
+            <title><![CDATA[The Claude Prompting Habit That Now Returns a 400 Error, Plus Four That Quietly Got Worse]]></title>
+            <description><![CDATA[<div class="medium-feed-item"><p class="medium-feed-image"><a href="https://ai.plainenglish.io/the-claude-prompting-habit-that-now-returns-a-400-error-plus-four-that-quietly-got-worse-c831f554c761?source=rss----78d064101951---4"><img src="https://cdn-images-1.medium.com/max/1774/1*AITP9DmaUqNg8kBdY3439A.png" width="1774"></a></p><p class="medium-feed-snippet">Five lines from the official guide that quietly replace the shouting, the guessing, and the prefilling.</p><p class="medium-feed-link"><a href="https://ai.plainenglish.io/the-claude-prompting-habit-that-now-returns-a-400-error-plus-four-that-quietly-got-worse-c831f554c761?source=rss----78d064101951---4">Continue reading on Artificial Intelligence in Plain English »</a></p></div>]]></description>
+            <link>https://ai.plainenglish.io/the-claude-prompting-habit-that-now-returns-a-400-error-plus-four-that-quietly-got-worse-c831f554c761?source=rss----78d064101951---4</link>
+            <guid isPermaLink="false">https://medium.com/p/c831f554c761</guid>
+            <category><![CDATA[ai]]></category>
+            <category><![CDATA[artificial-intelligence]]></category>
+            <category><![CDATA[anthropic-claude]]></category>
+            <category><![CDATA[technology]]></category>
+            <category><![CDATA[prompt-engineering]]></category>
+            <dc:creator><![CDATA[Faisal haque]]></dc:creator>
+            <pubDate>Thu, 15 Oct 2026 16:12:14 GMT</pubDate>
+            <atom:updated>2026-10-15T16:12:14.731Z</atom:updated>
+        </item><item>
+            <title><![CDATA[10 Hidden AI Tools You’ll Wish You Knew About Sooner]]></title>
+            <description><![CDATA[<div class="medium-feed-item"><p class="medium-feed-image"><a href="https://ai.plainenglish.io/10-hidden-ai-tools-youll-wish-you-knew-about-sooner-42c1dc5258f8?source=rss----78d064101951---4"><img src="https://cdn-images-1.medium.com/max/1672/1*K6eZFWHsMzhGEAioBmSYEw.png" width="1672"></a></p><p class="medium-feed-snippet">Real use cases, honest limits, and exactly what is free and what costs money</p><p class="medium-feed-link"><a href="https://ai.plainenglish.io/10-hidden-ai-tools-youll-wish-you-knew-about-sooner-42c1dc5258f8?source=rss----78d064101951---4">Continue reading on Artificial Intelligence in Plain English »</a></p></div>]]></description>
+            <link>https://ai.plainenglish.io/10-hidden-ai-tools-youll-wish-you-knew-about-sooner-42c1dc5258f8?source=rss----78d064101951---4</link>
+            <guid isPermaLink="false">https://medium.com/p/42c1dc5258f8</guid>
+            <category><![CDATA[ai-tools]]></category>
+            <category><![CDATA[technology]]></category>
+            <category><![CDATA[software-development]]></category>
+            <category><![CDATA[productivity]]></category>
+            <category><![CDATA[artificial-intelligence]]></category>
+            <dc:creator><![CDATA[Programming with me ]]></dc:creator>
+            <pubDate>Thu, 15 Oct 2026 15:56:26 GMT</pubDate>
+            <atom:updated>2026-10-15T15:56:24.874Z</atom:updated>
+        </item></channel></rss>

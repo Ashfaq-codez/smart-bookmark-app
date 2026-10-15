@@ -6,6 +6,8 @@ import { storeInstagramImage } from '@/lib/instagramCapture';
 import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
 import { redditPostRef, fetchRedditPost, resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
+import { fetchMediumFromFeed } from '@/lib/mediumFeed';
+import { articleFromMeta } from '@/lib/articleMeta';
 import { fetchSubstackNote, substackNoteTitle } from '@/lib/substackNote';
 import { isSubstackNoteUrl } from '@/lib/postData';
 import { cleanHandle, handleFromUrl, handleFromDescription, captionFromDescription, fetchInstagramPage, instagramSnapshot } from '@/lib/instagramMeta';
@@ -254,6 +256,11 @@ function isArticleHost(url: string | null | undefined): boolean {
 
 async function enrichArticle(db: SupabaseClient, userId: string, row: EnrichRow): Promise<EnrichResult> {
   const details = await fetchPageDetails(row.url, 'link');
+  // Medium refuses servers: its RSS feed has the post when it is one of the latest.
+  if (!details.article) {
+    const feed = await fetchMediumFromFeed(row.url);
+    if (feed) details.article = articleFromMeta(row.url, feed);
+  }
   const now = new Date().toISOString();
   // Medium refuses servers: nothing found, the card shows what was saved; tried again after a day.
   const patch: Record<string, unknown> = details.article
@@ -353,6 +360,11 @@ async function enrichMoreSocial(db: SupabaseClient, userId: string, row: EnrichR
     if (body && (mode === 'save' ? !keep.description : !row.description)) patch.description = body;
     if (cover && (mode === 'save' ? !keep.image : !row.image_url)) patch.image_url = cover;
     if (storedPath) patch.file_path = storedPath;
+    // A Threads short link (/t/<code>) learns its @handle: keep the full address, like a desktop save.
+    const ref = kind === 'threads' ? threadsPostRef(row.url) : null;
+    if (ref && !ref.handle && post.platform === 'threads' && post.author.handle !== 'threads') {
+      patch.url = `https://www.threads.com/@${post.author.handle}/post/${ref.code}`;
+    }
   }
   const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
   if (error) {

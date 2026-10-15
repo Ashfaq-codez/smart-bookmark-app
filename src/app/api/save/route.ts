@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle, isRedditShareLink, canonicalizeRedditUrl } from '@/lib/urlTools';
 import { cleanPageHtml, canonicalFromHtml, pageMetaFromHtml } from '@/lib/pageHtml';
+import { mediumPostId, fetchMediumFromFeed } from '@/lib/mediumFeed';
 import { resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
@@ -343,8 +344,9 @@ export async function POST(request: Request) {
         }
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Pages that refuse servers (Medium): use what the extension read from the open page instead.
+        // …or, for a Medium post (also on a publication's own domain), its publication's RSS feed.
         const page = !details.title && detectedType === 'link'
-          ? parsePageCapture(rawPage) || (pageHtml ? pageMetaFromHtml(pageHtml) : null)
+          ? parsePageCapture(rawPage) || (pageHtml ? pageMetaFromHtml(pageHtml) : null) || (mediumPostId(cleanUrl) ? await fetchMediumFromFeed(cleanUrl) : null)
           : null;
         const title = details.title || cleanTitle(page?.title) || null;
         const description = details.description || page?.description || null;

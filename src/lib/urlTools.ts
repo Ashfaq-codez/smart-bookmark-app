@@ -14,7 +14,7 @@ export function normalizeUrl(rawUrl: string, type: string = 'link'): string {
   const spotify = spotifyRef(withProtocol);
   if (spotify) return `https://open.spotify.com/${spotify.kind}/${spotify.id}`;
   const thread = threadsPostRef(withProtocol);
-  if (thread) return `https://www.threads.com/@${thread.handle}/post/${thread.code}`;
+  if (thread) return thread.handle ? `https://www.threads.com/@${thread.handle}/post/${thread.code}` : `https://www.threads.com/t/${thread.code}`;
   if (isLinkedInPostUrl(withProtocol)) { const u = new URL(withProtocol); return `https://www.linkedin.com${u.pathname.replace(/\/+$/, '')}`; }
   try {
     const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
@@ -167,13 +167,16 @@ export function spotifyRef(url: string | null | undefined): { kind: (typeof SPOT
   }
 }
 
-// threads.com / threads.net /@<handle>/post/<code>
+// threads.com / threads.net /@<handle>/post/<code>, or the app's short form /t/<code> (handle '' until the post is read)
 export function threadsPostRef(url: string | null | undefined): { handle: string; code: string } | null {
   try {
     const u = new URL(url || '');
     if (!hostIs(u.hostname.toLowerCase(), 'threads.com') && !hostIs(u.hostname.toLowerCase(), 'threads.net')) return null;
-    const m = decodeURIComponent(u.pathname).match(/^\/@([A-Za-z0-9._]{1,30})\/post\/([A-Za-z0-9_-]{6,20})\/?$/);
-    return m ? { handle: m[1], code: m[2] } : null;
+    const path = decodeURIComponent(u.pathname);
+    const m = path.match(/^\/@([A-Za-z0-9._]{1,30})\/post\/([A-Za-z0-9_-]{6,20})\/?$/);
+    if (m) return { handle: m[1], code: m[2] };
+    const short = path.match(/^\/t\/([A-Za-z0-9_-]{6,20})\/?$/);
+    return short ? { handle: '', code: short[1] } : null;
   } catch {
     return null;
   }

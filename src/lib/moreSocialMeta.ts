@@ -120,7 +120,7 @@ export function readThreadsEmbed(html: string, ref: { handle: string; code: stri
   const parsed = Date.parse(`${stamp[1] || ''} ${stamp[0] || ''}`);
   return {
     v: 1, platform: 'threads', code: ref.code,
-    author: { handle: /^[A-Za-z0-9._]{1,30}$/.test(handle) ? handle : ref.handle, verified: $('.VerifiedBadge').length > 0, avatar: isHttps(avatar) ? avatar : null },
+    author: { handle: /^[A-Za-z0-9._]{1,30}$/.test(handle) ? handle : ref.handle || 'threads', verified: $('.VerifiedBadge').length > 0, avatar: isHttps(avatar) ? avatar : null },
     text: body.text().replace(/\n{3,}/g, '\n\n').trim().slice(0, 10_000),
     image_sources: [...new Set(images)].slice(0, 10),
     created_at: isNaN(parsed) ? null : new Date(parsed).toISOString(),
@@ -132,7 +132,9 @@ export async function fetchThreadsEmbed(url: string) {
   const ref = threadsPostRef(url);
   if (!ref) return { ok: false as const };
   try {
-    const res = await safeFetch(`https://www.threads.com/@${ref.handle}/post/${ref.code}/embed`, { headers: UA, signal: AbortSignal.timeout(6000) });
+    // The embed page also works from the short /t/<code> form, which has no @handle.
+    const path = ref.handle ? `@${ref.handle}/post/${ref.code}` : `t/${ref.code}`;
+    const res = await safeFetch(`https://www.threads.com/${path}/embed`, { headers: UA, signal: AbortSignal.timeout(6000) });
     if (!res.ok) return { ok: false as const };
     const post = readThreadsEmbed(await res.text(), ref);
     return post ? { ok: true as const, post } : { ok: false as const };
