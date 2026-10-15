@@ -643,3 +643,42 @@ describe('POST /api/save: Instagram capture from the extension', () => {
     expect(fake.updates[0].patch.post_data).toMatchObject({ platform: 'instagram', handle: 'nasa', handle_source: 'extension' })
   })
 })
+
+describe('POST /api/save: Reddit links shared from the phone apps', () => {
+  const POST_URL = 'https://www.reddit.com/r/privacy/comments/1kpib8z/reddit_generates_a_new_link_every_time_you_click/?share_id=NHEBxfK3Flk8AopTLzby_&utm_content=1&utm_medium=ios_app&utm_source=share'
+
+  it('a share link (r/<sub>/s/<code>) from the iPhone Shortcut is saved as the real post', async () => {
+    const admin = fakeSupabase({ keyRow: { user_id: 'key-user' } })
+    vi.mocked(createAdminClient).mockReturnValue(admin.client as any)
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 301, headers: { location: POST_URL } }))
+    try {
+      const res = await post({ url: 'https://www.reddit.com/r/privacy/s/XaJ5kGdbva' }, { 'x-api-key': 'my-secret-key' })
+      expect(res.status).toBe(200)
+      expect(admin.inserted[0].url).toBe('https://www.reddit.com/r/privacy/comments/1kpib8z/reddit_generates_a_new_link_every_time_you_click/')
+      expect(admin.inserted[0].type).toBe('reddit')
+      expect(fetchSpy.mock.calls[0][1]).toMatchObject({ redirect: 'manual' })
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('a full post address with the app\'s tracking is cleaned', async () => {
+    const fake = loggedIn()
+    await post({ url: POST_URL })
+    expect(fake.inserted[0].url).toBe('https://www.reddit.com/r/privacy/comments/1kpib8z/reddit_generates_a_new_link_every_time_you_click/')
+  })
+
+  it('if the share link can\'t be resolved, it is still saved as given', async () => {
+    const fake = loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 403 }))
+    try {
+      const res = await post({ url: 'https://www.reddit.com/r/privacy/s/XaJ5kGdbva' })
+      expect(res.status).toBe(200)
+      expect(fake.inserted[0].url).toBe('https://reddit.com/r/privacy/s/XaJ5kGdbva')
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+})

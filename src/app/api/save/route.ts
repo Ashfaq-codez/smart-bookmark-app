@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle } from '@/lib/urlTools';
+import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle, isRedditShareLink } from '@/lib/urlTools';
+import { resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
 import { parsePageCapture } from '@/lib/pageCapture';
@@ -127,13 +128,17 @@ export async function POST(request: Request) {
 
     // A selection sent together with a social address is the person's own note on the post, never the post's content.
     // The save becomes a normal link, so the post is still read and filled in afterwards.
-    if (rawUrl && finalContent && (itemType === 'note' || isLink) && isSocialType(detectSiteType(rawUrl))) {
+    // Reddit app share links (reddit.com/r/<sub>/s/<code>, redd.it/<id>) only point to the post: save the post itself.
+    let inputUrl: unknown = rawUrl;
+    if (typeof rawUrl === 'string' && isRedditShareLink(rawUrl)) inputUrl = (await resolveRedditShareLink(rawUrl)) || rawUrl;
+
+    if (typeof inputUrl === 'string' && inputUrl && finalContent && (itemType === 'note' || isLink) && isSocialType(detectSiteType(inputUrl))) {
       itemType = 'link';
       isLink = true;
       finalContent = htmlToPlainText(finalContent) || null;
     }
 
-    const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
+    const cleanUrl = typeof inputUrl === 'string' && inputUrl ? normalizeUrl(inputUrl, itemType) : null;
     
     const detectedType: string = (cleanUrl && isLink && detectSiteType(cleanUrl)) || itemType;
     // The extension sends what an Instagram post page shows; accepted only for an Instagram post address.

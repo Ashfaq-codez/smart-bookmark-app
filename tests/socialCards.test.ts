@@ -184,3 +184,40 @@ describe('the cards', () => {
     expect(shortDate('2012-08-31T00:00:00Z', now)).toBe('Aug 31, 2012')
   })
 })
+
+describe('Reddit addresses from the phone apps', () => {
+  it('cleans post addresses and knows share links', async () => {
+    const { canonicalizeRedditUrl, isRedditShareLink, normalizeUrl } = await import('@/lib/urlTools')
+    expect(canonicalizeRedditUrl('https://old.reddit.com/r/IAmA/comments/Z1C9Z/i_am_barack/?utm_source=share')).toBe('https://www.reddit.com/r/IAmA/comments/z1c9z/i_am_barack/')
+    expect(canonicalizeRedditUrl('https://www.reddit.com/comments/1dsxv2')).toBe('https://www.reddit.com/comments/1dsxv2/')
+    expect(canonicalizeRedditUrl('https://www.reddit.com/r/IAmA/')).toBe(null)
+    expect(normalizeUrl('reddit.com/r/IAmA/comments/z1c9z/x?share_id=1')).toBe('https://www.reddit.com/r/IAmA/comments/z1c9z/x/')
+    expect(isRedditShareLink('https://www.reddit.com/r/privacy/s/XaJ5kGdbva')).toBe(true)
+    expect(isRedditShareLink('https://redd.it/1dsxv2')).toBe(true)
+    expect(isRedditShareLink('https://www.reddit.com/r/privacy/comments/1kpib8z/')).toBe(false)
+    expect(isRedditShareLink('https://evil.com/r/privacy/s/XaJ5kGdbva')).toBe(false)
+    expect(redditPostRef('https://www.reddit.com/comments/1dsxv2/')).toEqual({ sub: '', id: '1dsxv2' })
+  })
+
+  it('a redd.it post (no subreddit in the address) learns its subreddit from the post', async () => {
+    vi.mocked(safeFetch).mockResolvedValue(new Response(fx('reddit/image-post.html')))
+    const r = await fetchRedditPost('https://www.reddit.com/comments/1dsxv2/')
+    expect(r).toMatchObject({ ok: true, post: { subreddit: 'programming' } })
+    expect(String(vi.mocked(safeFetch).mock.calls[0][0])).toBe('https://embed.reddit.com/r/reddit/comments/1dsxv2/')
+  })
+
+  it('an old bookmark saved from a share link is repaired to the real post', async () => {
+    const { needsSnapshot: needs } = await import('@/lib/enrichSocialPost')
+    expect(needs({ type: 'link', url: 'https://reddit.com/r/privacy/s/XaJ5kGdbva', post_data: null })).toBe(true)
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 301, headers: { location: 'https://www.reddit.com/r/programming/comments/1dsxv2/cloud/?share_id=1' } }))
+    vi.mocked(safeFetch).mockResolvedValue(new Response(fx('reddit/image-post.html')))
+    try {
+      const f = fakeSupabase()
+      expect(await enrichSocialPost(f.client as any, 'user-1', { id: 2, type: 'link', url: 'https://reddit.com/r/privacy/s/XaJ5kGdbva' }, 'repair')).toBe('stored')
+      expect(f.updates[0].patch.url).toBe('https://www.reddit.com/r/programming/comments/1dsxv2/cloud/')
+      expect(f.updates[0].patch.post_data.subreddit).toBe('programming')
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+})

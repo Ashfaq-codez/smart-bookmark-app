@@ -1,9 +1,9 @@
 import * as cheerio from 'cheerio';
 import type { RedditPost } from '@/types';
-import { redditPostRef } from '@/lib/urlTools';
+import { redditPostRef, isRedditShareLink, canonicalizeRedditUrl } from '@/lib/urlTools';
 
 export { redditPostRef };
-import { safeFetch } from '@/utils/safeFetch';
+import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
 
 // A Reddit post without any paid API or login. Reddit refuses its normal pages and .json to servers, but its
 // official embed page (embed.reddit.com, made to be shown on other sites) carries the post: title, subreddit,
@@ -59,7 +59,7 @@ export function readRedditEmbed(html: string, ref: { sub: string; id: string }):
     id: ref.id,
     // The address keeps the subreddit's own capitals (IAmA); Reddit's data has it in lower case.
     subreddit: ctx.subreddit?.name && /^[A-Za-z0-9_]{2,21}$/.test(ctx.subreddit.name) && ctx.subreddit.name.toLowerCase() !== ref.sub.toLowerCase()
-      ? ctx.subreddit.name : ref.sub,
+      ? ctx.subreddit.name : ref.sub,   // (no subreddit in a redd.it / comments/<id> address: learned here)
     subreddit_icon: isHttps(icon) ? icon : null,
     author,
     title,
@@ -80,13 +80,15 @@ export async function fetchRedditPost(url: string): Promise<RedditFetch> {
   if (!ref) return { ok: false, reason: 'not-found' };
   const opts = { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; inntoit/1.0)' }, signal: AbortSignal.timeout(6000) };
   try {
-    const res = await safeFetch(`https://embed.reddit.com/r/${ref.sub}/comments/${ref.id}/`, opts);
+    // The embed page works with any subreddit name; 'reddit' stands in when the address has none.
+    const res = await safeFetch(`https://embed.reddit.com/r/${ref.sub || 'reddit'}/comments/${ref.id}/`, opts);
     if (res.ok) {
       const post = readRedditEmbed(await res.text(), ref);
       if (post) return { ok: true, post };
     }
   } catch { /* try oEmbed */ }
   try {
+    if (!ref.sub) return { ok: false, reason: 'unavailable' };   // oEmbed needs the subreddit
     const res = await safeFetch(`https://www.reddit.com/oembed?url=${encodeURIComponent(`https://www.reddit.com/r/${ref.sub}/comments/${ref.id}/`)}`, opts);
     if (res.status === 404) return { ok: false, reason: 'not-found' };
     if (!res.ok) return { ok: false, reason: 'unavailable' };
@@ -98,4 +100,27 @@ export async function fetchRedditPost(url: string): Promise<RedditFetch> {
   } catch {
     return { ok: false, reason: 'unavailable' };
   }
+}
+
+// The iPhone / Android Reddit apps share links that only point to the post (reddit.com/r/<sub>/s/<code>,
+// redd.it/<id>). Reddit answers them with a redirect to the real post: read where it leads (one hop only,
+// Reddit addresses only). Returns the clean post address, or null.
+export async function resolveRedditShareLink(rawUrl: string): Promise<string | null> {
+  if (!isRedditShareLink(rawUrl)) return null;
+  let current = /^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`;
+  for (let hop = 0; hop < 2; hop++) {
+    try {
+      if (!(await isSafeUrl(current))) return null;
+      const res = await fetch(current, { method: 'GET', redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; inntoit/1.0)' }, signal: AbortSignal.timeout(5000) });
+      const location = res.headers.get('location');
+      if (res.status < 300 || res.status >= 400 || !location) return null;
+      const next = new URL(location, current).href;
+      const post = canonicalizeRedditUrl(next);
+      if (post) return post;
+      current = next;   // redd.it -> reddit.com/... may take one more hop
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }

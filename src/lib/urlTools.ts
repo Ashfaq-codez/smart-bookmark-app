@@ -7,6 +7,8 @@ export function normalizeUrl(rawUrl: string, type: string = 'link'): string {
   if (!trimmed) return '';
   const xPost = canonicalizeXUrl(trimmed);
   if (xPost) return xPost;
+  const redditPost = canonicalizeRedditUrl(trimmed);
+  if (redditPost) return redditPost;
   try {
     const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     const parsed = new URL(withProto);
@@ -87,8 +89,37 @@ export function redditPostRef(url: string | null | undefined): { sub: string; id
     const u = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
     if (!hostIs(u.hostname.toLowerCase(), 'reddit.com')) return null;
     const m = u.pathname.match(/^\/r\/([A-Za-z0-9_]{2,21})\/comments\/([a-z0-9]{2,12})(?:\/|$)/i);
-    return m ? { sub: m[1], id: m[2].toLowerCase() } : null;
+    if (m) return { sub: m[1], id: m[2].toLowerCase() };
+    // reddit.com/comments/<id> (where redd.it short links lead): the subreddit is learned from the post.
+    const bare = u.pathname.match(/^\/comments\/([a-z0-9]{2,12})(?:\/|$)/i);
+    return bare ? { sub: '', id: bare[1].toLowerCase() } : null;
   } catch {
     return null;
+  }
+}
+
+// One address per Reddit post: https://www.reddit.com/r/<sub>/comments/<id>/<slug>/
+// (old., new., m., no www; the app's ?share_id= / utm_ tracking dropped). null when it is not a post address.
+export function canonicalizeRedditUrl(rawUrl: string): string | null {
+  try {
+    const u = new URL(/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`);
+    if (!hostIs(u.hostname.toLowerCase(), 'reddit.com')) return null;
+    const m = u.pathname.match(/^\/(?:r\/([A-Za-z0-9_]{2,21})\/)?comments\/([a-z0-9]{2,12})(?:\/([^/]{1,300}))?/i);
+    if (!m) return null;
+    return `https://www.reddit.com/${m[1] ? `r/${m[1]}/` : ''}comments/${m[2].toLowerCase()}/${m[3] ? `${m[3]}/` : ''}`;
+  } catch {
+    return null;
+  }
+}
+
+// Reddit links that only point to a post: redd.it/<id> and the app's share links reddit.com/r/<sub>/s/<code>.
+export function isRedditShareLink(rawUrl: string): boolean {
+  try {
+    const u = new URL(/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`);
+    const host = u.hostname.toLowerCase();
+    if (host === 'redd.it' || host === 'www.redd.it') return /^\/[a-z0-9]{2,12}\/?$/i.test(u.pathname);
+    return hostIs(host, 'reddit.com') && /^\/r\/[A-Za-z0-9_]{2,21}\/s\/[A-Za-z0-9]{4,20}\/?$/.test(u.pathname);
+  } catch {
+    return false;
   }
 }
