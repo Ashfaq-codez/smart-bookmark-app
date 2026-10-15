@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSnapshotRepair } from '@/hooks/useSnapshotRepair'
-import { cardHoverText, faviconUrl } from '@/utils/bookmarkHelpers'
+import { cardHoverText } from '@/utils/bookmarkHelpers'
 import { RedditCard } from './social/RedditCard'
 import { ArticleCard } from './social/ArticleCard'
 import { createPortal } from 'react-dom'
@@ -48,7 +48,6 @@ export default function BookmarkCard({
   const [isVisible, setIsVisible] = useState(false)
   const [isFullscreenImage, setIsFullscreenImage] = useState(false)
   const [fullscreenImageUrl, setFullscreenImageUrl] = useState('')
-  const [faviconError, setFaviconError] = useState(false);
   // The list only carries a trimmed note body. The editor must receive the FULL row, or saving would overwrite the note.
   const [fullBookmark, setFullBookmark] = useState<Bookmark | null>(null)
   const supabase = createClient()
@@ -315,17 +314,6 @@ export default function BookmarkCard({
           <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
             
 
-            {/* Dynamic Official Platform Logo Badge (Hides entirely if Logo fails) */}
-            {!faviconError && (
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-300 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
-                 <img 
-                   src={faviconUrl(getDomain(bookmark.url))} 
-                   alt="Platform Logo" 
-                   className="w-full h-full object-contain rounded-sm" 
-                   onError={() => setFaviconError(true)} 
-                 />
-              </div>
-            )}
 
             {previewImageUrl ? (
               <img 
@@ -340,14 +328,6 @@ export default function BookmarkCard({
                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">
                     {getDomain(bookmark.url).substring(0, 1)}
                  </div>
-                 {!faviconError && (
-                    <img 
-                      src={faviconUrl(getDomain(bookmark.url))} 
-                      alt="Favicon" 
-                      className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" 
-                      onError={() => setFaviconError(true)} 
-                    />
-                 )}
                  <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
               </div>
             )}
