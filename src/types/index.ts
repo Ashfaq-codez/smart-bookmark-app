@@ -20,8 +20,9 @@ export type Bookmark = {
   file_type?: string | null;
   // Set when the save is pinned to the top; the time it was pinned. null / missing = not pinned.
   pinned_at?: string | null;
-  // X posts: stored snapshot of the post (see XPost). null = not read yet. Added by migration 0005.
-  post_data?: XPost | null;
+  // Stored snapshot of a social post (X or Instagram). null = not read yet. Added by migration 0005.
+  // ALWAYS read it through getXPost() / getInstagramPost() (src/lib/postData.ts), which check the platform.
+  post_data?: PostData | null;
   post_data_fetched_at?: string | null;
   post_data_failed_at?: string | null;
 };
@@ -74,6 +75,19 @@ export type XPostCore = {
 
 export type XPost = XPostCore & {
   v: 1;                                                // snapshot format version
+  platform?: 'x';                                      // missing on X snapshots stored before Instagram ones existed
   source: 'syndication' | 'vxtwitter';
   quoted: XPostCore | null;                            // one level only
 };
+
+// ---------- Instagram snapshot (bookmarks.post_data with platform 'instagram') ----------
+export type InstagramPost = {
+  v: 1;
+  platform: 'instagram';
+  handle: string;                                      // checked: letters, digits, . and _, max 30
+  handle_source: 'extension' | 'url' | 'page';         // where the handle came from (see src/lib/instagramMeta.ts)
+  caption: string | null;
+  is_video: boolean;
+};
+
+export type PostData = XPost | InstagramPost;

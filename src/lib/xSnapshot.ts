@@ -231,7 +231,7 @@ export function parseSyndication(raw: unknown): XPost | null {
   const core = parseSyndicationCore(t);
   if (!core) return null;
   const quoted = t.quoted_tweet ? parseSyndicationCore(t.quoted_tweet) : null;
-  return { v: 1, source: 'syndication', ...core, quoted };
+  return { v: 1, platform: 'x', source: 'syndication', ...core, quoted };
 }
 
 function parseVxCore(t: RawVxTweet): XPostCore | null {
@@ -279,7 +279,7 @@ export function parseVx(raw: unknown): XPost | null {
   const t = raw as RawVxTweet;
   const core = parseVxCore(t);
   if (!core) return null;
-  return { v: 1, source: 'vxtwitter', ...core, quoted: t.qrt ? parseVxCore(t.qrt) : null };
+  return { v: 1, platform: 'x', source: 'vxtwitter', ...core, quoted: t.qrt ? parseVxCore(t.qrt) : null };
 }
 
 // The embed snapshot, improved with vxtwitter: the whole text of a long post and the repost count.
