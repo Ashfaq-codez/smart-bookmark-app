@@ -221,3 +221,70 @@ describe('Reddit addresses from the phone apps', () => {
     }
   })
 })
+
+describe('fixes after the first iPhone tests', () => {
+  it('Reddit picture posts on cf.preview.redd.it: the full picture is found (real page)', () => {
+    const p = readRedditEmbed(fx('reddit/picture-post-cf.html'), { sub: 'TwentiesIndia', id: '1x6bjzb' })!
+    expect(p.kind).toBe('image')
+    expect(p.image).toBe('https://i.redd.it/ngj2htq8zjvh1.png')
+    expect(p.subreddit).toBe('TwentiesIndia')
+  })
+
+  it('a Reddit card whose snapshot missed the picture uses the saved one', () => {
+    const snap = { ...readRedditEmbed(fx('reddit/text-post.html'), { sub: 'IAmA', id: 'z1c9z' })!, image: null }
+    const html = renderToString(createElement(RedditCard, { bookmark: { ...base, type: 'reddit', url: 'https://www.reddit.com/r/IAmA/comments/z1c9z/', title: 't', image_url: 'https://i.redd.it/abc123def.png', post_data: snap } as any }))
+    expect(html).toContain('https://i.redd.it/abc123def.png')
+  })
+
+  it('Substack Note: text, author, photo, attached picture with its size, counts (real page)', async () => {
+    const { readSubstackNote, substackNoteTitle } = await import('@/lib/substackNote')
+    const n = readSubstackNote(fx('articles/substack-note.html'))!
+    expect(n).toMatchObject({ platform: 'substack-note', text: 'Ahh. Finally dialled', author: { name: 'Chris Best', handle: 'cb' }, likes: 69, restacks: 5, replies: 9 })
+    expect(n.author.avatar).toMatch(/^https:\/\/substackcdn\.com\//)
+    expect(n.images).toEqual([{ url: expect.stringMatching(/1206x1999\.jpeg$/), width: 1206, height: 1999 }])
+    expect(substackNoteTitle(n)).toBe('Chris Best on Substack: Ahh. Finally dialled')
+  })
+
+  it('Substack Note without the app data: structured data is the backup', async () => {
+    const { readSubstackNote } = await import('@/lib/substackNote')
+    const html = fx('articles/substack-note.html').replace(/<script>window\._preloads[\s\S]*?<\/script>/, '')
+    expect(readSubstackNote(html)).toMatchObject({ text: 'Ahh. Finally dialled', author: { name: 'Chris Best', handle: 'cb', avatar: null }, likes: 69 })
+  })
+
+  it('Notes are not articles: their own type, card and repair', async () => {
+    const { isSubstackNoteUrl } = await import('@/lib/postData')
+    const { needsRepair } = await import('@/hooks/useSnapshotRepair')
+    const url = 'https://substack.com/@cb/note/c-361346907'
+    expect(isSubstackNoteUrl(url)).toBe(true)
+    expect(isSubstackNoteUrl('https://substack.com/@3blue1brown/note/p-143167821')).toBe(false)
+    const oldRow = { ...base, type: 'link', url, title: 'Chris Best (@cb)', description: 'Ahh. Finally dialled',
+      post_data: { v: 1, platform: 'substack', title: 'Chris Best (@cb)', subtitle: 'Ahh. Finally dialled', author: null, publication: null, image: null, published_at: null, read_minutes: null } }
+    expect(deriveDisplayType(oldRow as any)).toBe('substack-note')
+    expect(needsRepair(oldRow as any, 'substack-note')).toBe(true)        // stored as an article: read again
+    expect(needsSnapshot(oldRow as any)).toBe(true)
+    // before the note is read again, the card already shows the author and the text
+    const html = renderToString(createElement((await import('@/components/social/SubstackNoteCard')).SubstackNoteCard, { bookmark: oldRow as any })).replace(/<!-- -->/g, '')
+    expect(html).toContain('Chris Best')
+    expect(html).toContain('@cb')
+    expect(html).toContain('Ahh. Finally dialled')
+  })
+
+  it('repair: reads the note, replaces Substack\'s "Name (@handle)" title, never an edited one', async () => {
+    const url = 'https://substack.com/@cb/note/c-361346907'
+    vi.mocked(safeFetch).mockResolvedValue(new Response(fx('articles/substack-note.html')))
+    const a = fakeSupabase()
+    expect(await enrichSocialPost(a.client as any, 'user-1', { id: 5, type: 'link', url, title: 'Chris Best (@cb)' }, 'repair')).toBe('stored')
+    expect(a.updates[0].patch).toMatchObject({ title: 'Chris Best on Substack: Ahh. Finally dialled', post_data: { platform: 'substack-note' } })
+    vi.mocked(safeFetch).mockResolvedValue(new Response(fx('articles/substack-note.html')))
+    const b = fakeSupabase()
+    await enrichSocialPost(b.client as any, 'user-1', { id: 5, type: 'link', url, title: 'Great photo' }, 'repair')
+    expect(b.updates[0].patch.title).toBe(undefined)
+  })
+
+  it('Substack share tracking is removed from the address', async () => {
+    const { normalizeUrl } = await import('@/lib/urlTools')
+    expect(normalizeUrl('https://betterengineers.substack.com/p/rate-limiting-how-apis-stay-alive?r=4yp1kd&utm_medium=ios'))
+      .toBe('https://betterengineers.substack.com/p/rate-limiting-how-apis-stay-alive')
+    expect(normalizeUrl('https://example.com/a?r=1&utm_source=x')).toBe('https://example.com/a?r=1&utm_source=x')
+  })
+})

@@ -5,6 +5,7 @@ import { toEditorHtml } from './toEditorHtml'
 import TwitterPreview from './previews/TwitterPreview'
 import { RedditPreview } from '../social/RedditCard'
 import { ArticlePreview } from '../social/ArticleCard'
+import { SubstackNotePreview } from '../social/SubstackNoteCard'
 import InstagramPreview from './previews/InstagramPreview'
 import PinterestPreview from './previews/PinterestPreview'
 import ImagePreview from './previews/ImagePreview'
@@ -35,6 +36,8 @@ export default function PreviewPane({ bookmark, displayType, previewImageUrl, ed
         <TwitterPreview bookmark={bookmark} />
       ) : displayType === 'reddit' ? (
         <RedditPreview bookmark={bookmark} />
+      ) : displayType === 'substack-note' ? (
+        <SubstackNotePreview bookmark={bookmark} />
       ) : displayType === 'substack' || displayType === 'medium' ? (
         <ArticlePreview bookmark={bookmark} platform={displayType} />
       ) : displayType === 'instagram' ? (

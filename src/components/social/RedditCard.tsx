@@ -11,7 +11,8 @@ const ORANGE = '#FF4500'
 // What a Reddit card shows: the stored snapshot, or (before it arrives) what the bookmark itself has.
 export function redditView(b: Bookmark): RedditPost {
   const snap = getRedditPost(b)
-  if (snap) return snap
+  // Older snapshots may have missed the picture; the bookmark's own saved picture fills in (never for NSFW).
+  if (snap) return snap.image || snap.nsfw || !b.image_url ? snap : { ...snap, image: b.image_url }
   const ref = redditPostRef(b.url)
   const t = (b.title || '').trim()
   const autoTitle = !t || /^https?:\/\//i.test(t) || /^(\(\d+\)\s*)?reddit\b/i.test(t)

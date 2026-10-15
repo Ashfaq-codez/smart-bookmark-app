@@ -130,4 +130,19 @@ export type ArticlePost = {
   read_minutes: number | null;
 };
 
-export type PostData = XPost | InstagramPost | YouTubePost | RedditPost | ArticlePost;
+// ---------- Substack Note snapshot (bookmarks.post_data with platform 'substack-note') ----------
+// A short Substack post (substack.com/@handle/note/c-<id>), shown like a social post, not an article.
+export type SubstackNotePost = {
+  v: 1;
+  platform: 'substack-note';
+  id: string;
+  author: { name: string; handle: string | null; avatar: string | null };
+  text: string;
+  images: { url: string; width: number; height: number }[];
+  created_at: string | null;
+  likes: number | null;
+  restacks: number | null;
+  replies: number | null;
+};
+
+export type PostData = XPost | InstagramPost | YouTubePost | RedditPost | ArticlePost | SubstackNotePost;

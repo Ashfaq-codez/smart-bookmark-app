@@ -1,5 +1,5 @@
 import { hostIs } from '@/lib/urlTools';
-import type { Bookmark, XPost, InstagramPost, YouTubePost, RedditPost, ArticlePost } from '@/types';
+import type { Bookmark, XPost, InstagramPost, YouTubePost, RedditPost, ArticlePost, SubstackNotePost } from '@/types';
 
 // bookmarks.post_data holds one platform's snapshot (X, Instagram, YouTube, Reddit, Substack, Medium). Every reader goes through these,
 // so one platform's snapshot is never read as another's.
@@ -44,4 +44,19 @@ export function articlePlatformOf(b: Pick<Bookmark, 'post_data' | 'url'>): Artic
     if (hostIs(host, 'substack.com')) return 'substack'
   } catch { /* not an address */ }
   return null
+}
+
+export function getSubstackNotePost(b: Pick<Bookmark, 'post_data'> | null | undefined): SubstackNotePost | null {
+  const d = b?.post_data as Record<string, unknown> | null | undefined;
+  return d && typeof d === 'object' && d.platform === 'substack-note' && typeof d.text === 'string' ? (d as unknown as SubstackNotePost) : null;
+}
+
+// substack.com/@handle/note/c-<id>: a Substack Note (a short post). (/note/p-<id> shares an article: that is an article.)
+export function isSubstackNoteUrl(url: string | null | undefined): boolean {
+  try {
+    const u = new URL(url || '');
+    return hostIs(u.hostname.toLowerCase(), 'substack.com') && /^\/@[A-Za-z0-9_.-]{1,60}\/note\/c-\d{1,15}\/?$/.test(u.pathname);
+  } catch {
+    return false;
+  }
 }

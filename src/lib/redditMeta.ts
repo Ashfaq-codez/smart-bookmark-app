@@ -9,7 +9,8 @@ import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
 // official embed page (embed.reddit.com, made to be shown on other sites) carries the post: title, subreddit,
 // author, upvotes, the text of a text post and the picture of an image post. oEmbed is the backup (title + author).
 
-const REDDIT_IMAGE = /^https:\/\/(?:i|preview|external-preview)\.redd\.it\//;
+// Reddit's picture servers: i.redd.it, preview.redd.it, cf.preview.redd.it, external-preview.redd.it …
+const REDDIT_IMAGE = /^https:\/\/(?:[a-z0-9-]+\.)*redd\.it\//;
 const clean = (s: string | null | undefined, max: number) => {
   const t = (s || '').replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   return t ? t.slice(0, max) : null;
@@ -49,8 +50,10 @@ export function readRedditEmbed(html: string, ref: { sub: string; id: string }):
   const kind: RedditPost['kind'] =
     type === 'image' ? 'image' : type === 'video' ? 'video' : type === 'gallery' ? 'gallery' : type === 'link' ? 'link' : body ? 'text' : 'other';
   const link = typeof post.url === 'string' && isHttps(post.url) && !/\.redd\.it\//.test(post.url) && kind === 'link' ? post.url : null;
-  const image = nsfw ? null
-    : $('img').toArray().map((el) => $(el).attr('src') || '').find((src) => REDDIT_IMAGE.test(src) && !/snoovatar|avatars/.test(src)) || null;
+  // The full-size picture (i.redd.it/<name>.<ext>) when the page names it, else the first post picture shown.
+  const shown = $('img').toArray().map((el) => $(el).attr('src') || '').filter((src) => REDDIT_IMAGE.test(src) && !/snoovatar|avatars|communityIcon/.test(src));
+  const full = html.match(/https:\/\/i\.redd\.it\/[a-z0-9]{6,20}\.(?:jpe?g|png|webp|gif)/i)?.[0] ?? null;
+  const image = nsfw ? null : (kind === 'image' && full) || shown[0] || null;
   const created = Number(post.created_timestamp);
 
   return {

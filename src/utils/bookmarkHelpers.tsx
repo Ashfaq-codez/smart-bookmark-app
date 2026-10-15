@@ -1,7 +1,7 @@
 import React from 'react'
 import { Bookmark } from '@/types'
 import { hostIs, detectSiteType } from '@/lib/urlTools'
-import { getInstagramPost, getYouTubePost, getRedditPost, getArticlePost, articlePlatformOf } from '@/lib/postData'
+import { getInstagramPost, getYouTubePost, getRedditPost, getArticlePost, articlePlatformOf, getSubstackNotePost, isSubstackNoteUrl } from '@/lib/postData'
 import { handleFromUrl, handleFromDescription, countsFromDescription, captionFromDescription, plainCaption } from '@/lib/instagramText'
 
 // The host name of an address (lowercase, no www.), or '' when it is not an address
@@ -70,7 +70,8 @@ export const deriveDisplayType = (b: Bookmark) => {
     // Match the real site (x.com, www.x.com, mobile.twitter.com...), never just "contains" (dropbox.com is not x.com)
     const site = detectSiteType(b.url);
     if (site === 'twitter' || site === 'instagram' || site === 'pinterest' || site === 'youtube' || site === 'github' || site === 'reddit') return site;
-    // Substack / Medium articles (also Substack newsletters on their own domain, known from the stored snapshot)
+    // Substack Notes (short posts), then Substack / Medium articles (also newsletters on their own domain)
+    if (isSubstackNoteUrl(b.url)) return 'substack-note';
     const article = articlePlatformOf(b);
     if (article) return article;
     if (hostIs(hostOf(b.url), 'tiktok.com')) return 'tiktok';
@@ -195,6 +196,10 @@ export const cardHoverText = (b: Bookmark, displayType: string, domain: string):
   if (displayType === 'reddit') {
     const r = getRedditPost(b)
     return { title: r?.title || (looksAuto ? null : raw), sub: r?.subreddit ? `r/${r.subreddit}` : domain }
+  }
+  if (displayType === 'substack-note') {
+    const n = getSubstackNotePost(b)
+    return { title: n ? `${n.author.name}${n.author.handle ? ` @${n.author.handle}` : ''}` : (looksAuto ? null : raw), sub: 'substack.com' }
   }
   if (displayType === 'substack' || displayType === 'medium') {
     const a = getArticlePost(b)

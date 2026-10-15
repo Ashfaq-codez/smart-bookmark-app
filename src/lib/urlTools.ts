@@ -25,6 +25,13 @@ export function normalizeUrl(rawUrl: string, type: string = 'link'): string {
       if (videoId) return `${parsed.protocol}//youtube.com/watch?v=${videoId}`;
     }
 
+    // Substack share links carry a referral code and tracking (?r=…&utm_…): the same post, so they go.
+    if (host === 'substack.com' || host.endsWith('.substack.com')) {
+      for (const k of [...parsed.searchParams.keys()]) {
+        if (k === 'r' || k.startsWith('utm_') || k === 'showWelcomeOnShare' || k === 'triedRedirect') parsed.searchParams.delete(k);
+      }
+      search = parsed.search;
+    }
     const hash = type === 'note' ? parsed.hash : '';
     return `${parsed.protocol}//${host}${path}${search}${hash}`;
   } catch {

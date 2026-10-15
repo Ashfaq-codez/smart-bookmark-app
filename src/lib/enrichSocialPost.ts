@@ -3,6 +3,8 @@ import { canonicalizeXUrl, hostIs, isRedditShareLink } from '@/lib/urlTools';
 import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
 import { redditPostRef, fetchRedditPost, resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
+import { fetchSubstackNote, substackNoteTitle } from '@/lib/substackNote';
+import { isSubstackNoteUrl } from '@/lib/postData';
 import { cleanHandle, handleFromUrl, handleFromDescription, captionFromDescription, fetchInstagramPage, instagramSnapshot } from '@/lib/instagramMeta';
 import { fetchXSnapshot, xTitle } from '@/lib/xSnapshot';
 import type { XPost } from '@/types';
@@ -44,13 +46,15 @@ export function isInstagramPostUrl(url: string | null | undefined): boolean {
 
 // Does this bookmark still need a snapshot (and is it allowed to try now)?
 export function needsSnapshot(row: Pick<EnrichRow, 'type' | 'url' | 'post_data' | 'post_data_failed_at'>, now = Date.now()): boolean {
-  if (row.post_data) return false;
+  // A Substack Note first stored as an article (before Notes had their own card) is read again.
+  const notePlatform = (row.post_data as { platform?: string } | null | undefined)?.platform;
+  if (row.post_data && !(isSubstackNoteUrl(row.url) && notePlatform !== 'substack-note')) return false;
   const supported = (row.type === 'twitter' && !!canonicalizeXUrl(row.url || ''))
     || (row.type === 'instagram' && isInstagramPostUrl(row.url))
     || (row.type === 'youtube' && !!youTubeVideoId(row.url))
     // Reddit posts saved before Reddit had its own type are plain links: recognised by the address.
     || ((row.type === 'reddit' || row.type === 'link') && (!!redditPostRef(row.url) || isRedditShareLink(row.url)))
-    || (row.type === 'link' && isArticleHost(row.url));
+    || (row.type === 'link' && isArticleHost(row.url));   // (includes Substack Notes on substack.com)
   if (!supported) return false;
   if (!row.post_data_failed_at) return true;
   const failed = Date.parse(row.post_data_failed_at);
@@ -82,6 +86,7 @@ export async function enrichSocialPost(
   if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
   if (row.type === 'youtube') return enrichYouTube(db, userId, row, mode, keep);
   if (redditPostRef(row.url) || isRedditShareLink(row.url)) return enrichReddit(db, userId, row, mode, keep);
+  if (row.type === 'link' && isSubstackNoteUrl(row.url)) return enrichSubstackNote(db, userId, row, mode, keep);
   if (row.type === 'link' && isArticleHost(row.url)) return enrichArticle(db, userId, row);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
   if (!canonical) return 'skipped';
@@ -253,4 +258,31 @@ async function enrichArticle(db: SupabaseClient, userId: string, row: EnrichRow)
     return 'failed';
   }
   return details.article ? 'stored' : 'not-found';
+}
+
+// ---------- Substack Notes ----------
+// Titles the app made itself for a Note: "Name (@handle)" (Substack's own page title), empty or an address.
+const isAutoNoteTitle = (t: string | null | undefined) => {
+  const v = (t || '').trim();
+  return !v || /^https?:\/\//i.test(v) || /^[^()]{1,100} \(@[A-Za-z0-9_.-]{1,60}\)$/.test(v) || v === 'Substack';
+};
+
+async function enrichSubstackNote(db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep): Promise<EnrichResult> {
+  const r = await fetchSubstackNote(row.url);
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = r.ok
+    ? { post_data: r.post, post_data_fetched_at: now, post_data_failed_at: null }
+    : { post_data_failed_at: now };
+  if (r.ok) {
+    if (mode === 'save' ? !keep.title : isAutoNoteTitle(row.title)) patch.title = substackNoteTitle(r.post);
+    if (mode === 'save' && !keep.description) patch.description = r.post.text;
+    const img = r.post.images[0]?.url;
+    if (img && (mode === 'save' ? !keep.image : !row.image_url)) patch.image_url = img;
+  }
+  const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
+  if (error) {
+    console.error('[substack-note] update failed:', error.message);
+    return 'failed';
+  }
+  return r.ok ? 'stored' : 'not-found';
 }

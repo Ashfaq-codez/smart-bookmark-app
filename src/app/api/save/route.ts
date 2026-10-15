@@ -8,6 +8,7 @@ import { fetchPageDetails } from '@/lib/pageDetails';
 import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
 import { parsePageCapture } from '@/lib/pageCapture';
 import { articleFromMeta } from '@/lib/articleMeta';
+import { isSubstackNoteUrl } from '@/lib/postData';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
@@ -311,6 +312,11 @@ export async function POST(request: Request) {
         // Reddit's normal page only gives servers a "blocked" page, so nothing else is read.
         if (detectedType === 'reddit') {
           await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'reddit' }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
+          return;
+        }
+        // Substack Notes (short posts): the note itself, its author and pictures (not an article card).
+        if (detectedType === 'link' && isSubstackNoteUrl(cleanUrl)) {
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'link' }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
           return;
         }
         // YouTube videos: the real title and channel from YouTube's free oEmbed. The page is still read for
