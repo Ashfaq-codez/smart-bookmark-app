@@ -79,3 +79,16 @@ export function cleanTitle(title: unknown): string {
   if (typeof title !== 'string') return '';
   return title.trim().replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').trim();
 }
+
+// r/<sub>/comments/<id> from any reddit.com address (www, old, new, m), or null.
+export function redditPostRef(url: string | null | undefined): { sub: string; id: string } | null {
+  if (!url) return null;
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    if (!hostIs(u.hostname.toLowerCase(), 'reddit.com')) return null;
+    const m = u.pathname.match(/^\/r\/([A-Za-z0-9_]{2,21})\/comments\/([a-z0-9]{2,12})(?:\/|$)/i);
+    return m ? { sub: m[1], id: m[2].toLowerCase() } : null;
+  } catch {
+    return null;
+  }
+}

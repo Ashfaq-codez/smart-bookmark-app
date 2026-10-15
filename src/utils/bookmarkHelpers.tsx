@@ -1,7 +1,7 @@
 import React from 'react'
 import { Bookmark } from '@/types'
 import { hostIs, detectSiteType } from '@/lib/urlTools'
-import { getInstagramPost, getYouTubePost } from '@/lib/postData'
+import { getInstagramPost, getYouTubePost, getRedditPost, getArticlePost, articlePlatformOf } from '@/lib/postData'
 import { handleFromUrl, handleFromDescription, countsFromDescription, captionFromDescription, plainCaption } from '@/lib/instagramText'
 
 // The host name of an address (lowercase, no www.), or '' when it is not an address
@@ -59,17 +59,20 @@ export const deriveDisplayType = (b: Bookmark) => {
   // A saved label is trusted only if the address really is that site. Old saves made by the earlier
   // "contains x.com" check were stored as X posts even for dropbox.com, netflix.com...
   let storedType = b.type;
-  if (storedType && ['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github'].includes(storedType) && b.url) {
+  if (storedType && ['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'reddit'].includes(storedType) && b.url) {
     const real = storedType === 'tiktok' ? (hostIs(hostOf(b.url), 'tiktok.com') ? 'tiktok' : null) : detectSiteType(b.url);
     if (real !== storedType) storedType = 'link';
   }
-  if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'note', 'pdf', 'image', 'video'].includes(storedType || '')) return storedType;
+  if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'reddit', 'note', 'pdf', 'image', 'video'].includes(storedType || '')) return storedType;
   if (b.url) {
     if (isGoogleSearchUrl(b.url)) return 'google';
     const url = b.url.toLowerCase();
     // Match the real site (x.com, www.x.com, mobile.twitter.com...), never just "contains" (dropbox.com is not x.com)
     const site = detectSiteType(b.url);
-    if (site === 'twitter' || site === 'instagram' || site === 'pinterest' || site === 'youtube' || site === 'github') return site;
+    if (site === 'twitter' || site === 'instagram' || site === 'pinterest' || site === 'youtube' || site === 'github' || site === 'reddit') return site;
+    // Substack / Medium articles (also Substack newsletters on their own domain, known from the stored snapshot)
+    const article = articlePlatformOf(b);
+    if (article) return article;
     if (hostIs(hostOf(b.url), 'tiktok.com')) return 'tiktok';
     if (url.endsWith('.pdf') || b.file_type === 'application/pdf') return 'pdf';
   }
@@ -166,7 +169,6 @@ export const getUniversalEmbedUrl = (url: string): string | null => {
     }
     if (host === 'figma.com') return `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(url)}`;
     if (host === 'codepen.io') return url.replace('/pen/', '/embed/preview/');
-    if (host === 'reddit.com') return `${url.replace(/\/$/, '')}/embed`;
     if (host === 'soundcloud.com') return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&visual=true`;
     if (host === 'codesandbox.io') return url.replace('/s/', '/embed/');
     
@@ -190,6 +192,19 @@ export const cardHoverText = (b: Bookmark, displayType: string, domain: string):
     const title = yt?.title || (looksAuto || /^(\(\d+\)\s*)?YouTube$/i.test(raw) ? null : raw)
     return { title, sub: yt?.channel || domain }
   }
+  if (displayType === 'reddit') {
+    const r = getRedditPost(b)
+    return { title: r?.title || (looksAuto ? null : raw), sub: r?.subreddit ? `r/${r.subreddit}` : domain }
+  }
+  if (displayType === 'substack' || displayType === 'medium') {
+    const a = getArticlePost(b)
+    return { title: a?.title || (looksAuto ? null : raw), sub: a?.publication || a?.author || domain }
+  }
   const sub = displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : displayType === 'google' ? 'GOOGLE SEARCH' : domain
   return { title: looksAuto ? null : raw, sub }
 }
+
+// A site's own icon, from DuckDuckGo's free icon service (the earlier logo service, Clearbit, has shut down).
+// It answers "not found" for sites without one, so the <img> can hide itself.
+export const faviconUrl = (domain: string) =>
+  /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain) ? `https://icons.duckduckgo.com/ip3/${domain.toLowerCase()}.ico` : ''

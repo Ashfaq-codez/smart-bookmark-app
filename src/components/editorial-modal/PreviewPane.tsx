@@ -3,6 +3,8 @@ import TipTapEditor from '../editor/TipTapEditor'
 import { ModalEdits } from './useModalEdits'
 import { toEditorHtml } from './toEditorHtml'
 import TwitterPreview from './previews/TwitterPreview'
+import { RedditPreview } from '../social/RedditCard'
+import { ArticlePreview } from '../social/ArticleCard'
 import InstagramPreview from './previews/InstagramPreview'
 import PinterestPreview from './previews/PinterestPreview'
 import ImagePreview from './previews/ImagePreview'
@@ -31,6 +33,10 @@ export default function PreviewPane({ bookmark, displayType, previewImageUrl, ed
         </div>
       ) : displayType === 'twitter' ? (
         <TwitterPreview bookmark={bookmark} />
+      ) : displayType === 'reddit' ? (
+        <RedditPreview bookmark={bookmark} />
+      ) : displayType === 'substack' || displayType === 'medium' ? (
+        <ArticlePreview bookmark={bookmark} platform={displayType} />
       ) : displayType === 'instagram' ? (
         <InstagramPreview bookmark={bookmark} previewImageUrl={previewImageUrl} title={editTitle} description={editDescription} content={editContent} />
       ) : displayType === 'pinterest' ? (

@@ -1,5 +1,5 @@
 import { Bookmark } from '@/types'
-import { getUniversalEmbedUrl } from '@/utils/bookmarkHelpers'
+import { getUniversalEmbedUrl, faviconUrl } from '@/utils/bookmarkHelpers'
 import { RefreshCw } from 'lucide-react'
 
 export default function LinkPreview({ bookmark, previewImageUrl, getDomain, onCyclePreview }: { bookmark: Bookmark; previewImageUrl?: string; getDomain: (url: string) => string; onCyclePreview?: () => void }) {
@@ -32,7 +32,7 @@ export default function LinkPreview({ bookmark, previewImageUrl, getDomain, onCy
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815]">
-             <img src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} alt="Favicon" className="w-24 h-24 rounded-2xl shadow-xl mb-6 bg-white p-2" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+             <img src={faviconUrl(getDomain(bookmark.url))} alt="Favicon" className="w-24 h-24 rounded-2xl shadow-xl mb-6 bg-white p-2" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
              <span className="text-xl font-bold text-[#171A17] dark:text-[#F3F0E9] text-center px-4">{getDomain(bookmark.url)}</span>
              <span className="text-sm font-medium text-[#4D6A51] dark:text-[#8FAA91] mt-2 underline">Visit Website</span>
           </div>

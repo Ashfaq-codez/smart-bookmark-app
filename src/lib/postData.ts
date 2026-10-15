@@ -1,3 +1,4 @@
+import { hostIs } from '@/lib/urlTools';
 import type { Bookmark, XPost, InstagramPost, YouTubePost, RedditPost, ArticlePost } from '@/types';
 
 // bookmarks.post_data holds one platform's snapshot (X, Instagram, YouTube, Reddit, Substack, Medium). Every reader goes through these,
@@ -31,4 +32,16 @@ export function getArticlePost(b: Pick<Bookmark, 'post_data'> | null | undefined
   const d = b?.post_data as Record<string, unknown> | null | undefined;
   return d && typeof d === 'object' && (d.platform === 'substack' || d.platform === 'medium') && typeof d.title === 'string'
     ? (d as unknown as ArticlePost) : null;
+}
+
+// substack / medium from the stored snapshot, or from the address before the snapshot arrives.
+export function articlePlatformOf(b: Pick<Bookmark, 'post_data' | 'url'>): ArticlePost['platform'] | null {
+  const snap = getArticlePost(b)
+  if (snap) return snap.platform
+  try {
+    const host = new URL(b.url).hostname.toLowerCase()
+    if (hostIs(host, 'medium.com')) return 'medium'
+    if (hostIs(host, 'substack.com')) return 'substack'
+  } catch { /* not an address */ }
+  return null
 }

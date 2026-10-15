@@ -1,28 +1,17 @@
 import * as cheerio from 'cheerio';
 import type { RedditPost } from '@/types';
-import { hostIs } from '@/lib/urlTools';
+import { redditPostRef } from '@/lib/urlTools';
+
+export { redditPostRef };
 import { safeFetch } from '@/utils/safeFetch';
 
 // A Reddit post without any paid API or login. Reddit refuses its normal pages and .json to servers, but its
 // official embed page (embed.reddit.com, made to be shown on other sites) carries the post: title, subreddit,
 // author, upvotes, the text of a text post and the picture of an image post. oEmbed is the backup (title + author).
 
-// r/<sub>/comments/<id> from any reddit.com address (www, old, new, m), or null.
-export function redditPostRef(url: string | null | undefined): { sub: string; id: string } | null {
-  if (!url) return null;
-  try {
-    const u = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
-    if (!hostIs(u.hostname.toLowerCase(), 'reddit.com')) return null;
-    const m = u.pathname.match(/^\/r\/([A-Za-z0-9_]{2,21})\/comments\/([a-z0-9]{2,12})(?:\/|$)/i);
-    return m ? { sub: m[1], id: m[2].toLowerCase() } : null;
-  } catch {
-    return null;
-  }
-}
-
 const REDDIT_IMAGE = /^https:\/\/(?:i|preview|external-preview)\.redd\.it\//;
 const clean = (s: string | null | undefined, max: number) => {
-  const t = (s || '').replace(/\s+\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  const t = (s || '').replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   return t ? t.slice(0, max) : null;
 };
 const isHttps = (u: string | null | undefined): u is string => {
@@ -68,7 +57,9 @@ export function readRedditEmbed(html: string, ref: { sub: string; id: string }):
     v: 1,
     platform: 'reddit',
     id: ref.id,
-    subreddit: (ctx.subreddit?.name && /^[A-Za-z0-9_]{2,21}$/.test(ctx.subreddit.name) ? ctx.subreddit.name : ref.sub),
+    // The address keeps the subreddit's own capitals (IAmA); Reddit's data has it in lower case.
+    subreddit: ctx.subreddit?.name && /^[A-Za-z0-9_]{2,21}$/.test(ctx.subreddit.name) && ctx.subreddit.name.toLowerCase() !== ref.sub.toLowerCase()
+      ? ctx.subreddit.name : ref.sub,
     subreddit_icon: isHttps(icon) ? icon : null,
     author,
     title,

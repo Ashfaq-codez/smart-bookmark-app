@@ -4,7 +4,9 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSnapshotRepair } from '@/hooks/useSnapshotRepair'
-import { cardHoverText } from '@/utils/bookmarkHelpers'
+import { cardHoverText, faviconUrl } from '@/utils/bookmarkHelpers'
+import { RedditCard } from './social/RedditCard'
+import { ArticleCard } from './social/ArticleCard'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -13,7 +15,7 @@ import {
   XIcon, InstagramIcon, YouTubeIcon, TikTokIcon, PinterestIcon, SearchIcon 
 } from './BookmarkIcons';
 import { 
-  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getPlatformMeta, getGoogleQuery 
+  isVideoMedia, getYouTubeId, getTwitterAuthor, deriveDisplayType, renderTwitterText, getGoogleQuery 
 } from '@/utils/bookmarkHelpers';
 import EditorialModal from './editorial-modal/EditorialModal'
 import PinIcon from './PinIcon'
@@ -237,6 +239,12 @@ export default function BookmarkCard({
             <p className="text-[11px] sm:text-[12px] text-gray-500 dark:text-[#6B7280] font-sans mt-1 px-1">by {getTwitterAuthor(bookmark.url)}</p>
           </div>
 
+        ) : displayType === 'reddit' ? (
+          <RedditCard bookmark={bookmark} />
+
+        ) : displayType === 'substack' || displayType === 'medium' ? (
+          <ArticleCard bookmark={bookmark} platform={displayType} />
+
         ) : ['instagram', 'tiktok'].includes(displayType || '') ? (
           <div className="w-full aspect-[4/5] relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-gray-100 dark:bg-[#151815]">
             {displayType === 'instagram' ? <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] z-20" /> : <div className="absolute top-0 left-0 w-full h-[4px] bg-[#25F4EE] z-20" />}
@@ -306,16 +314,12 @@ export default function BookmarkCard({
         ) : (
           <div className="w-full relative rounded-xl sm:rounded-2xl overflow-hidden shadow-none group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-shadow duration-300 bg-[#FAF9F5] dark:bg-[#151815] flex flex-col group/fallback">
             
-            {/* Dynamic Brand Accent Line */}
-            {getPlatformMeta(bookmark.url).color !== 'transparent' && (
-               <div className="absolute top-0 left-0 w-full h-[3px] z-20" style={{ backgroundColor: getPlatformMeta(bookmark.url).color }} />
-            )}
 
             {/* Dynamic Official Platform Logo Badge (Hides entirely if Logo fails) */}
             {!faviconError && (
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-300 rounded-full p-1.5 shadow-md bg-white border border-black/[0.04] w-8 h-8 flex items-center justify-center">
                  <img 
-                   src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} 
+                   src={faviconUrl(getDomain(bookmark.url))} 
                    alt="Platform Logo" 
                    className="w-full h-full object-contain rounded-sm" 
                    onError={() => setFaviconError(true)} 
@@ -338,7 +342,7 @@ export default function BookmarkCard({
                  </div>
                  {!faviconError && (
                     <img 
-                      src={`https://logo.clearbit.com/${getDomain(bookmark.url)}`} 
+                      src={faviconUrl(getDomain(bookmark.url))} 
                       alt="Favicon" 
                       className="w-12 h-12 rounded-xl shadow-md mb-4 bg-white p-1 z-10" 
                       onError={() => setFaviconError(true)} 
@@ -350,7 +354,8 @@ export default function BookmarkCard({
           </div>
         )}
 
-        {!isMinimalist && displayType !== 'note' && displayType !== 'twitter' && (
+        {/* Hover title: only for cards that are mostly a picture (text cards already show their title) */}
+        {!isMinimalist && !['note', 'twitter', 'reddit', 'substack', 'medium'].includes(displayType || '') && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col gap-0.5 px-3.5 pb-3 pt-12 rounded-b-xl sm:rounded-b-2xl bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-300">
             {hover.title && (
               <h4 className="text-[13px] font-semibold font-sans text-white line-clamp-2 leading-snug drop-shadow-sm">{hover.title}</h4>
