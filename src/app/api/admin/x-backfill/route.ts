@@ -15,7 +15,7 @@ const DELAY_MS = 1500;   // pause between posts, to be gentle with the free sour
 async function nextBatch() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdmin(user.id)) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) };
+  if (!user || !isAdmin(user.id)) return { ok: false as const, response: NextResponse.json({ error: 'Not found' }, { status: 404 }) };
 
   const retryBefore = new Date(Date.now() - RETRY_AFTER_MS).toISOString();
   const { data, count, error } = await supabase
@@ -28,13 +28,13 @@ async function nextBatch() {
     .order('created_at', { ascending: false })
     .limit(BATCH);
   if (error) throw error;
-  return { supabase, userId: user.id, rows: data || [], waiting: count ?? (data || []).length };
+  return { ok: true as const, supabase, userId: user.id, rows: data || [], waiting: count ?? (data || []).length };
 }
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   try {
     const r = await nextBatch();
-    if ('error' in r) return r.error;
+    if (!r.ok) return r.response;
     return NextResponse.json({
       dryRun: true,
       waiting: r.waiting,
@@ -46,10 +46,10 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(): Promise<NextResponse> {
   try {
     const r = await nextBatch();
-    if ('error' in r) return r.error;
+    if (!r.ok) return r.response;
     const results: { id: number; url: string; result: string }[] = [];
     for (const [i, row] of r.rows.entries()) {
       if (i > 0) await new Promise((res) => setTimeout(res, DELAY_MS));
