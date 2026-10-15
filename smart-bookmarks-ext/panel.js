@@ -23,6 +23,9 @@ const PANEL_CSS = `
   }
   .wrap::-webkit-scrollbar { display: none; }
   .wrap.open { opacity: 1; transform: none; }
+  /* Shown in the browser's top layer (popover): above everything a page can draw, whatever its z-index.
+     The browser's own popover look (centered, border, padding) is undone here. */
+  .wrap[popover] { inset: auto; top: ${GAP}px; right: ${GAP}px; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; }
   .wrap .app { padding: 16px; }
   @media (prefers-color-scheme: dark) {
     .wrap { box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08); }
@@ -35,7 +38,7 @@ function close() {
   closing = true;
   const wrap = host.__wrap;
   wrap.classList.remove('open');
-  const done = () => { host?.remove(); host = null; closing = false; };
+  const done = () => { host?.__observer?.disconnect(); host?.remove(); host = null; closing = false; };
   wrap.addEventListener('transitionend', done, { once: true });
   setTimeout(done, 260);   // in case no transition runs
 }
@@ -51,13 +54,20 @@ function open() {
   const ex = globalThis.inntoitExtract;
   host = document.createElement('inntoit-panel');
   const root = host.attachShadow({ mode: 'closed' });
-  // Constructed style sheets: allowed even on pages whose rules block inline <style>.
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(globalThis.inntoitUI.CSS + PANEL_CSS);
-  root.adoptedStyleSheets = [sheet];
+  // Constructed style sheets: allowed even on pages whose rules block inline <style>. A <style> as the backup.
+  try {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(globalThis.inntoitUI.CSS + PANEL_CSS);
+    root.adoptedStyleSheets = [sheet];
+  } catch (e) {
+    const style = document.createElement('style');
+    style.textContent = globalThis.inntoitUI.CSS + PANEL_CSS;
+    root.appendChild(style);
+  }
 
   const wrap = document.createElement('div');
   wrap.className = 'wrap';
+  if ('popover' in HTMLElement.prototype) wrap.setAttribute('popover', 'manual');
   wrap.setAttribute('role', 'dialog');
   wrap.setAttribute('aria-label', 'Save to inntoit');
   // Typing in the note must not trigger the page's own keyboard shortcuts (Reddit, X, YouTube…).
@@ -79,8 +89,26 @@ function open() {
     close,
   });
 
-  document.documentElement.appendChild(host);
+  attach();
+  try { if (wrap.showPopover) wrap.showPopover(); } catch (e) { /* not in the top layer: the z-index still applies */ }
   requestAnimationFrame(() => { wrap.classList.add('open'); ui.focus(); });
+
+  // Some sites (single-page apps) remove elements they don't know: put the panel back while it is open.
+  host.__observer = new MutationObserver(() => {
+    if (host && !host.isConnected) { attach(); try { if (wrap.showPopover && !wrap.matches(':popover-open')) wrap.showPopover(); } catch (e) { /* ignore */ } }
+  });
+  host.__observer.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+function attach() {
+  (document.body || document.documentElement).appendChild(host);
+}
+
+// True when the panel really shows on screen (in the page and not hidden or zero-sized).
+function isShowing() {
+  if (!host || !host.isConnected) return false;
+  const r = host.__wrap.getBoundingClientRect();
+  return r.width > 40 && r.height > 40 && getComputedStyle(host.__wrap).visibility !== 'hidden';
 }
 
 // Click anywhere on the page (outside the panel) or press Esc: close.
@@ -91,8 +119,22 @@ document.addEventListener('keydown', onKeyDown, true);
 
 const onRuntimeMessage = (request, _sender, sendResponse) => {
   if (request.type !== 'TOGGLE_PANEL') return;
-  if (host) close(); else open();
-  sendResponse({ ok: true });
+  if (host) { close(); sendResponse({ ok: true }); return; }
+  try {
+    open();
+  } catch (e) {
+    console.warn('[inntoit] panel failed:', e);
+    host?.remove(); host = null;
+    sendResponse({ ok: false });   // background.js opens the normal popup instead
+    return;
+  }
+  // Answer once the panel has had two frames to appear: if it isn't really on screen, say so.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (isShowing()) { sendResponse({ ok: true }); return; }
+    host?.__observer?.disconnect(); host?.remove(); host = null;
+    sendResponse({ ok: false });
+  }));
+  return true;   // answers later
 };
 chrome.runtime.onMessage.addListener(onRuntimeMessage);
 
@@ -100,6 +142,7 @@ globalThis.__inntoitPanelCleanup = () => {
   document.removeEventListener('pointerdown', onPointerDown, true);
   document.removeEventListener('keydown', onKeyDown, true);
   try { chrome.runtime.onMessage.removeListener(onRuntimeMessage); } catch (e) { /* old copy cut off by a reload */ }
+  host?.__observer?.disconnect();
   host?.remove();
   host = null;
 };

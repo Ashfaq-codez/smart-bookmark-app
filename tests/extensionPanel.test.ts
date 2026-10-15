@@ -22,6 +22,9 @@ function setup(url = 'https://example.com/article', saveAnswer: any = { status: 
   }
   // jsdom has no constructed style sheets: a stand-in is enough here.
   w.CSSStyleSheet = class { replaceSync() {} }
+  // jsdom doesn't lay pages out: give elements a real size, as a browser would (the panel checks it is visible).
+  w.Element.prototype.getBoundingClientRect = function () { return { x: 900, y: 12, width: 368, height: 280, top: 12, left: 900, right: 1268, bottom: 292 } }
+  w.requestAnimationFrame = (fn: any) => setTimeout(fn, 0)
   let root: any = null
   const attach = w.Element.prototype.attachShadow
   w.Element.prototype.attachShadow = function (o: any) {
@@ -31,6 +34,7 @@ function setup(url = 'https://example.com/article', saveAnswer: any = { status: 
   }
   w.eval(SRC)
   const toggle = () => new Promise((r) => listener({ type: 'TOGGLE_PANEL' }, {}, r))
+  const toggleAnswer = toggle
   const host = () => w.document.querySelector('inntoit-panel')
   const $ = (sel: string) => root?.querySelector(sel)
   return { w, toggle, host, $, sent, text: () => root?.textContent || '' }
@@ -92,5 +96,22 @@ describe('extension save panel (drawn on the page, no frame)', () => {
       await wait(300)
       expect(t.host()).toBe(null)
     }
+  })
+
+  it('says "ok" only when the panel really shows; otherwise the popup is used', async () => {
+    const t = setup()
+    expect(await t.toggle()).toEqual({ ok: true })
+    const hidden = setup()
+    hidden.w.Element.prototype.getBoundingClientRect = () => ({ width: 0, height: 0 })
+    expect(await hidden.toggle()).toEqual({ ok: false })
+    expect(hidden.host()).toBe(null)
+  })
+
+  it('comes back if the page removes it while open', async () => {
+    const t = setup()
+    await t.toggle()
+    t.host().remove()
+    await wait(10)
+    expect(t.host()).toBeTruthy()
   })
 })

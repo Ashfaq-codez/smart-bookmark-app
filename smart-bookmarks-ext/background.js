@@ -326,13 +326,23 @@ async function openNormalPopup(tabId) {
   try {
     await chrome.action.setPopup({ tabId, popup: 'popup.html' });
     await chrome.action.openPopup();
+    chrome.action.setPopup({ tabId, popup: '' }).catch(() => {});   // back to the panel for the next click
   } catch (err) {
+    // Chrome wouldn't open it by itself: keep the popup on this tab so the next click opens it, and say so.
     console.log('[inntoit] popup fallback failed:', err?.message);
-  } finally {
-    // Back to the panel for the next click.
-    chrome.action.setPopup({ tabId, popup: '' }).catch(() => {});
+    chrome.action.setTitle({ tabId, title: 'Click again to save to inntoit' }).catch(() => {});
+    chrome.action.setBadgeText({ tabId, text: '1×' }).catch(() => {});
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#4D6A51' }).catch(() => {});
   }
 }
+
+// A tab that kept the popup (above) goes back to the panel once it loads a new page.
+chrome.tabs.onUpdated.addListener((tabId, change) => {
+  if (change.status !== 'loading') return;
+  chrome.action.setPopup({ tabId, popup: '' }).catch(() => {});
+  chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {});
+  chrome.action.setTitle({ tabId, title: DEFAULT_TITLE }).catch(() => {});
+});
 
 function togglePanel(tabId) {
   return new Promise((resolve) => {
