@@ -1,7 +1,7 @@
 import React from 'react'
 import { Bookmark } from '@/types'
 import { hostIs, detectSiteType } from '@/lib/urlTools'
-import { getInstagramPost } from '@/lib/postData'
+import { getInstagramPost, getYouTubePost } from '@/lib/postData'
 import { handleFromUrl, handleFromDescription, countsFromDescription, captionFromDescription, plainCaption } from '@/lib/instagramText'
 
 // The host name of an address (lowercase, no www.), or '' when it is not an address
@@ -172,4 +172,24 @@ export const getUniversalEmbedUrl = (url: string): string | null => {
     
     return null; // Return null if no interactive embed exists, which triggers standard fallback
   } catch { return null; }
+}
+// The two lines shown over a card on hover: a title, and a smaller line under it.
+// Never shows a bare web address as the title.
+//   Instagram: @handle over the site; YouTube: the video title over the channel name.
+export const cardHoverText = (b: Bookmark, displayType: string, domain: string): { title: string | null; sub: string } => {
+  const raw = (b.title || '').trim()
+  const looksAuto = !raw || /^https?:\/\//i.test(raw) || raw === (b.url || '').trim() ||
+    ['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled'].includes(raw)
+
+  if (displayType === 'instagram') {
+    const handle = getInstaMeta(b).username
+    return { title: handle ? `@${handle}` : null, sub: domain }
+  }
+  if (displayType === 'youtube') {
+    const yt = getYouTubePost(b)
+    const title = yt?.title || (looksAuto || /^(\(\d+\)\s*)?YouTube$/i.test(raw) ? null : raw)
+    return { title, sub: yt?.channel || domain }
+  }
+  const sub = displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : displayType === 'google' ? 'GOOGLE SEARCH' : domain
+  return { title: looksAuto ? null : raw, sub }
 }

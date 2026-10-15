@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSnapshotRepair } from '@/hooks/useSnapshotRepair'
+import { cardHoverText } from '@/utils/bookmarkHelpers'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -165,6 +166,7 @@ export default function BookmarkCard({
     return undefined; // Triggers Favicon UI
   }, [imageSrc, bookmark.url, ytHighResThumbnail, fallbackStep, displayType]);
 
+  const hover = cardHoverText(bookmark, displayType || 'link', getDomain(bookmark.url));
   const hasValidTitle = bookmark.title && !['Text Snippet', 'Saved Image', 'Saved Item', 'Untitled', ''].includes(bookmark.title);
   const previewHtml = bookmark.content_preview ?? bookmark.content ?? '';
   const plainTextLength = previewHtml ? previewHtml.replace(/<[^>]*>?/gm, '').trim().length : 0;
@@ -350,12 +352,10 @@ export default function BookmarkCard({
 
         {!isMinimalist && displayType !== 'note' && displayType !== 'twitter' && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col gap-0.5 px-3.5 pb-3 pt-12 rounded-b-xl sm:rounded-b-2xl bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-300">
-            {hasValidTitle && displayType !== 'instagram' && (
-              <h4 className="text-[13px] font-semibold font-sans text-white line-clamp-2 leading-snug drop-shadow-sm">{bookmark.title}</h4>
+            {hover.title && (
+              <h4 className="text-[13px] font-semibold font-sans text-white line-clamp-2 leading-snug drop-shadow-sm">{hover.title}</h4>
             )}
-            <p className="text-[11px] font-sans text-white/75 line-clamp-1">
-              {displayType === 'pdf' ? 'PDF DOCUMENT' : displayType === 'pinterest' ? 'PINTEREST PIN' : displayType === 'google' ? 'GOOGLE SEARCH' : getDomain(bookmark.url)}
-            </p>
+            <p className="text-[11px] font-sans text-white/75 line-clamp-1">{hover.sub}</p>
           </div>
         )}
       </div>
