@@ -176,26 +176,14 @@ function getSelectionHtml() {
   }
 }
 
-// Remember the latest non-empty selection, in case a site clears it when the context menu opens
-let lastSelectionHtml = null;
-let selTimer = null;
-const onSelectionChange = () => {
-  clearTimeout(selTimer);
-  selTimer = setTimeout(() => {
-    const h = getSelectionHtml();
-    if (h) lastSelectionHtml = h;
-  }, 120);
-};
-document.addEventListener('selectionchange', onSelectionChange);
-
 const onContextMenu = (e) => {
   rightClickedElement = e.target;
   // Grab the selection NOW, before the context menu / page can change it
-  selectedHtml = getSelectionHtml() || lastSelectionHtml;
+  // Only the selection that exists right now: an old one must never ride along with a later save.
+  selectedHtml = getSelectionHtml();
 };
 document.addEventListener('contextmenu', onContextMenu, true);
 globalThis.__inntoitCleanup = () => {
-  document.removeEventListener('selectionchange', onSelectionChange);
   document.removeEventListener('contextmenu', onContextMenu, true);
 };
 
@@ -213,7 +201,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const ex = globalThis.inntoitExtract;
     const capture = result && result.url && ex.instagramPostUrl(result.url, result.url)
       ? ex.captureInstagram(rightClickedElement, window.location.href, document) : null;
-    sendResponse({ ...(result || { url: window.location.href }), ...(capture && { capture }), html: selectedHtml || getSelectionHtml() || lastSelectionHtml, v: 4 });
+    sendResponse({ ...(result || { url: window.location.href }), ...(capture && { capture }), html: selectedHtml || getSelectionHtml(), v: 4 });
   }
 });
 }
