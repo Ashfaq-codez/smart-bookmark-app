@@ -97,6 +97,24 @@
       padding: 8px;
       border-radius: 8px;
     }
+    #hint {
+      display: none;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #6B4E16;
+      background: #FDF6E3;
+      border: 1px solid rgba(217, 119, 6, 0.18);
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #161816; color: #ECEDEA; }
+      .title { color: #ECEDEA; }
+      .card { background: #1F221F; border-color: rgba(255, 255, 255, 0.06); }
+      .url-badge { background: #2A2E2A; color: #A9B0A9; }
+      textarea { background: #161816; color: #ECEDEA; border-color: rgba(255, 255, 255, 0.1); }
+      #hint { background: #2B2414; color: #F2D69B; border-color: rgba(217, 119, 6, 0.3); }
+    }
   </style>
 </head>
 <body>
@@ -105,10 +123,12 @@
   </div>
   <div class="card">
     <div class="url-badge" id="tab-url">Detecting tab...</div>
+    <div id="hint"></div>
     <textarea id="note-input" placeholder="Add a personal note or reflection..."></textarea>
     <button id="save-btn">Save inntoit</button>
     <div id="status"></div>
   </div>
+  <script src="extract.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
