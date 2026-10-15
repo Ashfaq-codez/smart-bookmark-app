@@ -8,6 +8,7 @@ export type FakeOptions = {
   keyError?: any
   recentCount?: number              // how many saves this user already made in the last minute
   countError?: any                  // make that count lookup fail
+  listRows?: any[]                  // rows returned when a list query is awaited (no maybeSingle/single)
   updateError?: any                 // make the later page-details update fail (or a function of the patch)
 }
 
@@ -25,6 +26,7 @@ export function fakeSupabase(opts: FakeOptions = {}) {
       select: (_cols?: string, o?: { head?: boolean }) => {
         // The save-limit check asks for a count only: select('id', { count, head: true })
         if (o?.head) chain.then = (resolve: any) => resolve({ count: opts.recentCount ?? 0, error: opts.countError ?? null })
+        else if (opts.listRows && !isInsert) chain.then = (resolve: any) => resolve({ data: opts.listRows, count: opts.listRows!.length, error: null })
         return chain
       },
       gte: () => chain,
@@ -42,6 +44,8 @@ export function fakeSupabase(opts: FakeOptions = {}) {
         return chain
       },
       in: () => chain,
+      is: () => chain,
+      order: () => chain,
       or: (f: string) => { orFilters.push(f); return chain },
       ilike: () => chain,
       limit: () => chain,
