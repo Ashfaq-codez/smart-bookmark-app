@@ -282,9 +282,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     const resolvedUrl = target.url && !target.url.startsWith('blob:') ? target.url : null;
     if (target.type) detectedType = target.type;
 
+    // Links: no title and no social type, the server reads the page and decides.
+    // A selection is a note; the cleaned tab title is kept as its source label.
+    const noteTitle = detectedType === 'note' ? self.inntoitExtract.cleanTitle(tab.title) : '';
     const payload = {
       ...(resolvedUrl && { url: resolvedUrl }),
-      title: tab.title,
+      ...(noteTitle && { title: noteTitle }),
       ...(capturedContent && { content: capturedContent }),
       ...(detectedType && { type: detectedType })
     };

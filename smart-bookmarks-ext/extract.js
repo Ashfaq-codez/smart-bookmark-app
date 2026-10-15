@@ -139,6 +139,10 @@
     return null;
   }
 
+  // Browser-tab noise: a leading "(3) " notification count and a trailing " / X" (same rule as the server).
+  const cleanTitle = (title) =>
+    typeof title === 'string' ? title.trim().replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').trim() : '';
+
   // What the popup should say about the whole tab: null = fine to save, otherwise a reason.
   function pageProblem(pageUrl) {
     const site = siteOf(pageUrl);
@@ -147,7 +151,7 @@
     return null;
   }
 
-  const api = { siteOf, cleanUrl, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
+  const api = { siteOf, cleanUrl, cleanTitle, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
   root.inntoitExtract = Object.assign(root.inntoitExtract || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = root.inntoitExtract;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
