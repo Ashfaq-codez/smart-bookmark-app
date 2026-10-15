@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { UserRound } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Bookmark } from '@/types'
 import { InstagramIcon, InstaHeartIcon, InstaCommentIcon, InstaShareIcon, InstaSaveIcon, InstaDotsIcon } from '../../BookmarkIcons'
@@ -14,6 +15,7 @@ export default function InstagramPreview({ bookmark, previewImageUrl, title, des
   const instaData = getInstaMeta({ ...bookmark, title, description, content })
   const likes = instaData.likes
   const displayedLikes = useMemo(() => {
+    if (!likes) return null
     if (!igLiked) return likes
     const rawNum = parseInt(likes.replace(/,/g, ''), 10)
     if (!isNaN(rawNum)) return (rawNum + 1).toLocaleString()
@@ -30,17 +32,19 @@ export default function InstagramPreview({ bookmark, previewImageUrl, title, des
         <div className="w-full flex bg-[#FAFAFA] dark:bg-[#000000] p-0 md:p-4 py-8 md:h-full md:overflow-y-auto custom-scrollbar justify-center">
           <div className="w-full md:max-w-[470px] bg-white dark:bg-[#000000] md:border border-black/[0.08] dark:border-[#262626] md:rounded-[3px] flex flex-col m-auto md:my-auto">
             <div className="flex items-center justify-between p-3 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 p-[1.5px]">
-                  <div className="w-full h-full bg-white dark:bg-black rounded-full overflow-hidden border-2 border-white dark:border-black">
-                    <img src={`https://ui-avatars.com/api/?name=${instaData.username}&background=random&color=fff&size=100`} alt={instaData.username} className="w-full h-full object-cover" />
+              {/* Unknown poster: no @ line at all (never a placeholder name) */}
+              {instaData.username ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full shrink-0 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 p-[1.5px]">
+                    <div className="w-full h-full bg-white dark:bg-black rounded-full flex items-center justify-center text-[#737373] dark:text-[#A8A8A8]">
+                      <UserRound className="w-4 h-4" aria-hidden />
+                    </div>
                   </div>
+                  <a href={`https://www.instagram.com/${instaData.username}/`} target="_blank" rel="noopener noreferrer" className="text-[14px] font-semibold font-sans text-[#262626] dark:text-[#F5F5F5] leading-tight hover:underline">
+                    {instaData.username}
+                  </a>
                 </div>
-                <a href={`https://www.instagram.com/${instaData.username}/`} target="_blank" rel="noreferrer" className="text-[14px] font-semibold font-sans text-[#262626] dark:text-[#F5F5F5] leading-tight hover:underline flex items-center gap-1.5">
-                  <span>{instaData.username}</span>
-                  <span className="text-[#737373] dark:text-[#a8a8a8] font-normal text-xs">• Following</span>
-                </a>
-              </div>
+              ) : <span />}
               <a href={bookmark.url} target="_blank" rel="noreferrer" title="Open on Instagram" className="text-[#262626] dark:text-[#F5F5F5] hover:opacity-60 transition-opacity p-1">
                 <InstaDotsIcon />
               </a>
@@ -77,10 +81,10 @@ export default function InstagramPreview({ bookmark, previewImageUrl, title, des
                   {igSaved ? <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="20 21 12 13.44 4 21 4 3 20 3 20 21" /></svg> : <InstaSaveIcon />}
                 </button>
               </div>
-              <div className="text-[14px] font-semibold text-[#262626] dark:text-[#F5F5F5]">{displayedLikes} likes</div>
+              {displayedLikes && <div className="text-[14px] font-semibold text-[#262626] dark:text-[#F5F5F5]">{displayedLikes} likes</div>}
               {instaData.caption && (
                 <div className="text-[14px] text-[#262626] dark:text-[#F5F5F5] leading-snug mt-1 break-words">
-                  <a href={`https://www.instagram.com/${instaData.username}/`} target="_blank" rel="noreferrer" className="font-semibold mr-1.5 hover:underline text-[#262626] dark:text-[#F5F5F5]">{instaData.username}</a>
+                  {instaData.username && <a href={`https://www.instagram.com/${instaData.username}/`} target="_blank" rel="noopener noreferrer" className="font-semibold mr-1.5 hover:underline text-[#262626] dark:text-[#F5F5F5]">{instaData.username}</a>}
                   <span className="whitespace-pre-wrap">{renderInstagramText(instaData.caption)}</span>
                 </div>
               )}

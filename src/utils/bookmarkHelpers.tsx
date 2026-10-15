@@ -1,6 +1,8 @@
 import React from 'react'
 import { Bookmark } from '@/types'
 import { hostIs, detectSiteType } from '@/lib/urlTools'
+import { getInstagramPost } from '@/lib/postData'
+import { handleFromUrl, handleFromDescription, countsFromDescription, captionFromDescription, plainCaption } from '@/lib/instagramText'
 
 // The host name of an address (lowercase, no www.), or '' when it is not an address
 const hostOf = (url: string) => {
@@ -74,34 +76,24 @@ export const deriveDisplayType = (b: Bookmark) => {
   return storedType || 'link';
 }
 
-export const getInstaMeta = (b: Bookmark) => {
-  let username = 'instagram_user'; let likes = '1,248'; let caption = '';
-  const fullText = (b.description || '') + ' ' + (b.title || '');
+// Who posted it, the real like count and the caption, for the Instagram view.
+// username / likes are null when unknown: the view hides them (never a made-up "instagram_user" or "1,248").
+export const getInstaMeta = (b: Bookmark): { username: string | null; likes: string | null; caption: string } => {
+  // Only an Instagram snapshot counts here; an X snapshot in post_data is ignored (getInstagramPost checks).
+  const snap = getInstagramPost(b);
+  const desc = b.description || '';
+  const username = snap?.handle || handleFromUrl(b.url) || handleFromDescription(desc) || null;
+  const { likes } = countsFromDescription(desc);
 
-  if (fullText.includes(' on Instagram:')) {
-    const parts = fullText.split(' on Instagram:');
-    const metaPart = parts[0];
-    const userMatch = metaPart.match(/-\s+([a-zA-Z0-9_.]+)\s*$/) || metaPart.match(/^([a-zA-Z0-9_.]+)$/);
-    if (userMatch) username = userMatch[1].trim();
-    
-    const likesMatch = metaPart.match(/([\d,KMB]+)\s+likes?/i);
-    if (likesMatch) likes = likesMatch[1];
-
-    caption = parts.slice(1).join(' on Instagram:').trim();
-    if ((caption.startsWith('"') && caption.endsWith('"')) || (caption.startsWith("'") && caption.endsWith("'"))) {
-      caption = caption.substring(1, caption.length - 1).trim();
-    }
-  } else {
-    caption = (b.description && b.description !== b.title) ? b.description : '';
+  let caption = '';
+  if (snap?.caption && (!desc || handleFromDescription(desc))) {
+    caption = snap.caption;                          // description untouched since the save: the stored caption
+  } else if (handleFromDescription(desc)) {
+    caption = captionFromDescription(desc) || '';    // Instagram's own description text
+  } else if (desc && desc !== b.title) {
+    caption = plainCaption(desc) || '';              // the person's own text
   }
-
   if (caption.toLowerCase() === 'instagram' || caption.toLowerCase().includes('instagram photos and videos') || caption.includes('Create an account')) caption = '';
-  
-  if (username === 'instagram_user' && b.url) {
-    const urlMatch = b.url.match(/instagram\.com\/([^/]+)/);
-    if (urlMatch && !['p','reel','reels','tv','explore'].includes(urlMatch[1])) username = urlMatch[1];
-  }
-  if (username.length > 30) username = username.substring(0, 30);
   return { username, likes, caption };
 }
 
