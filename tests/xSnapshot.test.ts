@@ -12,7 +12,7 @@ import { fakeSupabase } from './helpers/fakeSupabase'
 // with the video post placed inside it as the quoted post, in exactly the shape X uses.
 const fx = (name: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixtures/x', name), 'utf8'))
 
-beforeEach(() => vi.mocked(safeFetch).mockReset())
+beforeEach(() => { vi.mocked(safeFetch).mockReset() })
 
 describe('parseSyndication', () => {
   it('photo post: author, text without the pic.x.com link, photo size', () => {

@@ -7,7 +7,7 @@ vi.mock('@/utils/safeFetch', () => ({ isSafeUrl: vi.fn(), safeFetch: vi.fn() }))
 import { createClient } from '@/utils/supabase/server'
 import { safeFetch } from '@/utils/safeFetch'
 import { POST } from '@/app/api/bookmarks/[id]/snapshot/route'
-import { needsRepair } from '@/hooks/useXSnapshotRepair'
+import { needsRepair } from '@/hooks/useSnapshotRepair'
 import { fakeSupabase, FakeOptions } from './helpers/fakeSupabase'
 
 const photo = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixtures/x/photo.json'), 'utf8'))
