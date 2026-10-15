@@ -201,7 +201,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const ex = globalThis.inntoitExtract;
     const capture = result && result.url && ex.instagramPostUrl(result.url, result.url)
       ? ex.captureInstagram(rightClickedElement, window.location.href, document) : null;
-    sendResponse({ ...(result || { url: window.location.href }), ...(capture && { capture }), html: selectedHtml || getSelectionHtml(), v: 4 });
+    // Saving this page itself (not a link to another one): also send its meta tags, for sites that refuse servers.
+    const target = (result && result.url) || window.location.href;
+    const page = !result?.type && !capture && ex.samePage(target, window.location.href) ? ex.capturePageMeta(document) : null;
+    sendResponse({ ...(result || { url: window.location.href }), ...(capture && { capture }), ...(page && { page }), html: selectedHtml || getSelectionHtml(), v: 4 });
   }
 });
 }

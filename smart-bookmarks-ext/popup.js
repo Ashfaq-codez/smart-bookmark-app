@@ -61,6 +61,17 @@ const EMBEDDED = new URLSearchParams(location.search).has('embedded') && window.
 const toPanel = (msg) => { if (EMBEDDED) window.parent.postMessage({ inntoit: msg.type, value: msg.value }, '*'); };
 const closeUi = () => (EMBEDDED ? toPanel({ type: 'close' }) : window.close());
 
+// The open page's meta tags (for sites like Medium that refuse servers). null when it can't.
+async function pageFromTab(tabId) {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['extract.js'] });
+    const [r] = await chrome.scripting.executeScript({ target: { tabId }, func: () => globalThis.inntoitExtract.capturePageMeta(document) });
+    return r?.result || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 const openApp = (path = '/dashboard') => { chrome.tabs.create({ url: `${APP_URL}${path}` }); closeUi(); };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -144,11 +155,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Same rules as right-click: a clean address, no title and no type (the server decides).
     const igPost = ex.instagramPostUrl(url, url);
     const capture = igPost ? await captureFromTab(tab.id) : null;
+    const page = !igPost && !site ? await pageFromTab(tab.id) : null;
     const personalNote = noteInput.value.trim();
     const payload = {
       url: igPost || ex.cleanUrl(url),
       ...(personalNote && { content: personalNote }),
       ...(capture && { capture }),
+      ...(page && { page }),
     };
 
     try {

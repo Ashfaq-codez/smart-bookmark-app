@@ -230,6 +230,51 @@
     };
   }
 
+  // ---------- page details (for sites that refuse servers, like Medium) ----------
+  // The open page's own meta tags. The server checks every field and uses them only when it can't read the page.
+  function capturePageMeta(doc) {
+    const meta = (k) => {
+      const el = doc.querySelector(`meta[property="${k}"], meta[name="${k}"]`);
+      const v = el ? (el.getAttribute('content') || '').trim() : '';
+      return v || null;
+    };
+    let author = meta('author');
+    let publisher = null;
+    let published = meta('article:published_time');
+    doc.querySelectorAll('script[type="application/ld+json"]').forEach((el) => {
+      try {
+        const raw = JSON.parse(el.textContent || '');
+        for (const d of Array.isArray(raw) ? raw : [raw]) {
+          const a = Array.isArray(d && d.author) ? d.author[0] : d && d.author;
+          if (!author && a && typeof a.name === 'string') author = a.name;
+          if (!publisher && d && d.publisher && typeof d.publisher.name === 'string') publisher = d.publisher.name;
+          if (!published && d && typeof d.datePublished === 'string') published = d.datePublished;
+        }
+      } catch (e) { /* not JSON */ }
+    });
+    const readLabel = [meta('twitter:data1'), meta('twitter:data2')].find((v) => /min read/i.test(v || '')) || null;
+    const out = {
+      title: meta('og:title') || meta('twitter:title') || (doc.title || '').trim() || null,
+      description: meta('og:description') || meta('description'),
+      image: meta('og:image') || meta('twitter:image'),
+      site_name: meta('og:site_name'),
+      author, publisher, published,
+      read_label: readLabel,
+      generator: meta('generator'),
+      android_package: meta('al:android:package'),
+    };
+    Object.keys(out).forEach((k) => { if (out[k] == null) delete out[k]; else if (typeof out[k] === 'string') out[k] = out[k].slice(0, 600); });
+    return out.title ? out : null;
+  }
+
+  // Same page? (ignores #fragments, a trailing slash and "www.")
+  const samePage = (a, b) => {
+    try {
+      const norm = (u) => { const x = new URL(u); return x.hostname.replace(/^www\./, '') + x.pathname.replace(/\/+$/, '') + x.search; };
+      return norm(a) === norm(b);
+    } catch (e) { return false; }
+  };
+
   // Browser-tab noise: a leading "(3) " notification count and a trailing " / X" (same rule as the server).
   const cleanTitle = (title) =>
     typeof title === 'string' ? title.trim().replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').trim() : '';
@@ -265,7 +310,7 @@
     return { url: pageUrl };
   }
 
-  const api = { fallbackTarget, siteOf, cleanUrl, cleanTitle, captureInstagram, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
+  const api = { capturePageMeta, samePage, fallbackTarget, siteOf, cleanUrl, cleanTitle, captureInstagram, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
   root.inntoitExtract = Object.assign(root.inntoitExtract || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = root.inntoitExtract;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

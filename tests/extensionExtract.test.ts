@@ -230,3 +230,24 @@ describe('page checks', () => {
     expect(ex.cleanTitle(undefined)).toBe('')
   })
 })
+
+describe('page details for sites that refuse servers', () => {
+  const MEDIUM = fs.readFileSync(path.resolve(__dirname, 'fixtures/articles/medium.html'), 'utf8')
+
+  it('reads the meta tags of the open page', () => {
+    const dom = new JSDOM(MEDIUM, { url: 'https://medium.com/@ev/welcome-to-medium-9e53ca408c48', runScripts: 'outside-only' })
+    dom.window.eval(SRC)
+    const meta = (dom.window as any).inntoitExtract.capturePageMeta(dom.window.document)
+    expect(meta).toMatchObject({
+      title: 'Welcome to Medium', description: 'A new place to read, write, and connect', site_name: 'Medium',
+      author: 'Ev Williams', read_label: '3 min read', android_package: 'com.medium.reader',
+      image: 'https://miro.medium.com/v2/resize:fit:1200/1*welcome.jpeg', published: '2012-08-15T04:19:01.543Z',
+    })
+  })
+
+  it('only for the page itself, never for a link to another page', () => {
+    const { ex } = page('https://medium.com/@ev/a', '')
+    expect(ex.samePage('https://medium.com/@ev/a#x', 'https://www.medium.com/@ev/a/')).toBe(true)
+    expect(ex.samePage('https://medium.com/@ev/b', 'https://medium.com/@ev/a')).toBe(false)
+  })
+})
