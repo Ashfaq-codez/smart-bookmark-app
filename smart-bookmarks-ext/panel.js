@@ -53,6 +53,8 @@ function open() {
   if (host) return;
   const ex = globalThis.inntoitExtract;
   host = document.createElement('inntoit-panel');
+  host.__reattached = 0;
+  protect(host);
   const root = host.attachShadow({ mode: 'closed' });
   // Constructed style sheets: allowed even on pages whose rules block inline <style>. A <style> as the backup.
   try {
@@ -93,15 +95,31 @@ function open() {
   try { if (wrap.showPopover) wrap.showPopover(); } catch (e) { /* not in the top layer: the z-index still applies */ }
   requestAnimationFrame(() => { wrap.classList.add('open'); ui.focus(); });
 
-  // Some sites (single-page apps) remove elements they don't know: put the panel back while it is open.
+  // Some sites (single-page apps) remove elements they don't know: put the panel back while it is open,
+  // a few times only (a page that keeps removing it gets the normal popup instead, never a tug-of-war).
+  host.__reattached = 0;
   host.__observer = new MutationObserver(() => {
-    if (host && !host.isConnected) { attach(); try { if (wrap.showPopover && !wrap.matches(':popover-open')) wrap.showPopover(); } catch (e) { /* ignore */ } }
+    if (!host || host.isConnected) return;
+    if (++host.__reattached > 4) { host.__observer.disconnect(); return; }
+    attach();
+    try { if (wrap.showPopover && !wrap.matches(':popover-open')) wrap.showPopover(); } catch (e) { /* ignore */ }
   });
   host.__observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
 function attach() {
-  (document.body || document.documentElement).appendChild(host);
+  // Next to <body> first (some sites hide or clear whatever else is put in their <body>); if the page
+  // removes it from there, inside <body> next time.
+  const parent = host.__reattached % 2 === 0 ? document.documentElement : (document.body || document.documentElement);
+  parent.appendChild(host);
+}
+
+// Page style rules can still reach the panel's outer element (e.g. "hide anything unknown"); inline
+// !important styles win over every page rule.
+function protect(el) {
+  const keep = { display: 'block', visibility: 'visible', opacity: '1', position: 'static', contain: 'none', filter: 'none',
+    transform: 'none', clip: 'auto', 'clip-path': 'none', width: 'auto', height: 'auto', overflow: 'visible', 'pointer-events': 'auto' };
+  for (const [k, v] of Object.entries(keep)) el.style.setProperty(k, v, 'important');
 }
 
 // True when the panel really shows on screen (in the page and not hidden or zero-sized).

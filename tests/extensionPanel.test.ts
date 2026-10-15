@@ -114,4 +114,11 @@ describe('extension save panel (drawn on the page, no frame)', () => {
     await wait(10)
     expect(t.host()).toBeTruthy()
   })
+
+  it('a page that keeps removing the panel gets the popup, never an endless fight', async () => {
+    const t = setup()
+    await t.toggle()
+    for (let i = 0; i < 8; i++) { t.host()?.remove(); await wait(5) }
+    expect(t.host()).toBe(null)   // gave up after a few tries (the page stays responsive)
+  })
 })
