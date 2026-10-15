@@ -42,7 +42,7 @@ describe('parseInstagramCapture', () => {
 
 describe('instagramTitle', () => {
   it('uses the first non-empty caption line, shortened', () => {
-    expect(instagramTitle({ handle: 'nasa', caption: '\n\nHello\nworld', image_url: null, is_video: false })).toBe('@nasa on Instagram: Hello')
+    expect(instagramTitle({ handle: 'nasa', caption: '\n\nHello\nworld', image_url: null, is_video: false })).toBe('nasa on Instagram: Hello')
     expect(instagramTitle({ handle: null, caption: null, image_url: 'x', is_video: false })).toBe('Post on Instagram')
     expect(instagramTitle({ handle: 'a', caption: 'y'.repeat(200), image_url: null, is_video: false }).length).toBeLessThan(110)
   })

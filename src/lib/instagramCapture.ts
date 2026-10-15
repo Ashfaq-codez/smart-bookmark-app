@@ -59,9 +59,9 @@ export function parseInstagramCapture(raw: unknown, url: string | null): Instagr
   return { handle, caption, image_url, is_video: r.is_video === true };
 }
 
-// "@name on Instagram: first line of the caption"
+// "name on Instagram: first line of the caption" (no "@", the same shape Instagram's own titles have)
 export function instagramTitle(c: InstagramCapture): string {
-  const who = c.handle ? `@${c.handle}` : 'Post';
+  const who = c.handle || 'Post';
   const first = (c.caption || '').split('\n').find((l) => l.trim())?.trim() || '';
   const short = first.length > 90 ? `${first.slice(0, 89).trimEnd()}…` : first;
   return short ? `${who} on Instagram: ${short}` : `${who} on Instagram`;

@@ -132,14 +132,15 @@ async function enrichInstagram(
   if (!handle) { handle = handleFromUrl(row.url); source = 'url'; }
   if (!handle && mode === 'repair') { handle = handleFromDescription(row.description); source = 'page'; }
 
-  // A new save always reads the page (title, caption, cover). A repair only when the handle is still unknown,
-  // so most old cards are fixed without contacting Instagram at all.
+  // A new save reads the page (title, caption, cover) unless the extension already sent the post's details.
+  // A repair only reads it when the handle is still unknown, so most old cards never contact Instagram.
+  const fromExtension = mode === 'save' && source === 'extension' && !!handle;
   const patch: Record<string, unknown> = {};
   // The caption the extension read (already checked by parseInstagramCapture) beats any page text.
   const capturedCaption = typeof captured.caption === 'string' && captured.caption.trim() ? captured.caption : null;
   let caption = capturedCaption || captionFromDescription(row.description);
   let isVideo = captured.is_video === true || /\/(reels?|tv)\//.test(row.url);
-  if (mode === 'save' || !handle) {
+  if ((mode === 'save' && !fromExtension) || !handle) {
     const page = await fetchInstagramPage(row.url);
     if (page.ok) {
       const p = page.page;

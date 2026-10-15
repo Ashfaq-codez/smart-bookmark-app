@@ -566,7 +566,7 @@ describe('POST /api/save: Instagram capture from the extension', () => {
     const fake = loggedIn()
     await post({ url: 'https://www.instagram.com/p/ABCdef123/', capture })
     expect(fake.inserted[0].url).toBe('https://instagram.com/p/ABCdef123')
-    expect(fake.inserted[0].title).toBe('@nasa on Instagram: Line one')
+    expect(fake.inserted[0].title).toBe('nasa on Instagram: Line one')
     expect(fake.inserted[0].description).toBe('Line one\nLine two')
   })
 
@@ -589,7 +589,8 @@ describe('POST /api/save: Instagram capture from the extension', () => {
     expect(fake.inserted[0].title).toBe('Post on Instagram: Hi')
     await finishBackgroundWork()
     expect(fake.uploads).toHaveLength(0)
-    expect(safeFetch).not.toHaveBeenCalled()
+    // no usable handle from the extension: the server falls back to reading the post page (never the bad picture)
+    for (const call of vi.mocked(safeFetch).mock.calls) expect(String(call[0])).not.toContain('evil.example')
   })
 
   it('copies the picture into storage as a resized WebP and links it to the bookmark', async () => {
@@ -636,6 +637,9 @@ describe('POST /api/save: Instagram capture from the extension', () => {
     const res = await post({ url: 'https://www.instagram.com/p/ABCdef123/', capture })
     expect(res.status).toBe(200)
     await finishBackgroundWork()
-    expect(fake.updates).toHaveLength(0)
+    // no picture copy, but the post's handle is still stored
+    expect(fake.updates).toHaveLength(1)
+    expect(fake.updates[0].patch.image_url).toBe(undefined)
+    expect(fake.updates[0].patch.post_data).toMatchObject({ platform: 'instagram', handle: 'nasa', handle_source: 'extension' })
   })
 })
