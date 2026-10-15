@@ -1,19 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "Smart Bookmarks Hub",
-  "version": "1.1",
+  "name": "inntoit",
+  "version": "1.2",
   "icons": {
-    "128": "icon.png"
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
   },
   "permissions": [
     "activeTab",
     "contextMenus",
-    "scripting",
-    "notifications",
-    "cookies"
+    "scripting"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
@@ -24,9 +31,16 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["extract.js", "content.js"],
-      "css": ["styles.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "extract.js",
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
     }
   ]
 }
