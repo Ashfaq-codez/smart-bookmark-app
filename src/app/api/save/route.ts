@@ -317,7 +317,7 @@ export async function POST(request: Request) {
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Pages that refuse servers (Medium): use what the extension read from the open page instead.
         const page = !details.title && detectedType === 'link' ? parsePageCapture(rawPage) : null;
-        const title = details.title || page?.title || null;
+        const title = details.title || cleanTitle(page?.title) || null;
         const description = details.description || page?.description || null;
         const image = details.image || page?.image || null;
         const article = details.article || (page ? articleFromMeta(cleanUrl, page) : null);

@@ -1,34 +1,33 @@
 // The save panel: a rounded card floating a little below the browser toolbar, top-right of the page.
-// It shows popup.html in a frame (same code as the normal popup), inside a closed shadow root so the
-// page's styles can't touch it and ours can't touch the page.
-// Opened / closed by clicking the toolbar icon (background.js sends TOGGLE_PANEL).
-// Safe to load more than once: a new copy removes the old copy's panel and listeners first.
+// Drawn straight onto the page (ui.js) inside a closed shadow root: the page's styles can't touch it, ours can't
+// touch the page, and there is no frame for a strict site (Reddit) to block. Saving goes through background.js,
+// like right-click saves. Opened / closed by clicking the toolbar icon (background.js sends TOGGLE_PANEL).
+// Needs extract.js and ui.js loaded first. Safe to load more than once.
 {
 if (globalThis.__inntoitPanelCleanup) globalThis.__inntoitPanelCleanup();
 
 const GAP = 12;          // distance from the top and right edges of the page
 const WIDTH = 368;
 let host = null;
-let frame = null;
 let closing = false;
 
-const css = `
+const PANEL_CSS = `
   :host { all: initial; }
   .wrap {
     position: fixed; top: ${GAP}px; right: ${GAP}px; z-index: 2147483647;
-    width: ${WIDTH}px; max-width: calc(100vw - ${GAP * 2}px); height: 240px; max-height: calc(100vh - ${GAP * 2}px);
-    border-radius: 20px; overflow: hidden;
+    width: ${WIDTH}px; max-width: calc(100vw - ${GAP * 2}px); max-height: calc(100vh - ${GAP * 2}px); overflow: hidden auto;
+    border-radius: 20px; scrollbar-width: none;
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
-    background: #FAF9F5;
     opacity: 0; transform: translateY(-6px) scale(0.98); transform-origin: top right;
-    transition: opacity .18s ease, transform .2s cubic-bezier(.2, .8, .2, 1), height .18s ease;
+    transition: opacity .18s ease, transform .2s cubic-bezier(.2, .8, .2, 1);
   }
+  .wrap::-webkit-scrollbar { display: none; }
   .wrap.open { opacity: 1; transform: none; }
+  .wrap .app { padding: 16px; }
   @media (prefers-color-scheme: dark) {
-    .wrap { background: #0F120F; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08); }
+    .wrap { box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08); }
   }
   @media (prefers-reduced-motion: reduce) { .wrap { transition: none; } }
-  iframe { display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: light dark; }
 `;
 
 function close() {
@@ -36,59 +35,57 @@ function close() {
   closing = true;
   const wrap = host.__wrap;
   wrap.classList.remove('open');
-  const done = () => { host?.remove(); host = null; frame = null; closing = false; };
+  const done = () => { host?.remove(); host = null; closing = false; };
   wrap.addEventListener('transitionend', done, { once: true });
   setTimeout(done, 260);   // in case no transition runs
 }
 
+// The page's own icon, when it is a safe address.
+function pageIcon() {
+  const link = document.querySelector('link[rel~="icon"][href], link[rel="apple-touch-icon"][href]');
+  try { const u = new URL(link?.getAttribute('href') || '/favicon.ico', location.href); return u.protocol === 'https:' ? u.href : null; } catch (e) { return null; }
+}
+
 function open() {
   if (host) return;
+  const ex = globalThis.inntoitExtract;
   host = document.createElement('inntoit-panel');
   const root = host.attachShadow({ mode: 'closed' });
-  // A constructed style sheet: allowed even on pages whose rules block inline <style>.
+  // Constructed style sheets: allowed even on pages whose rules block inline <style>.
   const sheet = new CSSStyleSheet();
-  sheet.replaceSync(css);
+  sheet.replaceSync(globalThis.inntoitUI.CSS + PANEL_CSS);
   root.adoptedStyleSheets = [sheet];
 
   const wrap = document.createElement('div');
   wrap.className = 'wrap';
-  frame = document.createElement('iframe');
-  frame.src = chrome.runtime.getURL('popup.html?embedded=1');
-  frame.title = 'Save to inntoit';
-  frame.allow = 'clipboard-write';
-  wrap.appendChild(frame);
+  wrap.setAttribute('role', 'dialog');
+  wrap.setAttribute('aria-label', 'Save to inntoit');
+  // Typing in the note must not trigger the page's own keyboard shortcuts (Reddit, X, YouTube…).
+  for (const t of ['keydown', 'keyup', 'keypress']) wrap.addEventListener(t, (e) => { if (e.key !== 'Escape') e.stopPropagation(); });
   root.appendChild(wrap);
   host.__wrap = wrap;
+
+  const ui = globalThis.inntoitUI.buildSaveUI(wrap, {
+    tab: { url: location.href, title: document.title, favIconUrl: pageIcon() },
+    logoUrl: chrome.runtime.getURL('icon-32.png'),
+    showClose: true,
+    captureInstagram: async () => ex.captureInstagram(null, location.href, document),
+    capturePage: async () => ex.capturePageMeta(document),
+    send: (payload) => chrome.runtime.sendMessage({ type: 'PANEL_SAVE', payload }).then((r) => {
+      if (!r || r.networkError) throw new Error('network');
+      return r;
+    }),
+    openApp: (path) => { chrome.runtime.sendMessage({ type: 'OPEN_APP', path }); close(); },
+    close,
+  });
+
   document.documentElement.appendChild(host);
-
-  // The panel says when it is ready; if it never does (a page that blocks it), use the normal popup instead.
-  const failTimer = setTimeout(() => {
-    if (host && !host.__ready) { host.remove(); host = null; frame = null; chrome.runtime.sendMessage({ type: 'PANEL_FAILED' }); }
-  }, 2500);
-  host.__failTimer = failTimer;
-}
-
-// Messages from the panel's frame (only that frame: anything else is ignored).
-function onMessage(e) {
-  if (!frame || e.source !== frame.contentWindow) return;
-  const d = e.data || {};
-  if (d.inntoit === 'ready') {
-    host.__ready = true;
-    clearTimeout(host.__failTimer);
-    requestAnimationFrame(() => host?.__wrap.classList.add('open'));
-    frame.focus();
-  } else if (d.inntoit === 'height' && typeof d.value === 'number') {
-    host.__wrap.style.height = `${Math.max(120, Math.min(Math.ceil(d.value), 640))}px`;
-  } else if (d.inntoit === 'close') {
-    close();
-  }
+  requestAnimationFrame(() => { wrap.classList.add('open'); ui.focus(); });
 }
 
 // Click anywhere on the page (outside the panel) or press Esc: close.
 const onPointerDown = (e) => { if (host && !e.composedPath().includes(host)) close(); };
 const onKeyDown = (e) => { if (host && e.key === 'Escape') close(); };
-
-window.addEventListener('message', onMessage);
 document.addEventListener('pointerdown', onPointerDown, true);
 document.addEventListener('keydown', onKeyDown, true);
 
@@ -100,7 +97,6 @@ const onRuntimeMessage = (request, _sender, sendResponse) => {
 chrome.runtime.onMessage.addListener(onRuntimeMessage);
 
 globalThis.__inntoitPanelCleanup = () => {
-  window.removeEventListener('message', onMessage);
   document.removeEventListener('pointerdown', onPointerDown, true);
   document.removeEventListener('keydown', onKeyDown, true);
   try { chrome.runtime.onMessage.removeListener(onRuntimeMessage); } catch (e) { /* old copy cut off by a reload */ }

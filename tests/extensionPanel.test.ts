@@ -1,95 +1,96 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { JSDOM } from 'jsdom'
 import fs from 'node:fs'
 import path from 'node:path'
 
-// Runs the extension's panel.js in a fake page with a fake `chrome`.
-const SRC = fs.readFileSync(path.resolve(__dirname, '../smart-bookmarks-ext/panel.js'), 'utf8')
+// Runs the extension's extract.js + ui.js + panel.js in a fake page with a fake `chrome`.
+const read = (f: string) => fs.readFileSync(path.resolve(__dirname, '../smart-bookmarks-ext', f), 'utf8')
+const SRC = ['extract.js', 'ui.js', 'panel.js'].map(read).join('\n;\n')
+const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms))
 
-function setup() {
-  const dom = new JSDOM('<!doctype html><html><body><p id="page">page</p></body></html>', { url: 'https://example.com/', runScripts: 'outside-only', pretendToBeVisual: true })
+function setup(url = 'https://example.com/article', saveAnswer: any = { status: 200, data: { data: { id: 7 } } }) {
+  const dom = new JSDOM('<!doctype html><html><head><title>(2) A good article</title></head><body><p id="page">page</p></body></html>', { url, runScripts: 'outside-only', pretendToBeVisual: true })
   const w = dom.window as any
   let listener: any = null
   const sent: any[] = []
   w.chrome = {
     runtime: {
       getURL: (p: string) => `chrome-extension://abc/${p}`,
-      sendMessage: (m: any) => sent.push(m),
+      sendMessage: async (m: any) => { sent.push(m); return m.type === 'PANEL_SAVE' ? saveAnswer : undefined },
       onMessage: { addListener: (fn: any) => { listener = fn }, removeListener: () => {} },
     },
   }
   // jsdom has no constructed style sheets: a stand-in is enough here.
-  if (!w.CSSStyleSheet.prototype.replaceSync) w.CSSStyleSheet = class { replaceSync() {} }
-  const attach = w.Element.prototype.attachShadow
+  w.CSSStyleSheet = class { replaceSync() {} }
   let root: any = null
+  const attach = w.Element.prototype.attachShadow
   w.Element.prototype.attachShadow = function (o: any) {
     root = attach.call(this, { ...o, mode: 'open' })   // open in tests only, so we can look inside
-    try { Object.defineProperty(root, 'adoptedStyleSheets', { value: [], writable: true }) } catch { /* already there */ }
+    Object.defineProperty(root, 'adoptedStyleSheets', { value: [], writable: true })
     return root
   }
   w.eval(SRC)
   const toggle = () => new Promise((r) => listener({ type: 'TOGGLE_PANEL' }, {}, r))
   const host = () => w.document.querySelector('inntoit-panel')
-  const frame = () => root?.querySelector('iframe')
-  return { w, toggle, host, frame, sent }
+  const $ = (sel: string) => root?.querySelector(sel)
+  return { w, toggle, host, $, sent, text: () => root?.textContent || '' }
 }
 
-describe('extension save panel', () => {
-  it('opens a frame with the popup page, top-right', async () => {
+describe('extension save panel (drawn on the page, no frame)', () => {
+  it('opens on the page itself: no iframe, shows the cleaned page title', async () => {
     const t = setup()
     await t.toggle()
     expect(t.host()).toBeTruthy()
-    expect(t.frame().src).toBe('chrome-extension://abc/popup.html?embedded=1')
+    expect(t.$('iframe')).toBe(null)
+    expect(t.$('.page-title').textContent).toBe('A good article')
+    expect(t.$('textarea')).toBeTruthy()
   })
 
-  it('toggling again closes it', async () => {
+  it('saves through the background script with the note and page details', async () => {
     const t = setup()
     await t.toggle()
-    await t.toggle()
-    await new Promise((r) => setTimeout(r, 300))
-    expect(t.host()).toBe(null)
+    t.$('textarea').value = 'my note'
+    t.$('button.save').click()
+    await wait(10)
+    const save = t.sent.find((m) => m.type === 'PANEL_SAVE')
+    expect(save.payload).toMatchObject({ url: 'https://example.com/article', content: 'my note', page: { title: '(2) A good article' } })
+    expect(t.text()).toContain('Added to inntoit')
   })
 
-  it('ignores messages that do not come from its own frame', async () => {
+  it('shows "already saved" and "sign in" answers', async () => {
+    const dup = setup('https://example.com/a', { status: 409, data: { existing: { id: 3 } } })
+    await dup.toggle(); dup.$('button.save').click(); await wait(10)
+    expect(dup.text()).toContain('This is already in inntoit')
+    const out = setup('https://example.com/a', { status: 401, data: {} })
+    await out.toggle(); out.$('button.save').click(); await wait(10)
+    expect(out.text()).toContain('Sign in to inntoit first')
+  })
+
+  it('on the Instagram feed: the warning, no save button', async () => {
+    const t = setup('https://www.instagram.com/')
+    await t.toggle()
+    expect(t.text()).toContain('This is the Instagram feed, not a post')
+    expect(t.$('button.save').hidden).toBe(true)
+  })
+
+  it('typing in the note never reaches the page\'s keyboard shortcuts', async () => {
     const t = setup()
     await t.toggle()
-    t.w.dispatchEvent(new t.w.MessageEvent('message', { data: { inntoit: 'close' }, source: t.w }))
-    await new Promise((r) => setTimeout(r, 300))
-    expect(t.host()).toBeTruthy()
+    let pageSaw = 0
+    t.w.document.addEventListener('keydown', () => { pageSaw++ })
+    t.$('textarea').dispatchEvent(new t.w.KeyboardEvent('keydown', { key: 'j', bubbles: true, composed: true }))
+    expect(pageSaw).toBe(0)
   })
 
-  it('closes when its own frame asks, on Esc, and on a click outside', async () => {
-    for (const how of ['frame', 'esc', 'outside']) {
+  it('closes on Esc, a click outside, or a second click on the icon', async () => {
+    for (const how of ['esc', 'outside', 'toggle']) {
       const t = setup()
       await t.toggle()
-      if (how === 'frame') t.w.dispatchEvent(new t.w.MessageEvent('message', { data: { inntoit: 'close' }, source: t.frame().contentWindow }))
       if (how === 'esc') t.w.document.dispatchEvent(new t.w.KeyboardEvent('keydown', { key: 'Escape' }))
       if (how === 'outside') t.w.document.getElementById('page').dispatchEvent(new t.w.Event('pointerdown', { bubbles: true, composed: true }))
-      await new Promise((r) => setTimeout(r, 300))
+      if (how === 'toggle') await t.toggle()
+      await wait(300)
       expect(t.host()).toBe(null)
-    }
-  })
-
-  it('follows the content height, within limits', async () => {
-    const t = setup()
-    await t.toggle()
-    const wrap = t.frame().parentElement
-    t.w.dispatchEvent(new t.w.MessageEvent('message', { data: { inntoit: 'height', value: 301.4 }, source: t.frame().contentWindow }))
-    expect(wrap.style.height).toBe('302px')
-    t.w.dispatchEvent(new t.w.MessageEvent('message', { data: { inntoit: 'height', value: 5000 }, source: t.frame().contentWindow }))
-    expect(wrap.style.height).toBe('640px')
-  })
-
-  it('falls back to the normal popup when the frame never loads', async () => {
-    vi.useFakeTimers()
-    try {
-      const t = setup()
-      await t.toggle()
-      vi.advanceTimersByTime(2600)
-      expect(t.sent).toContainEqual({ type: 'PANEL_FAILED' })
-      expect(t.host()).toBe(null)
-    } finally {
-      vi.useRealTimers()
     }
   })
 })

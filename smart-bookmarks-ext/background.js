@@ -345,7 +345,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (await togglePanel(tab.id)) return;
   // A tab opened before the extension was (re)loaded has no panel script yet: add it and try once more.
   try {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['panel.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['extract.js', 'ui.js', 'panel.js'] });
     if (await togglePanel(tab.id)) return;
   } catch (err) {
     console.log('[inntoit] panel inject failed:', err?.message);
@@ -353,7 +353,21 @@ chrome.action.onClicked.addListener(async (tab) => {
   openNormalPopup(tab.id);
 });
 
-// The page would not show the panel (it never loaded): use the normal popup.
-chrome.runtime.onMessage.addListener((request, sender) => {
-  if (request.type === 'PANEL_FAILED' && sender.tab?.id != null) openNormalPopup(sender.tab.id);
+// The panel (drawn on the page) saves through here: the background can reach inntoit with your sign-in,
+// a script on the page can't.
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'PANEL_SAVE' && sender.tab?.id != null) {
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(request.payload || {}),
+    })
+      .then(async (res) => sendResponse({ status: res.status, data: await res.json().catch(() => ({})) }))
+      .catch(() => sendResponse({ networkError: true }));
+    return true;   // answers later
+  }
+  if (request.type === 'OPEN_APP' && typeof request.path === 'string' && request.path.startsWith('/')) {
+    chrome.tabs.create({ url: `https://smart-bookmark-app-lime.vercel.app${request.path}` });
+  }
 });
