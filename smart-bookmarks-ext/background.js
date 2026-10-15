@@ -211,17 +211,42 @@ function askPage(tabId, frameId) {
   });
 }
 
-function flashBadge(text, color) {
-  chrome.action.setBadgeText({ text });
-  chrome.action.setBadgeBackgroundColor({ color });
-  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2200);
+// The toolbar icon tells how a right-click save went: a short badge, and a tooltip with the full sentence
+// (hover the icon). Shown on the tab that was saved, then cleared.
+const BADGES = {
+  saving:  { text: '…',  color: '#737B73', title: 'Saving to inntoit…' },
+  saved:   { text: '✓',  color: '#4D6A51', title: 'Saved to inntoit' },
+  plain:   { text: '✓',  color: '#4D6A51', title: 'Saved to inntoit (the selection was kept as plain text)' },
+  dup:     { text: '✓',  color: '#B7791F', title: 'Already in inntoit' },
+  notPost: { text: '?',  color: '#B7791F', title: 'Nothing saved: no post under the mouse. Right-click a post (not the feed) and choose “Save inntoit”.' },
+  limit:   { text: '1m', color: '#B7791F', title: 'Nothing saved: too many saves. Wait a minute and try again.' },
+  signin:  { text: '!',  color: '#B91C1C', title: 'Nothing saved: sign in to inntoit first.' },
+  error:   { text: '!',  color: '#B91C1C', title: 'Nothing saved: something went wrong. Try again.' },
+};
+const DEFAULT_TITLE = 'inntoit';
+const clearTimers = {};
+
+function badge(tabId, state, { sticky = false } = {}) {
+  const b = BADGES[state];
+  const target = tabId != null ? { tabId } : {};
+  chrome.action.setBadgeText({ ...target, text: b.text });
+  chrome.action.setBadgeBackgroundColor({ ...target, color: b.color });
+  if (chrome.action.setBadgeTextColor) chrome.action.setBadgeTextColor({ ...target, color: '#FFFFFF' });
+  chrome.action.setTitle({ ...target, title: b.title });
+  clearTimeout(clearTimers[tabId]);
+  if (sticky) return;
+  // Problems stay a little longer, so there is time to hover and read why.
+  const ms = state === 'saved' || state === 'plain' || state === 'dup' ? 2500 : 6000;
+  clearTimers[tabId] = setTimeout(() => {
+    chrome.action.setBadgeText({ ...target, text: '' });
+    chrome.action.setTitle({ ...target, title: DEFAULT_TITLE });
+  }, ms);
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "save-to-inntoit") return;
 
-  chrome.action.setBadgeText({ text: "..." });
-  chrome.action.setBadgeBackgroundColor({ color: "#4D6A51" });
+  badge(tab.id, 'saving', { sticky: true });
 
   const frameId = info.frameId || 0;
   let capturedContent = info.selectionText || null;
@@ -252,7 +277,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
     // Instagram feed / X timeline with no post under the mouse: never save the feed address.
     if (!target.url && !capturedContent) {
-      flashBadge("?", "#D97706");
+      badge(tab.id, 'notPost');
       return;
     }
 
@@ -278,16 +303,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     })
     .then(res => {
       if (res.status === 409) {
-        flashBadge("DUP", "#D97706");
+        badge(tab.id, 'dup');
       } else if (res.status === 429) {
-        flashBadge("LIM", "#D97706");
+        badge(tab.id, 'limit');
+      } else if (res.status === 401) {
+        badge(tab.id, 'signin');
       } else if (res.ok) {
-        // "OK" = formatting captured, "TXT" = fell back to plain text (content script didn't reply)
-        flashBadge(capturedContent && !formatKept ? "TXT" : "OK", "#4D6A51");
+        badge(tab.id, capturedContent && !formatKept ? 'plain' : 'saved');
       } else {
         throw new Error("Failed");
       }
     })
-    .catch(() => flashBadge("ERR", "#B91C1C"));
+    .catch(() => badge(tab.id, 'error'));
   });
 });
