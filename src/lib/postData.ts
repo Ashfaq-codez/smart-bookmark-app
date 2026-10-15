@@ -1,5 +1,5 @@
 import { hostIs } from '@/lib/urlTools';
-import type { Bookmark, XPost, InstagramPost, YouTubePost, RedditPost, ArticlePost, SubstackNotePost } from '@/types';
+import type { Bookmark, XPost, InstagramPost, YouTubePost, RedditPost, ArticlePost, SubstackNotePost, HackerNewsPost, SpotifyPost, ThreadsPost, LinkedInPost } from '@/types';
 
 // bookmarks.post_data holds one platform's snapshot (X, Instagram, YouTube, Reddit, Substack, Medium). Every reader goes through these,
 // so one platform's snapshot is never read as another's.
@@ -60,3 +60,13 @@ export function isSubstackNoteUrl(url: string | null | undefined): boolean {
     return false;
   }
 }
+
+// One getter per platform below; each checks the platform and the one field its card can't do without.
+const getter = <T,>(platform: string, field: string) => (b: Pick<Bookmark, 'post_data'> | null | undefined): T | null => {
+  const d = b?.post_data as Record<string, unknown> | null | undefined;
+  return d && typeof d === 'object' && d.platform === platform && typeof d[field] === 'string' ? (d as unknown as T) : null;
+};
+export const getHackerNewsPost = getter<HackerNewsPost>('hackernews', 'title');
+export const getSpotifyPost = getter<SpotifyPost>('spotify', 'title');
+export const getThreadsPost = getter<ThreadsPost>('threads', 'text');
+export const getLinkedInPost = getter<LinkedInPost>('linkedin', 'text');

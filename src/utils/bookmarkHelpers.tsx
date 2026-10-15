@@ -59,17 +59,18 @@ export const deriveDisplayType = (b: Bookmark) => {
   // A saved label is trusted only if the address really is that site. Old saves made by the earlier
   // "contains x.com" check were stored as X posts even for dropbox.com, netflix.com...
   let storedType = b.type;
-  if (storedType && ['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'reddit'].includes(storedType) && b.url) {
+  if (storedType && ['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'reddit', 'threads', 'spotify', 'hackernews', 'linkedin'].includes(storedType) && b.url) {
     const real = storedType === 'tiktok' ? (hostIs(hostOf(b.url), 'tiktok.com') ? 'tiktok' : null) : detectSiteType(b.url);
     if (real !== storedType) storedType = 'link';
   }
-  if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'reddit', 'note', 'pdf', 'image', 'video'].includes(storedType || '')) return storedType;
+  if (['twitter', 'instagram', 'youtube', 'tiktok', 'pinterest', 'github', 'reddit', 'threads', 'spotify', 'hackernews', 'linkedin', 'note', 'pdf', 'image', 'video'].includes(storedType || '')) return storedType;
   if (b.url) {
     if (isGoogleSearchUrl(b.url)) return 'google';
     const url = b.url.toLowerCase();
     // Match the real site (x.com, www.x.com, mobile.twitter.com...), never just "contains" (dropbox.com is not x.com)
     const site = detectSiteType(b.url);
-    if (site === 'twitter' || site === 'instagram' || site === 'pinterest' || site === 'youtube' || site === 'github' || site === 'reddit') return site;
+    if (site === 'twitter' || site === 'instagram' || site === 'pinterest' || site === 'youtube' || site === 'github' || site === 'reddit'
+      || site === 'threads' || site === 'spotify' || site === 'hackernews' || site === 'linkedin') return site;
     // Substack Notes (short posts), then Substack / Medium articles (also newsletters on their own domain)
     if (isSubstackNoteUrl(b.url)) return 'substack-note';
     const article = articlePlatformOf(b);

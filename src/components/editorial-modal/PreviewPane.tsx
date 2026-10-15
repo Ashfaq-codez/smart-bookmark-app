@@ -6,6 +6,7 @@ import TwitterPreview from './previews/TwitterPreview'
 import { RedditPreview } from '../social/RedditCard'
 import { ArticlePreview } from '../social/ArticleCard'
 import { SubstackNotePreview } from '../social/SubstackNoteCard'
+import { HackerNewsPreview, SpotifyPreview, ThreadsPreview, LinkedInPreview } from '../social/MoreSocialCards'
 import InstagramPreview from './previews/InstagramPreview'
 import PinterestPreview from './previews/PinterestPreview'
 import ImagePreview from './previews/ImagePreview'
@@ -36,6 +37,14 @@ export default function PreviewPane({ bookmark, displayType, previewImageUrl, ed
         <TwitterPreview bookmark={bookmark} />
       ) : displayType === 'reddit' ? (
         <RedditPreview bookmark={bookmark} />
+      ) : displayType === 'hackernews' ? (
+        <HackerNewsPreview bookmark={bookmark} />
+      ) : displayType === 'spotify' ? (
+        <SpotifyPreview bookmark={bookmark} />
+      ) : displayType === 'threads' ? (
+        <ThreadsPreview bookmark={bookmark} />
+      ) : displayType === 'linkedin' ? (
+        <LinkedInPreview bookmark={bookmark} />
       ) : displayType === 'substack-note' ? (
         <SubstackNotePreview bookmark={bookmark} />
       ) : displayType === 'substack' || displayType === 'medium' ? (
