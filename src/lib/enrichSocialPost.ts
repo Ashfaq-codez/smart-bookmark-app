@@ -65,10 +65,11 @@ const isVideoAddress = (u?: string | null) => !!u && /\.(mp4|m3u8|mov|webm)(\?|$
 // `keep`: fields the person sent with the save themselves (never replaced).
 // `captured`: what the extension read on the page (Instagram only); checked here, never trusted as is.
 export type EnrichKeep = { title?: boolean; description?: boolean; image?: boolean };
+export type Captured = { handle?: unknown; caption?: string | null; is_video?: boolean };
 
 export async function enrichSocialPost(
   db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode,
-  keep: EnrichKeep = {}, captured: { handle?: unknown } = {},
+  keep: EnrichKeep = {}, captured: Captured = {},
 ): Promise<EnrichResult> {
   if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
@@ -115,7 +116,7 @@ const isAutoInstagramTitle = (t: string | null | undefined, url: string) => {
 };
 
 async function enrichInstagram(
-  db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep, captured: { handle?: unknown },
+  db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep, captured: Captured,
 ): Promise<EnrichResult> {
   if (!isInstagramPostUrl(row.url)) return 'skipped';
   const now = new Date().toISOString();
@@ -134,14 +135,16 @@ async function enrichInstagram(
   // A new save always reads the page (title, caption, cover). A repair only when the handle is still unknown,
   // so most old cards are fixed without contacting Instagram at all.
   const patch: Record<string, unknown> = {};
-  let caption = captionFromDescription(row.description);
-  let isVideo = /\/(reels?|tv)\//.test(row.url);
+  // The caption the extension read (already checked by parseInstagramCapture) beats any page text.
+  const capturedCaption = typeof captured.caption === 'string' && captured.caption.trim() ? captured.caption : null;
+  let caption = capturedCaption || captionFromDescription(row.description);
+  let isVideo = captured.is_video === true || /\/(reels?|tv)\//.test(row.url);
   if (mode === 'save' || !handle) {
     const page = await fetchInstagramPage(row.url);
     if (page.ok) {
       const p = page.page;
       if (!handle && p.handle) { handle = p.handle; source = 'page'; }
-      caption = captionFromDescription(p.description) || caption;
+      caption = capturedCaption || captionFromDescription(p.description) || caption;
       isVideo = isVideo || p.is_video;
       const titleIsAuto = mode === 'save' ? !keep.title : isAutoInstagramTitle(row.title, row.url);
       if (titleIsAuto && p.title) patch.title = p.title;

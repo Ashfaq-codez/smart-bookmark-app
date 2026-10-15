@@ -139,6 +139,97 @@
     return null;
   }
 
+  // ---------- Instagram capture ----------
+  // Instagram image addresses expire and the server cannot read Instagram, so the post is read from the page here.
+  const IG_CDN = (u) => {
+    try {
+      const h = new URL(u).hostname.toLowerCase();
+      return new URL(u).protocol === 'https:' && (hostIs(h, 'cdninstagram.com') || hostIs(h, 'fbcdn.net'));
+    } catch (e) { return false; }
+  };
+  const NOT_HANDLES = new Set(['p', 'reel', 'reels', 'tv', 'explore', 'accounts', 'stories', 'direct', 'about', 'legal', 'developer', 'web']);
+
+  // Plain text with line breaks kept (<br> and block ends become new lines).
+  function textWithBreaks(el) {
+    let out = '';
+    const walk = (n) => {
+      if (n.nodeType === 3) { out += n.nodeValue; return; }
+      if (n.nodeType !== 1) return;
+      const tag = n.tagName.toUpperCase();
+      if (tag === 'BR') { out += '\n'; return; }
+      if (tag === 'SCRIPT' || tag === 'STYLE') return;
+      n.childNodes.forEach(walk);
+      if (tag === 'DIV' || tag === 'P' || tag === 'LI') out += '\n';
+    };
+    walk(el);
+    return out.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  // Biggest candidate from srcset, else src.
+  function bestImageUrl(img) {
+    const set = (img.getAttribute('srcset') || '').split(',').map((part) => {
+      const [u, w] = part.trim().split(/\s+/);
+      return { u, w: parseInt(w, 10) || 0 };
+    }).filter((c) => c.u);
+    set.sort((a, b) => b.w - a.w);
+    return (set[0] && set[0].u) || img.getAttribute('src') || '';
+  }
+
+  // { handle, caption, image_url, is_video } for the post at `target` (or the post page), or null.
+  function captureInstagram(target, pageUrl, doc) {
+    const onPostPage = !!instagramPostUrl(pageUrl, pageUrl);
+    const root = (target && target.closest && target.closest('article')) ||
+      (onPostPage ? doc.querySelector('div[role="dialog"] article, main article, div[role="dialog"], main') : null);
+    if (!root) return null;
+
+    let handle = null;
+    for (const a of root.querySelectorAll('a[href]')) {
+      let path = '';
+      try { path = new URL(a.getAttribute('href'), pageUrl).pathname; } catch (e) { continue; }
+      const m = path.match(/^\/([A-Za-z0-9._]{1,30})\/?$/);
+      if (m && !NOT_HANDLES.has(m[1].toLowerCase())) { handle = m[1]; break; }
+    }
+
+    const h1 = root.querySelector('h1');
+    let caption = h1 ? textWithBreaks(h1) : '';
+    if (!caption && onPostPage) {
+      // og:description looks like: 12 likes, 3 comments - name on May 1, 2026: "the caption"
+      const og = doc.querySelector('meta[property="og:description"]');
+      const m = og && (og.getAttribute('content') || '').match(/:\s*"([\s\S]*)"\s*\.?$/);
+      if (m) caption = m[1].trim();
+    }
+
+    const video = root.querySelector('video');
+    let image = video && IG_CDN(video.getAttribute('poster') || '') ? video.getAttribute('poster') : '';
+    if (!image) {
+      // The main picture: the biggest one that is not a profile picture
+      let best = null;
+      let bestSize = -1;
+      root.querySelectorAll('img').forEach((img) => {
+        if (/profile picture/i.test(img.getAttribute('alt') || '')) return;
+        const u = bestImageUrl(img);
+        if (!IG_CDN(u)) return;
+        const size = (img.naturalWidth || parseInt(img.getAttribute('width') || '0', 10) || 1) *
+          (img.naturalHeight || parseInt(img.getAttribute('height') || '0', 10) || 1);
+        if (size > bestSize) { best = u; bestSize = size; }
+      });
+      image = best || '';
+    }
+    if (!image && onPostPage) {
+      const og = doc.querySelector('meta[property="og:image"]');
+      const u = og ? og.getAttribute('content') || '' : '';
+      if (IG_CDN(u)) image = u;
+    }
+
+    if (!handle && !caption && !image) return null;
+    return {
+      handle,
+      caption: caption.slice(0, 2200) || null,
+      image_url: image || null,
+      is_video: !!video,
+    };
+  }
+
   // Browser-tab noise: a leading "(3) " notification count and a trailing " / X" (same rule as the server).
   const cleanTitle = (title) =>
     typeof title === 'string' ? title.trim().replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').trim() : '';
@@ -151,7 +242,7 @@
     return null;
   }
 
-  const api = { siteOf, cleanUrl, cleanTitle, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
+  const api = { siteOf, cleanUrl, cleanTitle, captureInstagram, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
   root.inntoitExtract = Object.assign(root.inntoitExtract || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = root.inntoitExtract;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

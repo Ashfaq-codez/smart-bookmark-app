@@ -9,6 +9,7 @@ export type FakeOptions = {
   recentCount?: number              // how many saves this user already made in the last minute
   countError?: any                  // make that count lookup fail
   listRows?: any[]                  // rows returned when a list query is awaited (no maybeSingle/single)
+  uploadError?: any                 // make a storage upload fail
   updateError?: any                 // make the later page-details update fail (or a function of the patch)
 }
 
@@ -64,9 +65,24 @@ export function fakeSupabase(opts: FakeOptions = {}) {
     return chain
   }
 
+  const uploads: { path: string; size: number; data: Buffer; contentType?: string }[] = []   // files put in storage
+  const removed: string[] = []
+  const storage = {
+    from: () => ({
+      upload: async (path: string, data: Buffer, o?: { contentType?: string }) => {
+        if (opts.uploadError) return { data: null, error: opts.uploadError }
+        uploads.push({ path, size: data.length, data, contentType: o?.contentType })
+        return { data: { path }, error: null }
+      },
+      getPublicUrl: (path: string) => ({ data: { publicUrl: `https://storage.test/attachments/${path}` } }),
+      remove: async (paths: string[]) => { removed.push(...paths); return { error: null } },
+    }),
+  }
+
   const client = {
     from,
+    storage,
     auth: { getUser: async () => ({ data: { user: opts.user ?? null }, error: null }) },
   }
-  return { client, inserted, updates, eqCalls, bookmarkFilters, orFilters }
+  return { client, inserted, updates, eqCalls, bookmarkFilters, orFilters, uploads, removed }
 }

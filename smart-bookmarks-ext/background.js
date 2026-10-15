@@ -289,7 +289,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       ...(resolvedUrl && { url: resolvedUrl }),
       ...(noteTitle && { title: noteTitle }),
       ...(capturedContent && { content: capturedContent }),
-      ...(detectedType && { type: detectedType })
+      ...(detectedType && { type: detectedType }),
+      ...(resolvedUrl && target.capture && { capture: target.capture })
     };
 
     fetch(API_URL, {

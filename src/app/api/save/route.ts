@@ -9,6 +9,7 @@ import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
 import { isOverSaveLimit } from '@/lib/saveLimit';
+import { parseInstagramCapture, instagramTitle, storeInstagramImage } from '@/lib/instagramCapture';
 
 // The page details are read after the answer is sent; give that background work room to finish.
 export const maxDuration = 30;
@@ -55,7 +56,8 @@ export async function POST(request: Request) {
       image_url: customImg, 
       type: customType,
       category,
-      sub_category
+      sub_category,
+      capture: rawCapture
     } = body;
 
     // A social type from the client is not trusted: it is a plain link, and the real type comes from the address below.
@@ -131,6 +133,8 @@ export async function POST(request: Request) {
     const cleanUrl = rawUrl ? normalizeUrl(rawUrl, itemType) : null;
     
     const detectedType: string = (cleanUrl && isLink && detectSiteType(cleanUrl)) || itemType;
+    // The extension sends what an Instagram post page shows; accepted only for an Instagram post address.
+    const capture = isLink && detectedType === 'instagram' ? parseInstagramCapture(rawCapture, cleanUrl) : null;
 
     // Notes are checked by their text even when they arrive without an address.
     if (cleanUrl || (itemType === 'note' && finalContent)) {
@@ -225,9 +229,9 @@ export async function POST(request: Request) {
     // Save first, read the page afterwards: the person (or the extension) gets "saved" straight away,
     // and the title / description / cover image are filled in a moment later (they appear live in the dashboard).
     // Social posts always get their title from the post itself; other titles lose browser-tab noise.
-    const givenTitle = isSocialType(detectedType) ? '' : cleanTitle(customTitle);
+    const givenTitle = capture ? instagramTitle(capture) : isSocialType(detectedType) ? '' : cleanTitle(customTitle);
     let finalTitle = givenTitle;
-    const finalDescription = itemType === 'note' ? null : (customDesc || null);
+    const finalDescription = itemType === 'note' ? null : (capture?.caption || customDesc || null);
     const finalImage = customImg || null;
 
     if (itemType === 'note') {
@@ -251,7 +255,8 @@ export async function POST(request: Request) {
         image_url: finalImage,
         category: category || 'Inbox',
         sub_category: sub_category || null,
-        tags: ['auto-saved', detectedType],
+        // 'video' marks an Instagram video post, so the cards can offer "Watch on Instagram".
+        tags: ['auto-saved', detectedType, ...(capture?.is_video ? ['video'] : [])],
         type: detectedType, 
       }])
       .select()
@@ -273,7 +278,25 @@ export async function POST(request: Request) {
         }
         // Instagram posts: page details plus who posted it (stored as an Instagram snapshot).
         if (detectedType === 'instagram' && isInstagramPostUrl(cleanUrl)) {
-          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'instagram' }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
+          // Instagram picture addresses expire: keep our own copy of what the extension saw (video posts: the poster only).
+          let storedImage = false;
+          if (capture?.image_url && !customImg) {
+            const stored = await storeInstagramImage(db, userId, capture.image_url);
+            if (stored) {
+              const { error } = await db.from('bookmarks')
+                .update({ image_url: stored.publicUrl, file_path: stored.path })
+                .eq('id', savedId).eq('user_id', userId);
+              if (error) {
+                console.error('[after-save] instagram update failed:', error.message);
+                await db.storage.from('attachments').remove([stored.path]);
+              } else {
+                storedImage = true;
+              }
+            }
+          }
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'instagram' }, 'save',
+            { title: !!givenTitle, description: !!finalDescription, image: !!customImg || storedImage },
+            capture ? { handle: capture.handle, caption: capture.caption, is_video: capture.is_video } : {});
           return;
         }
         const details = await fetchPageDetails(cleanUrl, detectedType);

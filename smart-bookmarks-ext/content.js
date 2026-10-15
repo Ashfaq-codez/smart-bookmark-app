@@ -209,7 +209,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     const result = globalThis.inntoitExtract.extractExactUrl(rightClickedElement, window.location.href);
     // Nothing specific found: save the page itself. On Instagram / X a missing post stays url: null (never the feed).
-    sendResponse({ ...(result || { url: window.location.href }), html: selectedHtml || getSelectionHtml() || lastSelectionHtml, v: 4 });
+    // Instagram post: also send what the page shows (handle, caption, picture), the server can't read Instagram.
+    const ex = globalThis.inntoitExtract;
+    const capture = result && result.url && ex.instagramPostUrl(result.url, result.url)
+      ? ex.captureInstagram(rightClickedElement, window.location.href, document) : null;
+    sendResponse({ ...(result || { url: window.location.href }), ...(capture && { capture }), html: selectedHtml || getSelectionHtml() || lastSelectionHtml, v: 4 });
   }
 });
 }

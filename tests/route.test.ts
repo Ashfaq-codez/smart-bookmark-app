@@ -552,3 +552,90 @@ describe('POST /api/save: X duplicates by status ID', () => {
     expect(fake.updates[0].patch.url).toBe(undefined)
   })
 })
+
+describe('POST /api/save: Instagram capture from the extension', () => {
+  const IMG = 'https://scontent-icn2-1.cdninstagram.com/v/t51/abc.jpg?stp=x'
+  const capture = { handle: 'nasa', caption: 'Line one\nLine two', image_url: IMG, is_video: false }
+
+  async function jpeg(w: number, h: number) {
+    const sharp = (await import('sharp')).default
+    return sharp({ create: { width: w, height: h, channels: 3, background: '#88aacc' } }).jpeg().toBuffer()
+  }
+
+  it('uses the captured handle and caption for the title and description', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://www.instagram.com/p/ABCdef123/', capture })
+    expect(fake.inserted[0].url).toBe('https://instagram.com/p/ABCdef123')
+    expect(fake.inserted[0].title).toBe('@nasa on Instagram: Line one')
+    expect(fake.inserted[0].description).toBe('Line one\nLine two')
+  })
+
+  it('ignores a capture sent with a non-Instagram address', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://example.com/p/ABCdef123', capture })
+    expect(fake.inserted[0].title).not.toContain('Instagram')
+    expect(fake.inserted[0].description).toBe(null)
+  })
+
+  it('ignores a capture for an Instagram address that is not a post', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://www.instagram.com/nasa/', capture })
+    expect(fake.inserted[0].title).not.toContain('on Instagram')
+  })
+
+  it('drops an invalid handle and a picture that is not on the Instagram CDN', async () => {
+    const fake = loggedIn()
+    await post({ url: 'https://instagram.com/reel/ABCdef123', capture: { handle: 'bad handle!', caption: 'Hi', image_url: 'https://evil.example/x.jpg' } })
+    expect(fake.inserted[0].title).toBe('Post on Instagram: Hi')
+    await finishBackgroundWork()
+    expect(fake.uploads).toHaveLength(0)
+    expect(safeFetch).not.toHaveBeenCalled()
+  })
+
+  it('copies the picture into storage as a resized WebP and links it to the bookmark', async () => {
+    const fake = loggedIn()
+    vi.mocked(safeFetch).mockResolvedValue(new Response(await jpeg(3000, 2000), { headers: { 'content-type': 'image/jpeg' } }))
+    await post({ url: 'https://www.instagram.com/p/ABCdef123/', capture })
+    await finishBackgroundWork()
+    expect(fake.uploads).toHaveLength(1)
+    expect(fake.uploads[0].path).toMatch(/^user-1\/ig-[0-9a-f-]{36}\.webp$/)
+    expect(fake.uploads[0].contentType).toBe('image/webp')
+    expect(fake.updates[0].patch.image_url).toBe(`https://storage.test/attachments/${fake.uploads[0].path}`)
+    expect(fake.updates[0].patch.file_path).toBe(fake.uploads[0].path)
+    expect(fake.updates[0].filters).toContainEqual(['user_id', 'user-1'])
+    const sharp = (await import('sharp')).default
+    const meta = await sharp(fake.uploads[0].data).metadata()
+    expect(meta.format).toBe('webp')
+    expect(meta.width).toBe(1600)
+    expect(meta.height).toBe(1067)
+  })
+
+  it('never fetches Instagram itself when a capture is present', async () => {
+    loggedIn()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response('not an image', { headers: { 'content-type': 'text/html' } }))
+    await post({ url: 'https://www.instagram.com/p/ABCdef123/', capture })
+    await finishBackgroundWork()
+    for (const call of vi.mocked(safeFetch).mock.calls) expect(String(call[0])).not.toContain('instagram.com/p/')
+  })
+
+  it('marks a video post with a "video" tag and stores only the poster', async () => {
+    const fake = loggedIn()
+    vi.mocked(safeFetch).mockResolvedValue(new Response(await jpeg(640, 640), { headers: { 'content-type': 'image/jpeg' } }))
+    await post({ url: 'https://www.instagram.com/reel/ABCdef123/', capture: { ...capture, is_video: true } })
+    expect(fake.inserted[0].tags).toContain('video')
+    await finishBackgroundWork()
+    expect(fake.uploads).toHaveLength(1)
+    expect(vi.mocked(safeFetch)).toHaveBeenCalledTimes(1)
+    expect(String(vi.mocked(safeFetch).mock.calls[0][0])).toBe(IMG)
+  })
+
+  it('keeps the save when the picture cannot be copied', async () => {
+    const fake = loggedIn({ uploadError: { message: 'full' } })
+    vi.mocked(safeFetch).mockResolvedValue(new Response(await jpeg(100, 100), { headers: { 'content-type': 'image/jpeg' } }))
+    const res = await post({ url: 'https://www.instagram.com/p/ABCdef123/', capture })
+    expect(res.status).toBe(200)
+    await finishBackgroundWork()
+    expect(fake.updates).toHaveLength(0)
+  })
+})
