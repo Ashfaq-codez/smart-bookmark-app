@@ -299,10 +299,16 @@ export async function POST(request: Request) {
             capture ? { handle: capture.handle, caption: capture.caption, is_video: capture.is_video } : {});
           return;
         }
+        // YouTube videos: the real title and channel from YouTube's free oEmbed. The page is still read for
+        // the description when that works; its title is only used if oEmbed had none.
+        let youTubeTitle = false;
+        if (detectedType === 'youtube') {
+          youTubeTitle = (await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'youtube' }, 'save', { title: !!givenTitle })) === 'stored';
+        }
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Only fill in what the person did not give us themselves.
         const patch: Record<string, string> = {};
-        if (!givenTitle && details.title) patch.title = details.title;
+        if (!givenTitle && !youTubeTitle && details.title && !/^(\(\d+\)\s*)?YouTube$/i.test(details.title)) patch.title = details.title;
         if (!customDesc && details.description) patch.description = details.description;
         if (!customImg && details.image) patch.image_url = details.image;
         if (Object.keys(patch).length === 0) return;

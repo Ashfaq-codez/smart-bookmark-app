@@ -4,14 +4,14 @@ import { isAdmin } from '@/lib/admin';
 import { enrichSocialPost, RETRY_AFTER_MS } from '@/lib/enrichSocialPost';
 import { handleFromUrl, handleFromDescription } from '@/lib/instagramMeta';
 
-// Shared by /api/admin/x-backfill and /api/admin/instagram-backfill.
+// Shared by /api/admin/x-backfill, /api/admin/instagram-backfill and /api/admin/youtube-backfill.
 // Owner only (ADMIN_USER_IDS) and only the owner's own rows, 10 at a time.
 //   GET  = dry run: what the next batch would do; changes nothing and contacts nobody.
 //   POST = does the next batch and reports each result plus how many are left.
 
 const BATCH = 10;
-type Kind = 'twitter' | 'instagram';
-const DELAY_MS: Record<Kind, number> = { twitter: 1500, instagram: 3000 };   // gentle with the free sources
+type Kind = 'twitter' | 'instagram' | 'youtube';
+const DELAY_MS: Record<Kind, number> = { twitter: 1500, instagram: 3000, youtube: 500 };   // gentle with the free sources
 
 async function nextBatch(type: Kind) {
   const supabase = await createClient();
@@ -66,7 +66,7 @@ export async function backfillApply(type: Kind): Promise<NextResponse> {
     const results: { id: number; url: string; result: string }[] = [];
     for (const [i, row] of r.rows.entries()) {
       // Pause only before a request that really goes out.
-      const goesOut = type === 'twitter' || instagramPlan(row).contactsInstagram;
+      const goesOut = type !== 'instagram' || instagramPlan(row).contactsInstagram;
       if (i > 0 && goesOut) await new Promise((res) => setTimeout(res, DELAY_MS[type]));
       results.push({ id: row.id, url: row.url, result: await enrichSocialPost(r.supabase, r.userId, row, 'repair') });
     }

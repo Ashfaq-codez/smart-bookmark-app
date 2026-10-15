@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicalizeXUrl, hostIs } from '@/lib/urlTools';
+import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
 import { cleanHandle, handleFromUrl, handleFromDescription, captionFromDescription, fetchInstagramPage, instagramSnapshot } from '@/lib/instagramMeta';
 import { fetchXSnapshot, xTitle } from '@/lib/xSnapshot';
 import type { XPost } from '@/types';
@@ -42,7 +43,9 @@ export function isInstagramPostUrl(url: string | null | undefined): boolean {
 // Does this bookmark still need a snapshot (and is it allowed to try now)?
 export function needsSnapshot(row: Pick<EnrichRow, 'type' | 'url' | 'post_data' | 'post_data_failed_at'>, now = Date.now()): boolean {
   if (row.post_data) return false;
-  const supported = (row.type === 'twitter' && !!canonicalizeXUrl(row.url || '')) || (row.type === 'instagram' && isInstagramPostUrl(row.url));
+  const supported = (row.type === 'twitter' && !!canonicalizeXUrl(row.url || ''))
+    || (row.type === 'instagram' && isInstagramPostUrl(row.url))
+    || (row.type === 'youtube' && !!youTubeVideoId(row.url));
   if (!supported) return false;
   if (!row.post_data_failed_at) return true;
   const failed = Date.parse(row.post_data_failed_at);
@@ -72,6 +75,7 @@ export async function enrichSocialPost(
   keep: EnrichKeep = {}, captured: Captured = {},
 ): Promise<EnrichResult> {
   if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
+  if (row.type === 'youtube') return enrichYouTube(db, userId, row, mode, keep);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
   if (!canonical) return 'skipped';
   const id = canonical.split('/status/')[1];
@@ -161,4 +165,24 @@ async function enrichInstagram(
   }
   const ok = await update({ ...patch, post_data: instagramSnapshot(handle, source, caption, isVideo), post_data_fetched_at: now, post_data_failed_at: null });
   return ok ? 'stored' : 'failed';
+}
+
+// ---------- YouTube ----------
+// The real title and channel. A save sets the title unless the person gave one; a repair only replaces a
+// title the app made itself (the bare address, "YouTube").
+async function enrichYouTube(db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep): Promise<EnrichResult> {
+  const id = youTubeVideoId(row.url);
+  if (!id) return 'skipped';
+  const info = await fetchYouTubeInfo(id);
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = info.ok
+    ? { post_data: info.post, post_data_fetched_at: now, post_data_failed_at: null }
+    : { post_data_failed_at: now };
+  if (info.ok && (mode === 'save' ? !keep.title : isAutoYouTubeTitle(row.title))) patch.title = info.post.title;
+  const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
+  if (error) {
+    console.error('[youtube] update failed:', error.message);
+    return 'failed';
+  }
+  return info.ok ? 'stored' : 'not-found';
 }

@@ -20,8 +20,8 @@ export type Bookmark = {
   file_type?: string | null;
   // Set when the save is pinned to the top; the time it was pinned. null / missing = not pinned.
   pinned_at?: string | null;
-  // Stored snapshot of a social post (X or Instagram). null = not read yet. Added by migration 0005.
-  // ALWAYS read it through getXPost() / getInstagramPost() (src/lib/postData.ts), which check the platform.
+  // Stored snapshot of a social post (X, Instagram or YouTube). null = not read yet. Added by migration 0005.
+  // ALWAYS read it through getXPost() / getInstagramPost() / getYouTubePost() (src/lib/postData.ts), which check the platform.
   post_data?: PostData | null;
   post_data_fetched_at?: string | null;
   post_data_failed_at?: string | null;
@@ -90,4 +90,13 @@ export type InstagramPost = {
   is_video: boolean;
 };
 
-export type PostData = XPost | InstagramPost;
+// ---------- YouTube snapshot (bookmarks.post_data with platform 'youtube') ----------
+export type YouTubePost = {
+  v: 1;
+  platform: 'youtube';
+  id: string;                                          // the 11-character video id
+  title: string;
+  channel: string | null;
+};
+
+export type PostData = XPost | InstagramPost | YouTubePost;
