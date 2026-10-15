@@ -234,6 +234,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       });
     }
 
+    // Instagram feed / X timeline with no post under the mouse: never save the feed address.
+    if (!chrome.runtime.lastError && response && response.url === null && response.reason && !capturedContent) {
+      chrome.action.setBadgeText({ text: "?" });
+      chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
+      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2200);
+      return;
+    }
+
     if (!chrome.runtime.lastError && response?.url) {
       // Final safety check just in case the content script failed and returned a blob
       if (!response.url.startsWith('blob:')) {
