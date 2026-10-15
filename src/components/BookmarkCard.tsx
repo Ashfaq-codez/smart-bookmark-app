@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useXSnapshotRepair } from '@/hooks/useXSnapshotRepair'
+import { useSnapshotRepair } from '@/hooks/useSnapshotRepair'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 import { Bookmark } from '@/types'
@@ -140,7 +140,7 @@ export default function BookmarkCard({
   const getDomain = (link: string) => { try { const clean = link.split('#:~:text=')[0]; return new URL(clean).hostname.replace('www.', '') } catch { return 'source' } }
   
   const displayType = deriveDisplayType(bookmark);
-  useXSnapshotRepair(bookmark, displayType || 'link');
+  useSnapshotRepair(bookmark, displayType || 'link');
   const ytVideoId = getYouTubeId(bookmark.url);
   const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;

@@ -7,7 +7,7 @@ type Ctx = { params: Promise<{ id: string }> };
 // Reading X can take a few seconds.
 export const maxDuration = 20;
 
-// "This X card has no snapshot yet": read the post once and store it. The card then refreshes through the
+// "This X / Instagram card has no snapshot yet": read the post once and store it. The card then refreshes through the
 // normal live update. Only the owner's own bookmark, and at most once a day for a post that failed.
 export async function POST(_request: Request, { params }: Ctx) {
   try {
@@ -21,7 +21,7 @@ export async function POST(_request: Request, { params }: Ctx) {
 
     const { data: row, error } = await supabase
       .from('bookmarks')
-      .select('id, url, type, title, image_url, post_data, post_data_failed_at')
+      .select('id, url, type, title, description, image_url, post_data, post_data_failed_at')
       .eq('id', id)
       .eq('user_id', user.id)
       .maybeSingle();
