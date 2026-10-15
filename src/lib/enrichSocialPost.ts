@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { canonicalizeXUrl, hostIs, isRedditShareLink } from '@/lib/urlTools';
+import { canonicalizeXUrl, hostIs, isRedditShareLink, hackerNewsItemId, spotifyRef, threadsPostRef, isLinkedInPostUrl } from '@/lib/urlTools';
+import { fetchHackerNews, fetchSpotify, fetchThreadsEmbed, fetchLinkedIn, moreSocialTitle } from '@/lib/moreSocialMeta';
+import { storeInstagramImage } from '@/lib/instagramCapture';
 import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
 import { redditPostRef, fetchRedditPost, resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
@@ -54,7 +56,8 @@ export function needsSnapshot(row: Pick<EnrichRow, 'type' | 'url' | 'post_data' 
     || (row.type === 'youtube' && !!youTubeVideoId(row.url))
     // Reddit posts saved before Reddit had its own type are plain links: recognised by the address.
     || ((row.type === 'reddit' || row.type === 'link') && (!!redditPostRef(row.url) || isRedditShareLink(row.url)))
-    || (row.type === 'link' && isArticleHost(row.url));   // (includes Substack Notes on substack.com)
+    || (row.type === 'link' && isArticleHost(row.url))   // (includes Substack Notes on substack.com)
+    || !!moreSocialKind(row);
   if (!supported) return false;
   if (!row.post_data_failed_at) return true;
   const failed = Date.parse(row.post_data_failed_at);
@@ -86,6 +89,7 @@ export async function enrichSocialPost(
   if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
   if (row.type === 'youtube') return enrichYouTube(db, userId, row, mode, keep);
   if (redditPostRef(row.url) || isRedditShareLink(row.url)) return enrichReddit(db, userId, row, mode, keep);
+  if (moreSocialKind(row)) return enrichMoreSocial(db, userId, row, mode, keep);
   if (row.type === 'link' && isSubstackNoteUrl(row.url)) return enrichSubstackNote(db, userId, row, mode, keep);
   if (row.type === 'link' && isArticleHost(row.url)) return enrichArticle(db, userId, row);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
@@ -285,4 +289,70 @@ async function enrichSubstackNote(db: SupabaseClient, userId: string, row: Enric
     return 'failed';
   }
   return r.ok ? 'stored' : 'not-found';
+}
+
+// ---------- Hacker News, Spotify, Threads, LinkedIn ----------
+// Recognised by the address, so links saved before these sites had their own type are repaired too.
+function moreSocialKind(row: Pick<EnrichRow, 'type' | 'url'>): 'hackernews' | 'spotify' | 'threads' | 'linkedin' | null {
+  if (!['link', 'hackernews', 'spotify', 'threads', 'linkedin'].includes(row.type || 'link')) return null;
+  if (hackerNewsItemId(row.url)) return 'hackernews';
+  if (spotifyRef(row.url)) return 'spotify';
+  if (threadsPostRef(row.url)) return 'threads';
+  if (isLinkedInPostUrl(row.url)) return 'linkedin';
+  return null;
+}
+
+// Titles these sites' own pages gave before (the address, "Threads • Log in", "LinkedIn", "Spotify – Web Player"…).
+const isAutoSocialTitle = (t: string | null | undefined) => {
+  const v = (t || '').trim();
+  return !v || /^https?:\/\//i.test(v) || /^(\(\d+\)\s*)?(Threads|LinkedIn|Spotify|Hacker News)\b/i.test(v)
+    || /\b(log ?in|sign ?(in|up)|join now)\b/i.test(v) || /^Spotify\s*[–-]\s*Web Player/i.test(v);
+};
+
+async function enrichMoreSocial(db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep): Promise<EnrichResult> {
+  const kind = moreSocialKind(row)!;
+  const now = new Date().toISOString();
+  let post: import('@/types').HackerNewsPost | import('@/types').SpotifyPost | import('@/types').ThreadsPost | import('@/types').LinkedInPost | null = null;
+  let cover: string | null = null;
+  let body: string | null = null;
+  let storedPath: string | null = null;   // our copy of a Threads picture (deleted with the bookmark)
+
+  if (kind === 'hackernews') {
+    const r = await fetchHackerNews(row.url);
+    if (r.ok) { post = r.post; body = r.post.text; }
+  } else if (kind === 'spotify') {
+    const r = await fetchSpotify(row.url);
+    if (r.ok) { post = r.post; cover = r.post.image; body = r.post.subtitle; }
+  } else if (kind === 'linkedin') {
+    const r = await fetchLinkedIn(row.url);
+    if (r.ok) { post = r.post; cover = r.post.image; body = r.post.text; }
+  } else {
+    const r = await fetchThreadsEmbed(row.url);
+    if (r.ok) {
+      // Threads picture addresses expire: keep our own copy of the first one (like Instagram).
+      const { image_sources, ...rest } = r.post;
+      const stored = image_sources[0] ? await storeInstagramImage(db, userId, image_sources[0]) : null;
+      post = { ...rest, images: stored ? [stored.publicUrl] : [], more_images: Math.max(0, image_sources.length - 1) };
+      cover = stored?.publicUrl ?? null;
+      storedPath = stored?.path ?? null;
+      body = rest.text;
+    }
+  }
+
+  const patch: Record<string, unknown> = post
+    ? { post_data: post, post_data_fetched_at: now, post_data_failed_at: null }
+    : { post_data_failed_at: now };
+  if (post) {
+    if (mode === 'save' ? !keep.title : isAutoSocialTitle(row.title)) patch.title = moreSocialTitle(post);
+    if (body && (mode === 'save' ? !keep.description : !row.description)) patch.description = body;
+    if (cover && (mode === 'save' ? !keep.image : !row.image_url)) patch.image_url = cover;
+    if (storedPath) patch.file_path = storedPath;
+  }
+  const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
+  if (error) {
+    console.error(`[${kind}] update failed:`, error.message);
+    if (storedPath) await db.storage.from('attachments').remove([storedPath]);
+    return 'failed';
+  }
+  return post ? 'stored' : 'not-found';
 }

@@ -9,6 +9,13 @@ export function normalizeUrl(rawUrl: string, type: string = 'link'): string {
   if (xPost) return xPost;
   const redditPost = canonicalizeRedditUrl(trimmed);
   if (redditPost) return redditPost;
+  // Share tracking off: Spotify ?si=, Threads ?xmt=, LinkedIn ?utm_… / ?rcm=. One address per post.
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const spotify = spotifyRef(withProtocol);
+  if (spotify) return `https://open.spotify.com/${spotify.kind}/${spotify.id}`;
+  const thread = threadsPostRef(withProtocol);
+  if (thread) return `https://www.threads.com/@${thread.handle}/post/${thread.code}`;
+  if (isLinkedInPostUrl(withProtocol)) { const u = new URL(withProtocol); return `https://www.linkedin.com${u.pathname.replace(/\/+$/, '')}`; }
   try {
     const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     const parsed = new URL(withProto);
@@ -45,7 +52,7 @@ export function hostIs(host: string, domain: string): boolean {
   return h === domain || h.endsWith('.' + domain);
 }
 
-export type SiteType = 'twitter' | 'instagram' | 'youtube' | 'pinterest' | 'github' | 'linkedin' | 'reddit';
+export type SiteType = 'twitter' | 'instagram' | 'youtube' | 'pinterest' | 'github' | 'linkedin' | 'reddit' | 'threads' | 'spotify' | 'hackernews';
 
 export function detectSiteType(url: string): SiteType | null {
   let host: string;
@@ -57,12 +64,15 @@ export function detectSiteType(url: string): SiteType | null {
   if (hostIs(host, 'github.com')) return 'github';
   if (hostIs(host, 'linkedin.com')) return 'linkedin';
   if (hostIs(host, 'reddit.com') || hostIs(host, 'redd.it')) return 'reddit';
+  if (hostIs(host, 'threads.com') || hostIs(host, 'threads.net')) return 'threads';
+  if (host.toLowerCase() === 'open.spotify.com') return 'spotify';
+  if (host.toLowerCase() === 'news.ycombinator.com') return 'hackernews';
   return null;
 }
 
 // Sites whose posts we read ourselves. For these the server decides the type from the address;
 // a type or title sent by the client is never trusted.
-export const SOCIAL_TYPES: readonly string[] = ['twitter', 'instagram', 'youtube', 'pinterest', 'reddit'];
+export const SOCIAL_TYPES: readonly string[] = ['twitter', 'instagram', 'youtube', 'pinterest', 'reddit', 'threads', 'spotify', 'hackernews', 'linkedin'];
 
 export function isSocialType(type: string | null | undefined): boolean {
   return !!type && SOCIAL_TYPES.includes(type);
@@ -126,6 +136,56 @@ export function isRedditShareLink(rawUrl: string): boolean {
     const host = u.hostname.toLowerCase();
     if (host === 'redd.it' || host === 'www.redd.it') return /^\/[a-z0-9]{2,12}\/?$/i.test(u.pathname);
     return hostIs(host, 'reddit.com') && /^\/r\/[A-Za-z0-9_]{2,21}\/s\/[A-Za-z0-9]{4,20}\/?$/.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+// news.ycombinator.com/item?id=<n>  ->  "<n>"
+export function hackerNewsItemId(url: string | null | undefined): string | null {
+  try {
+    const u = new URL(url || '');
+    if (u.hostname.toLowerCase() !== 'news.ycombinator.com' || u.pathname !== '/item') return null;
+    const id = u.searchParams.get('id') || '';
+    return /^\d{1,10}$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+const SPOTIFY_KINDS = ['track', 'album', 'playlist', 'episode', 'show', 'artist', 'audiobook'] as const;
+// open.spotify.com/(intl-xx/)<kind>/<id>
+export function spotifyRef(url: string | null | undefined): { kind: (typeof SPOTIFY_KINDS)[number]; id: string } | null {
+  try {
+    const u = new URL(url || '');
+    if (u.hostname.toLowerCase() !== 'open.spotify.com') return null;
+    const m = u.pathname.match(/^\/(?:intl-[a-z-]{2,10}\/)?([a-z]+)\/([A-Za-z0-9]{22})\/?$/);
+    if (!m || !(SPOTIFY_KINDS as readonly string[]).includes(m[1])) return null;
+    return { kind: m[1] as (typeof SPOTIFY_KINDS)[number], id: m[2] };
+  } catch {
+    return null;
+  }
+}
+
+// threads.com / threads.net /@<handle>/post/<code>
+export function threadsPostRef(url: string | null | undefined): { handle: string; code: string } | null {
+  try {
+    const u = new URL(url || '');
+    if (!hostIs(u.hostname.toLowerCase(), 'threads.com') && !hostIs(u.hostname.toLowerCase(), 'threads.net')) return null;
+    const m = decodeURIComponent(u.pathname).match(/^\/@([A-Za-z0-9._]{1,30})\/post\/([A-Za-z0-9_-]{6,20})\/?$/);
+    return m ? { handle: m[1], code: m[2] } : null;
+  } catch {
+    return null;
+  }
+}
+
+// A LinkedIn post: /posts/<slug>-activity-<n>-xxxx or /feed/update/urn:li:(activity|share|ugcPost):<n>
+export function isLinkedInPostUrl(url: string | null | undefined): boolean {
+  try {
+    const u = new URL(url || '');
+    if (!hostIs(u.hostname.toLowerCase(), 'linkedin.com')) return false;
+    return /^\/posts\/[^/]+-(?:activity|share|ugcPost)-\d{10,25}/.test(u.pathname)
+      || /^\/feed\/update\/urn:li:(?:activity|share|ugcPost):\d{10,25}\/?$/.test(decodeURIComponent(u.pathname));
   } catch {
     return false;
   }

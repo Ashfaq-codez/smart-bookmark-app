@@ -145,4 +145,60 @@ export type SubstackNotePost = {
   replies: number | null;
 };
 
-export type PostData = XPost | InstagramPost | YouTubePost | RedditPost | ArticlePost | SubstackNotePost;
+// ---------- Hacker News (platform 'hackernews') ----------
+export type HackerNewsPost = {
+  v: 1;
+  platform: 'hackernews';
+  id: string;
+  kind: 'story' | 'ask' | 'show' | 'job' | 'poll' | 'comment';
+  title: string;
+  link: string | null;                                 // the article the story points to (null for Ask HN)
+  text: string | null;                                 // plain text of an Ask / Show HN or a comment
+  author: string | null;
+  points: number | null;
+  comments: number | null;
+  created_at: string | null;
+};
+
+// ---------- Spotify (platform 'spotify') ----------
+export type SpotifyPost = {
+  v: 1;
+  platform: 'spotify';
+  kind: 'track' | 'album' | 'playlist' | 'episode' | 'show' | 'artist' | 'audiobook';
+  id: string;
+  title: string;
+  subtitle: string | null;                             // "Rick Astley · Whenever You Need Somebody · 1987", a playlist's description…
+  image: string | null;
+  duration_s: number | null;
+  track_count: number | null;
+};
+
+// ---------- Threads (platform 'threads') ----------
+export type ThreadsPost = {
+  v: 1;
+  platform: 'threads';
+  code: string;                                        // the post code in threads.com/@user/post/<code>
+  author: { handle: string; verified: boolean; avatar: string | null };
+  text: string;
+  images: string[];                                    // our own stored copy (Threads picture addresses expire)
+  more_images: number;                                 // pictures in the post not copied
+  created_at: string | null;
+  likes: string | null;                                // as Threads shows them ("9.3K")
+  replies: string | null;
+  reposts: string | null;
+};
+
+// ---------- LinkedIn (platform 'linkedin') ----------
+export type LinkedInPost = {
+  v: 1;
+  platform: 'linkedin';
+  author: { name: string; avatar: string | null; url: string | null };
+  text: string;
+  image: string | null;
+  created_at: string | null;
+  likes: number | null;
+  comments: number | null;
+};
+
+export type PostData = XPost | InstagramPost | YouTubePost | RedditPost | ArticlePost | SubstackNotePost
+  | HackerNewsPost | SpotifyPost | ThreadsPost | LinkedInPost;

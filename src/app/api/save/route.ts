@@ -9,6 +9,9 @@ import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
 import { parsePageCapture } from '@/lib/pageCapture';
 import { articleFromMeta } from '@/lib/articleMeta';
 import { isSubstackNoteUrl } from '@/lib/postData';
+import { hackerNewsItemId, spotifyRef, threadsPostRef, isLinkedInPostUrl } from '@/lib/urlTools';
+
+const isMoreSocialPost = (u: string) => !!(hackerNewsItemId(u) || spotifyRef(u) || threadsPostRef(u) || isLinkedInPostUrl(u));
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
@@ -312,6 +315,11 @@ export async function POST(request: Request) {
         // Reddit's normal page only gives servers a "blocked" page, so nothing else is read.
         if (detectedType === 'reddit') {
           await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'reddit' }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
+          return;
+        }
+        // Hacker News, Spotify, Threads and LinkedIn posts: each from its own free public source.
+        if (['hackernews', 'spotify', 'threads', 'linkedin'].includes(detectedType) && isMoreSocialPost(cleanUrl)) {
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: detectedType }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
           return;
         }
         // Substack Notes (short posts): the note itself, its author and pictures (not an article card).
