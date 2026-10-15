@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicalizeXUrl, hostIs, isRedditShareLink, hackerNewsItemId, spotifyRef, threadsPostRef, isLinkedInPostUrl } from '@/lib/urlTools';
-import { fetchHackerNews, fetchSpotify, fetchThreadsEmbed, fetchLinkedIn, moreSocialTitle } from '@/lib/moreSocialMeta';
+import { fetchHackerNews, fetchSpotify, fetchThreadsEmbed, fetchLinkedIn, moreSocialTitle, readLinkedInPost } from '@/lib/moreSocialMeta';
+import { readInstagramPage } from '@/lib/instagramMeta';
 import { storeInstagramImage } from '@/lib/instagramCapture';
 import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
 import { redditPostRef, fetchRedditPost, resolveRedditShareLink } from '@/lib/redditMeta';
@@ -80,7 +81,8 @@ const isVideoAddress = (u?: string | null) => !!u && /\.(mp4|m3u8|mov|webm)(\?|$
 // `keep`: fields the person sent with the save themselves (never replaced).
 // `captured`: what the extension read on the page (Instagram only); checked here, never trusted as is.
 export type EnrichKeep = { title?: boolean; description?: boolean; image?: boolean };
-export type Captured = { handle?: unknown; caption?: string | null; is_video?: boolean };
+// pageHtml: the page as the person's phone downloaded it (iPhone Shortcut), used when the server is refused.
+export type Captured = { handle?: unknown; caption?: string | null; is_video?: boolean; pageHtml?: string | null };
 
 export async function enrichSocialPost(
   db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode,
@@ -89,7 +91,7 @@ export async function enrichSocialPost(
   if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
   if (row.type === 'youtube') return enrichYouTube(db, userId, row, mode, keep);
   if (redditPostRef(row.url) || isRedditShareLink(row.url)) return enrichReddit(db, userId, row, mode, keep);
-  if (moreSocialKind(row)) return enrichMoreSocial(db, userId, row, mode, keep);
+  if (moreSocialKind(row)) return enrichMoreSocial(db, userId, row, mode, keep, captured.pageHtml);
   if (row.type === 'link' && isSubstackNoteUrl(row.url)) return enrichSubstackNote(db, userId, row, mode, keep);
   if (row.type === 'link' && isArticleHost(row.url)) return enrichArticle(db, userId, row);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
@@ -161,8 +163,10 @@ async function enrichInstagram(
   let caption = capturedCaption || captionFromDescription(row.description);
   let isVideo = captured.is_video === true || /\/(reels?|tv)\//.test(row.url);
   if ((mode === 'save' && !fromExtension) || !handle) {
-    const page = await fetchInstagramPage(row.url);
-    if (page.ok) {
+    const fetched = await fetchInstagramPage(row.url);
+    // Login wall for the server: the phone's copy of the page (iPhone Shortcut) has the same details.
+    const page = fetched.ok ? fetched : captured.pageHtml ? { ok: true as const, page: readInstagramPage(captured.pageHtml) } : fetched;
+    if (page.ok && (page.page.handle || page.page.title)) {
       const p = page.page;
       if (!handle && p.handle) { handle = p.handle; source = 'page'; }
       caption = capturedCaption || captionFromDescription(p.description) || caption;
@@ -309,7 +313,7 @@ const isAutoSocialTitle = (t: string | null | undefined) => {
     || /\b(log ?in|sign ?(in|up)|join now)\b/i.test(v) || /^Spotify\s*[–-]\s*Web Player/i.test(v);
 };
 
-async function enrichMoreSocial(db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep): Promise<EnrichResult> {
+async function enrichMoreSocial(db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep, pageHtml?: string | null): Promise<EnrichResult> {
   const kind = moreSocialKind(row)!;
   const now = new Date().toISOString();
   let post: import('@/types').HackerNewsPost | import('@/types').SpotifyPost | import('@/types').ThreadsPost | import('@/types').LinkedInPost | null = null;
@@ -325,7 +329,9 @@ async function enrichMoreSocial(db: SupabaseClient, userId: string, row: EnrichR
     if (r.ok) { post = r.post; cover = r.post.image; body = r.post.subtitle; }
   } else if (kind === 'linkedin') {
     const r = await fetchLinkedIn(row.url);
-    if (r.ok) { post = r.post; cover = r.post.image; body = r.post.text; }
+    // LinkedIn often refuses cloud servers: the phone's copy of the page has the same structured data.
+    const p = r.ok ? r.post : pageHtml ? readLinkedInPost(pageHtml) : null;
+    if (p) { post = p; cover = p.image; body = p.text; }
   } else {
     const r = await fetchThreadsEmbed(row.url);
     if (r.ok) {

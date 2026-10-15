@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle, isRedditShareLink } from '@/lib/urlTools';
+import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle, isRedditShareLink, canonicalizeRedditUrl } from '@/lib/urlTools';
+import { cleanPageHtml, canonicalFromHtml, pageMetaFromHtml } from '@/lib/pageHtml';
 import { resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
@@ -65,7 +66,8 @@ export async function POST(request: Request) {
       category,
       sub_category,
       capture: rawCapture,
-      page: rawPage
+      page: rawPage,
+      page_html: rawPageHtml
     } = body;
 
     // A social type from the client is not trusted: it is a plain link, and the real type comes from the address below.
@@ -133,8 +135,14 @@ export async function POST(request: Request) {
     // A selection sent together with a social address is the person's own note on the post, never the post's content.
     // The save becomes a normal link, so the post is still read and filled in afterwards.
     // Reddit app share links (reddit.com/r/<sub>/s/<code>, redd.it/<id>) only point to the post: save the post itself.
+    // The iPhone Shortcut may also send the page as the phone downloaded it (sites that refuse servers don't refuse phones).
+    const pageHtml = cleanPageHtml(rawPageHtml);
     let inputUrl: unknown = rawUrl;
-    if (typeof rawUrl === 'string' && isRedditShareLink(rawUrl)) inputUrl = (await resolveRedditShareLink(rawUrl)) || rawUrl;
+    if (typeof rawUrl === 'string' && isRedditShareLink(rawUrl)) {
+      // Reddit sometimes refuses to answer Vercel; the phone's copy of the post page names the post itself.
+      const fromPhone = pageHtml ? canonicalizeRedditUrl(canonicalFromHtml(pageHtml) || '') : null;
+      inputUrl = (await resolveRedditShareLink(rawUrl)) || fromPhone || rawUrl;
+    }
 
     if (typeof inputUrl === 'string' && inputUrl && finalContent && (itemType === 'note' || isLink) && isSocialType(detectSiteType(inputUrl))) {
       itemType = 'link';
@@ -308,7 +316,7 @@ export async function POST(request: Request) {
           }
           await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'instagram' }, 'save',
             { title: !!givenTitle, description: !!finalDescription, image: !!customImg || storedImage },
-            capture ? { handle: capture.handle, caption: capture.caption, is_video: capture.is_video } : {});
+            capture ? { handle: capture.handle, caption: capture.caption, is_video: capture.is_video, pageHtml } : { pageHtml });
           return;
         }
         // Reddit posts: read from Reddit's official embed page (title, subreddit, author, text, picture).
@@ -319,7 +327,7 @@ export async function POST(request: Request) {
         }
         // Hacker News, Spotify, Threads and LinkedIn posts: each from its own free public source.
         if (['hackernews', 'spotify', 'threads', 'linkedin'].includes(detectedType) && isMoreSocialPost(cleanUrl)) {
-          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: detectedType }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: detectedType }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg }, { pageHtml });
           return;
         }
         // Substack Notes (short posts): the note itself, its author and pictures (not an article card).
@@ -335,7 +343,9 @@ export async function POST(request: Request) {
         }
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Pages that refuse servers (Medium): use what the extension read from the open page instead.
-        const page = !details.title && detectedType === 'link' ? parsePageCapture(rawPage) : null;
+        const page = !details.title && detectedType === 'link'
+          ? parsePageCapture(rawPage) || (pageHtml ? pageMetaFromHtml(pageHtml) : null)
+          : null;
         const title = details.title || cleanTitle(page?.title) || null;
         const description = details.description || page?.description || null;
         const image = details.image || page?.image || null;

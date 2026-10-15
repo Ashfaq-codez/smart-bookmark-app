@@ -682,3 +682,65 @@ describe('POST /api/save: Reddit links shared from the phone apps', () => {
     }
   })
 })
+
+describe('POST /api/save: the iPhone Shortcut sends the page its phone downloaded', () => {
+  const fx = (p: string) => require('node:fs').readFileSync(require('node:path').resolve(__dirname, 'fixtures', p), 'utf8')
+  const keyUser = () => {
+    const admin = fakeSupabase({ keyRow: { user_id: 'key-user' } })
+    vi.mocked(createAdminClient).mockReturnValue(admin.client as any)
+    return admin
+  }
+
+  it('Reddit share link refused by Reddit on the server: the phone\'s page names the post', async () => {
+    const admin = keyUser()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 403 }))
+    try {
+      const page = '<html><head><meta property="og:url" content="https://www.reddit.com/r/FuckFlipkart/comments/1x6f3fj/think_twice_before_ordering_electronic_goods_from/"></head><body>…</body></html>'
+      await post({ url: 'https://reddit.com/r/FuckFlipkart/s/4NbUHiHedN', page_html: page }, { 'x-api-key': 'k' })
+      expect(admin.inserted[0].url).toBe('https://www.reddit.com/r/FuckFlipkart/comments/1x6f3fj/think_twice_before_ordering_electronic_goods_from/')
+      expect(admin.inserted[0].type).toBe('reddit')
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('a page naming a different site never changes a Reddit share link into something else', async () => {
+    const admin = keyUser()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 403 }))
+    try {
+      await post({ url: 'https://reddit.com/r/FuckFlipkart/s/4NbUHiHedN', page_html: '<html><head><meta property="og:url" content="https://evil.example/x"></head><body>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</body></html>' }, { 'x-api-key': 'k' })
+      expect(admin.inserted[0].url).toBe('https://reddit.com/r/FuckFlipkart/s/4NbUHiHedN')
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('Medium on its own domain (ai.plainenglish.io), refused to the server: the phone\'s page gives the Medium card', async () => {
+    const admin = keyUser()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response('', { status: 403 }))
+    await post({ url: 'https://ai.plainenglish.io/10-ai-tools-everyone-will-be-using-in-six-months-but-almost-nobodys-found-yet-735a5471ea22', page_html: fx('articles/medium.html') }, { 'x-api-key': 'k' })
+    await finishBackgroundWork()
+    const patch = admin.updates[0].patch
+    expect(patch.title).toBe('Welcome to Medium')
+    expect(patch.post_data).toMatchObject({ platform: 'medium', author: 'Ev Williams', read_minutes: 3 })
+    expect(patch.image_url).toMatch(/^https:\/\/miro\.medium\.com\//)
+  })
+
+  it('LinkedIn refused to the server: the phone\'s page gives the post', async () => {
+    const admin = keyUser()
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response('', { status: 429 }))
+    await post({ url: 'https://www.linkedin.com/posts/satyanadella_a-couple-reflections-on-the-quantum-computing-activity-7298008744133595140-a6YV', page_html: fx('linkedin/post.html') }, { 'x-api-key': 'k' })
+    await finishBackgroundWork()
+    expect(admin.updates[0].patch.post_data).toMatchObject({ platform: 'linkedin', author: { name: 'Satya Nadella' } })
+  })
+
+  it('without the page (older Shortcut) nothing changes', async () => {
+    const admin = keyUser()
+    await post({ url: 'https://example.com/a' }, { 'x-api-key': 'k' })
+    expect(admin.inserted[0].url).toBe('https://example.com/a')
+  })
+})
