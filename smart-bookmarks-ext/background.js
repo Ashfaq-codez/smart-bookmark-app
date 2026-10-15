@@ -223,7 +223,7 @@ const BADGES = {
   signin:  { text: '!',  color: '#B91C1C', title: 'Nothing saved: sign in to inntoit first.' },
   error:   { text: '!',  color: '#B91C1C', title: 'Nothing saved: something went wrong. Try again.' },
 };
-const DEFAULT_TITLE = 'inntoit';
+const DEFAULT_TITLE = 'Save to inntoit';
 const clearTimers = {};
 
 function badge(tabId, state, { sticky = false } = {}) {
@@ -316,4 +316,43 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     })
     .catch(() => badge(tab.id, 'error'));
   });
+});
+
+// ---------- toolbar icon: the floating save panel ----------
+// The icon opens our own rounded panel on the page (panel.js). Pages extensions can't draw on
+// (chrome:// pages, the Chrome Web Store, the PDF viewer) get Chrome's normal popup instead.
+async function openNormalPopup(tabId) {
+  try {
+    await chrome.action.setPopup({ tabId, popup: 'popup.html' });
+    await chrome.action.openPopup();
+  } catch (err) {
+    console.log('[inntoit] popup fallback failed:', err?.message);
+  } finally {
+    // Back to the panel for the next click.
+    chrome.action.setPopup({ tabId, popup: '' }).catch(() => {});
+  }
+}
+
+function togglePanel(tabId) {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { type: 'TOGGLE_PANEL' }, { frameId: 0 }, (r) => resolve(!chrome.runtime.lastError && !!r?.ok));
+  });
+}
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!/^https?:/.test(tab.url || '')) return openNormalPopup(tab.id);
+  if (await togglePanel(tab.id)) return;
+  // A tab opened before the extension was (re)loaded has no panel script yet: add it and try once more.
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['panel.js'] });
+    if (await togglePanel(tab.id)) return;
+  } catch (err) {
+    console.log('[inntoit] panel inject failed:', err?.message);
+  }
+  openNormalPopup(tab.id);
+});
+
+// The page would not show the panel (it never loaded): use the normal popup.
+chrome.runtime.onMessage.addListener((request, sender) => {
+  if (request.type === 'PANEL_FAILED' && sender.tab?.id != null) openNormalPopup(sender.tab.id);
 });

@@ -55,7 +55,13 @@ async function captureFromTab(tabId) {
   }
 }
 
-const openApp = (path = '/dashboard') => chrome.tabs.create({ url: `${APP_URL}${path}` });
+// Shown inside the floating panel (panel.js) or as Chrome's normal popup.
+const EMBEDDED = new URLSearchParams(location.search).has('embedded') && window.top !== window;
+// Only tells the panel its size / to close; carries no data, so any page origin is fine.
+const toPanel = (msg) => { if (EMBEDDED) window.parent.postMessage({ inntoit: msg.type, value: msg.value }, '*'); };
+const closeUi = () => (EMBEDDED ? toPanel({ type: 'close' }) : window.close());
+
+const openApp = (path = '/dashboard') => { chrome.tabs.create({ url: `${APP_URL}${path}` }); closeUi(); };
 
 document.addEventListener('DOMContentLoaded', async () => {
   const $ = (id) => document.getElementById(id);
@@ -64,11 +70,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   const noteInput = $('note-input');
 
   $('open-app').addEventListener('click', () => openApp());
+  if (EMBEDDED) {
+    document.body.classList.add('embedded');
+    $('close-btn').hidden = false;
+    $('close-btn').addEventListener('click', closeUi);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeUi(); });
+    // The panel follows the content's height (no inner scrollbar, no empty space).
+    new ResizeObserver(() => toPanel({ type: 'height', value: document.documentElement.scrollHeight })).observe(document.body);
+  }
   $('kbd-hint').textContent = `${/Mac/i.test(navigator.platform) ? '⌘' : 'Ctrl'} + Enter to save`;
   fill(btn, 'bookmarkPlus', 'Save to inntoit');
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tab?.url || '';
+  // Ready to show: the panel fades in now (it is never shown half-filled).
+  requestAnimationFrame(() => toPanel({ type: 'ready' }));
 
   // ---------- what is being saved ----------
   $('page-title').textContent = ex.cleanTitle(tab?.title) || url || 'This tab';
@@ -147,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         fill(btn, 'check', 'Saved');
         showStatus('ok', 'check', 'Added to inntoit', { label: 'Open', onClick: () => openApp(data?.data?.id ? `/dashboard?b=${data.data.id}` : '/dashboard') });
-        setTimeout(() => window.close(), 1600);
+        setTimeout(closeUi, 1600);
       } else if (res.status === 409) {
         fill(btn, 'bookmarkCheck', 'Already saved');
         const id = data?.existing?.id;

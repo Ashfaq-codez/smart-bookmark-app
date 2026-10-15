@@ -67,6 +67,10 @@
       background: transparent; color: var(--muted); transition: background .15s ease, color .15s ease;
     }
     .icon-btn:hover { background: var(--field); color: var(--ink); }
+    .icon-btn[hidden] { display: none; }
+    .head-actions { display: flex; gap: 2px; }
+    /* Inside the floating panel: fill the panel's width; the panel itself has the rounded edge and shadow. */
+    body.embedded { width: auto; padding: 16px; overflow: hidden; }
     .icon-btn:focus-visible, button:focus-visible, textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
     /* ---------- card ---------- */
@@ -152,9 +156,14 @@
 <body>
   <div class="head">
     <div class="brand"><img src="icon-32.png" alt="" /><span>inntoit</span></div>
-    <button class="icon-btn" id="open-app" title="Open inntoit" aria-label="Open inntoit">
-      <svg class="i" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-    </button>
+    <div class="head-actions">
+      <button class="icon-btn" id="open-app" title="Open inntoit" aria-label="Open inntoit">
+        <svg class="i" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+      </button>
+      <button class="icon-btn" id="close-btn" title="Close (Esc)" aria-label="Close" hidden>
+        <svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
   </div>
 
   <div class="card">
