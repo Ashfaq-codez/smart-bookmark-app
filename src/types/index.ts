@@ -21,7 +21,7 @@ export type Bookmark = {
   // Set when the save is pinned to the top; the time it was pinned. null / missing = not pinned.
   pinned_at?: string | null;
   // Stored snapshot of a social post (X, Instagram or YouTube). null = not read yet. Added by migration 0005.
-  // ALWAYS read it through getXPost() / getInstagramPost() / getYouTubePost() (src/lib/postData.ts), which check the platform.
+  // ALWAYS read it through the getters in src/lib/postData.ts (src/lib/postData.ts), which check the platform.
   post_data?: PostData | null;
   post_data_fetched_at?: string | null;
   post_data_failed_at?: string | null;
@@ -99,4 +99,35 @@ export type YouTubePost = {
   channel: string | null;
 };
 
-export type PostData = XPost | InstagramPost | YouTubePost;
+// ---------- Reddit snapshot (bookmarks.post_data with platform 'reddit') ----------
+export type RedditPost = {
+  v: 1;
+  platform: 'reddit';
+  id: string;                                          // post id without the t3_ prefix
+  subreddit: string;                                   // name without r/
+  subreddit_icon: string | null;
+  author: string | null;                               // name without u/
+  title: string;
+  body: string | null;                                 // plain text of a text post (shortened)
+  image: string | null;                                // picture of an image post / link preview
+  link: string | null;                                 // the outside address of a link post
+  kind: 'text' | 'image' | 'video' | 'link' | 'gallery' | 'other';
+  nsfw: boolean;                                       // the card never shows its picture
+  score: number | null;
+  created_at: string | null;
+};
+
+// ---------- Article snapshot: Substack / Medium (bookmarks.post_data with platform 'substack' | 'medium') ----------
+export type ArticlePost = {
+  v: 1;
+  platform: 'substack' | 'medium';
+  title: string;
+  subtitle: string | null;
+  author: string | null;
+  publication: string | null;                          // newsletter / publication name
+  image: string | null;
+  published_at: string | null;
+  read_minutes: number | null;
+};
+
+export type PostData = XPost | InstagramPost | YouTubePost | RedditPost | ArticlePost;

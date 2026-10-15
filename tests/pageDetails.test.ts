@@ -17,7 +17,7 @@ describe('fetchPageDetails', () => {
       `<html><head><title>T</title><meta property="og:title" content="Great Page"><meta property="og:description" content="About"><meta property="og:image" content="/cover.png"></head></html>`,
       { status: 200 }))
     const d = await fetchPageDetails('https://example.com/a', 'link')
-    expect(d).toEqual({ title: 'Great Page', description: 'About', image: 'https://example.com/cover.png' })
+    expect(d).toEqual({ title: 'Great Page', description: 'About', image: 'https://example.com/cover.png', article: null })
   })
 
   it('turns an http image address into https', async () => {

@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
 import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
+import { parsePageCapture } from '@/lib/pageCapture';
+import { articleFromMeta } from '@/lib/articleMeta';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
@@ -57,7 +59,8 @@ export async function POST(request: Request) {
       type: customType,
       category,
       sub_category,
-      capture: rawCapture
+      capture: rawCapture,
+      page: rawPage
     } = body;
 
     // A social type from the client is not trusted: it is a plain link, and the real type comes from the address below.
@@ -299,6 +302,12 @@ export async function POST(request: Request) {
             capture ? { handle: capture.handle, caption: capture.caption, is_video: capture.is_video } : {});
           return;
         }
+        // Reddit posts: read from Reddit's official embed page (title, subreddit, author, text, picture).
+        // Reddit's normal page only gives servers a "blocked" page, so nothing else is read.
+        if (detectedType === 'reddit') {
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'reddit' }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
+          return;
+        }
         // YouTube videos: the real title and channel from YouTube's free oEmbed. The page is still read for
         // the description when that works; its title is only used if oEmbed had none.
         let youTubeTitle = false;
@@ -306,11 +315,21 @@ export async function POST(request: Request) {
           youTubeTitle = (await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'youtube' }, 'save', { title: !!givenTitle })) === 'stored';
         }
         const details = await fetchPageDetails(cleanUrl, detectedType);
+        // Pages that refuse servers (Medium): use what the extension read from the open page instead.
+        const page = !details.title && detectedType === 'link' ? parsePageCapture(rawPage) : null;
+        const title = details.title || page?.title || null;
+        const description = details.description || page?.description || null;
+        const image = details.image || page?.image || null;
+        const article = details.article || (page ? articleFromMeta(cleanUrl, page) : null);
         // Only fill in what the person did not give us themselves.
-        const patch: Record<string, string> = {};
-        if (!givenTitle && !youTubeTitle && details.title && !/^(\(\d+\)\s*)?YouTube$/i.test(details.title)) patch.title = details.title;
-        if (!customDesc && details.description) patch.description = details.description;
-        if (!customImg && details.image) patch.image_url = details.image;
+        const patch: Record<string, unknown> = {};
+        if (!givenTitle && !youTubeTitle && title && !/^(\(\d+\)\s*)?YouTube$/i.test(title)) patch.title = title;
+        if (!customDesc && description) patch.description = description;
+        if (!customImg && image) patch.image_url = image;
+        if (article && detectedType === 'link') {
+          patch.post_data = article;
+          patch.post_data_fetched_at = new Date().toISOString();
+        }
         if (Object.keys(patch).length === 0) return;
         const { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
         if (error) console.error('[after-save] update failed:', error.message);

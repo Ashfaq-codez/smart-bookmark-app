@@ -1,6 +1,6 @@
-import type { Bookmark, XPost, InstagramPost, YouTubePost } from '@/types';
+import type { Bookmark, XPost, InstagramPost, YouTubePost, RedditPost, ArticlePost } from '@/types';
 
-// bookmarks.post_data holds an X, Instagram or YouTube snapshot. Every reader goes through these,
+// bookmarks.post_data holds one platform's snapshot (X, Instagram, YouTube, Reddit, Substack, Medium). Every reader goes through these,
 // so one platform's snapshot is never read as another's.
 
 // X snapshots stored before Instagram ones existed have no `platform`; they are recognised by their author.
@@ -20,4 +20,15 @@ export function getInstagramPost(b: Pick<Bookmark, 'post_data'> | null | undefin
 export function getYouTubePost(b: Pick<Bookmark, 'post_data'> | null | undefined): YouTubePost | null {
   const d = b?.post_data as Record<string, unknown> | null | undefined;
   return d && typeof d === 'object' && d.platform === 'youtube' && typeof d.title === 'string' ? (d as unknown as YouTubePost) : null;
+}
+
+export function getRedditPost(b: Pick<Bookmark, 'post_data'> | null | undefined): RedditPost | null {
+  const d = b?.post_data as Record<string, unknown> | null | undefined;
+  return d && typeof d === 'object' && d.platform === 'reddit' && typeof d.title === 'string' ? (d as unknown as RedditPost) : null;
+}
+
+export function getArticlePost(b: Pick<Bookmark, 'post_data'> | null | undefined): ArticlePost | null {
+  const d = b?.post_data as Record<string, unknown> | null | undefined;
+  return d && typeof d === 'object' && (d.platform === 'substack' || d.platform === 'medium') && typeof d.title === 'string'
+    ? (d as unknown as ArticlePost) : null;
 }

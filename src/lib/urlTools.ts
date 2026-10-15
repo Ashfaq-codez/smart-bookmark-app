@@ -36,7 +36,7 @@ export function hostIs(host: string, domain: string): boolean {
   return h === domain || h.endsWith('.' + domain);
 }
 
-export type SiteType = 'twitter' | 'instagram' | 'youtube' | 'pinterest' | 'github' | 'linkedin';
+export type SiteType = 'twitter' | 'instagram' | 'youtube' | 'pinterest' | 'github' | 'linkedin' | 'reddit';
 
 export function detectSiteType(url: string): SiteType | null {
   let host: string;
@@ -47,12 +47,13 @@ export function detectSiteType(url: string): SiteType | null {
   if (hostIs(host, 'pinterest.com') || hostIs(host, 'pin.it')) return 'pinterest';
   if (hostIs(host, 'github.com')) return 'github';
   if (hostIs(host, 'linkedin.com')) return 'linkedin';
+  if (hostIs(host, 'reddit.com') || hostIs(host, 'redd.it')) return 'reddit';
   return null;
 }
 
 // Sites whose posts we read ourselves. For these the server decides the type from the address;
 // a type or title sent by the client is never trusted.
-export const SOCIAL_TYPES: readonly string[] = ['twitter', 'instagram', 'youtube', 'pinterest'];
+export const SOCIAL_TYPES: readonly string[] = ['twitter', 'instagram', 'youtube', 'pinterest', 'reddit'];
 
 export function isSocialType(type: string | null | undefined): boolean {
   return !!type && SOCIAL_TYPES.includes(type);

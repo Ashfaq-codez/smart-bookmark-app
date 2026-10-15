@@ -1,7 +1,9 @@
 import * as cheerio from 'cheerio';
 import { isSafeUrl, safeFetch } from '@/utils/safeFetch';
+import { readArticleMeta, articleFromMeta } from '@/lib/articleMeta';
+import type { ArticlePost } from '@/types';
 
-export type PageDetails = { title: string | null; description: string | null; image: string | null; canonicalUrl?: string | null };
+export type PageDetails = { title: string | null; description: string | null; image: string | null; canonicalUrl?: string | null; article?: ArticlePost | null };
 
 const EMPTY: PageDetails = { title: null, description: null, image: null };
 
@@ -62,7 +64,9 @@ export async function fetchPageDetails(cleanUrl: string, detectedType: string): 
         if (image.startsWith('http://')) image = image.replace('http://', 'https://');
       } catch { image = null; }
     }
-    return { title, description, image };
+    // Substack / Medium article: author, publication, date, reading time (shown by the article cards).
+    const article = articleFromMeta(cleanUrl, readArticleMeta(html));
+    return { title, description, image, article };
   } catch {
     return EMPTY;
   }

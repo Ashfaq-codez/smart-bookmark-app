@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicalizeXUrl, hostIs } from '@/lib/urlTools';
 import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
+import { redditPostRef, fetchRedditPost } from '@/lib/redditMeta';
+import { fetchPageDetails } from '@/lib/pageDetails';
 import { cleanHandle, handleFromUrl, handleFromDescription, captionFromDescription, fetchInstagramPage, instagramSnapshot } from '@/lib/instagramMeta';
 import { fetchXSnapshot, xTitle } from '@/lib/xSnapshot';
 import type { XPost } from '@/types';
@@ -45,7 +47,10 @@ export function needsSnapshot(row: Pick<EnrichRow, 'type' | 'url' | 'post_data' 
   if (row.post_data) return false;
   const supported = (row.type === 'twitter' && !!canonicalizeXUrl(row.url || ''))
     || (row.type === 'instagram' && isInstagramPostUrl(row.url))
-    || (row.type === 'youtube' && !!youTubeVideoId(row.url));
+    || (row.type === 'youtube' && !!youTubeVideoId(row.url))
+    // Reddit posts saved before Reddit had its own type are plain links: recognised by the address.
+    || ((row.type === 'reddit' || row.type === 'link') && !!redditPostRef(row.url))
+    || (row.type === 'link' && isArticleHost(row.url));
   if (!supported) return false;
   if (!row.post_data_failed_at) return true;
   const failed = Date.parse(row.post_data_failed_at);
@@ -76,6 +81,8 @@ export async function enrichSocialPost(
 ): Promise<EnrichResult> {
   if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
   if (row.type === 'youtube') return enrichYouTube(db, userId, row, mode, keep);
+  if (redditPostRef(row.url)) return enrichReddit(db, userId, row, mode, keep);
+  if (row.type === 'link' && isArticleHost(row.url)) return enrichArticle(db, userId, row);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
   if (!canonical) return 'skipped';
   const id = canonical.split('/status/')[1];
@@ -185,4 +192,57 @@ async function enrichYouTube(db: SupabaseClient, userId: string, row: EnrichRow,
     return 'failed';
   }
   return info.ok ? 'stored' : 'not-found';
+}
+
+// ---------- Reddit ----------
+// Titles the app made itself for Reddit: empty, an address, or Reddit's bare site name.
+const isAutoRedditTitle = (t: string | null | undefined) => {
+  const v = (t || '').trim();
+  return !v || /^https?:\/\//i.test(v) || /^(\(\d+\)\s*)?reddit(\s*-.*)?$/i.test(v) || /^Reddit - /i.test(v);
+};
+
+async function enrichReddit(db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep): Promise<EnrichResult> {
+  const r = await fetchRedditPost(row.url);
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = r.ok
+    ? { post_data: r.post, post_data_fetched_at: now, post_data_failed_at: null }
+    : { post_data_failed_at: now };
+  if (r.ok) {
+    const p = r.post;
+    if (mode === 'save' ? !keep.title : isAutoRedditTitle(row.title)) patch.title = p.title;
+    if (p.body && (mode === 'save' ? !keep.description : !row.description)) patch.description = p.body;
+    if (p.image && (mode === 'save' ? !keep.image : !row.image_url)) patch.image_url = p.image;
+  }
+  const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
+  if (error) {
+    console.error('[reddit] update failed:', error.message);
+    return 'failed';
+  }
+  return r.ok ? 'stored' : 'not-found';
+}
+
+// ---------- Substack / Medium (repair only; new saves get it from the save's own page read) ----------
+function isArticleHost(url: string | null | undefined): boolean {
+  try {
+    const host = new URL(url || '').hostname.toLowerCase();
+    return hostIs(host, 'medium.com') || hostIs(host, 'substack.com');
+  } catch {
+    return false;
+  }
+}
+
+async function enrichArticle(db: SupabaseClient, userId: string, row: EnrichRow): Promise<EnrichResult> {
+  const details = await fetchPageDetails(row.url, 'link');
+  const now = new Date().toISOString();
+  // Medium refuses servers: nothing found, the card shows what was saved; tried again after a day.
+  const patch: Record<string, unknown> = details.article
+    ? { post_data: details.article, post_data_fetched_at: now, post_data_failed_at: null }
+    : { post_data_failed_at: now };
+  if (details.article && !row.image_url && details.article.image) patch.image_url = details.article.image;
+  const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
+  if (error) {
+    console.error('[article] update failed:', error.message);
+    return 'failed';
+  }
+  return details.article ? 'stored' : 'not-found';
 }
