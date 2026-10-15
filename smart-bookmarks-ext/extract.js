@@ -242,7 +242,30 @@
     return null;
   }
 
-  const api = { siteOf, cleanUrl, cleanTitle, captureInstagram, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
+  // No usable answer from the page: decide from what Chrome tells us about the click.
+  //   social sites -> the post link or the page itself (never a CDN picture address)
+  //   elsewhere    -> the link, else a picture/video file as that media type, else the page
+  function fallbackTarget(info, tabUrl) {
+    const ex = { siteOf, cleanUrl, instagramPostUrl, isXPostUrl, pageProblem };
+    const pageUrl = info.pageUrl || tabUrl;
+    const link = info.linkUrl && !info.linkUrl.startsWith('blob:') ? info.linkUrl : null;
+    const site = ex.siteOf(pageUrl);
+    if (site === 'instagram' || site === 'twitter') {
+      const post = link && (ex.instagramPostUrl(link, pageUrl) || (ex.isXPostUrl(link) ? ex.cleanUrl(link) : null));
+      if (post) return { url: post };
+      const problem = ex.pageProblem(pageUrl);
+      if (problem) return { url: null, reason: problem };
+      return { url: ex.instagramPostUrl(pageUrl, pageUrl) || ex.cleanUrl(pageUrl) };
+    }
+    if (site) return { url: link || ex.cleanUrl(pageUrl) };
+    if (link) return { url: link };
+    if (info.srcUrl && !info.srcUrl.startsWith('blob:') && (info.mediaType === 'image' || info.mediaType === 'video')) {
+      return { url: info.srcUrl, type: info.mediaType };
+    }
+    return { url: pageUrl };
+  }
+
+  const api = { fallbackTarget, siteOf, cleanUrl, cleanTitle, captureInstagram, instagramPostUrl, isXPostUrl, extractExactUrl, pageProblem };
   root.inntoitExtract = Object.assign(root.inntoitExtract || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = root.inntoitExtract;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

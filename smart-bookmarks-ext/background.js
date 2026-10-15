@@ -211,29 +211,6 @@ function askPage(tabId, frameId) {
   });
 }
 
-// No usable answer from the page: decide from what Chrome tells us about the click.
-//   social sites -> the post link or the page itself (never a CDN picture address)
-//   elsewhere    -> the link, else a picture/video file as that media type, else the page
-function fallbackTarget(info, tab) {
-  const ex = self.inntoitExtract;
-  const pageUrl = info.pageUrl || tab.url;
-  const link = info.linkUrl && !info.linkUrl.startsWith('blob:') ? info.linkUrl : null;
-  const site = ex.siteOf(pageUrl);
-  if (site === 'instagram' || site === 'twitter') {
-    const post = link && (ex.instagramPostUrl(link, pageUrl) || (ex.isXPostUrl(link) ? ex.cleanUrl(link) : null));
-    if (post) return { url: post };
-    const problem = ex.pageProblem(pageUrl);
-    if (problem) return { url: null, reason: problem };
-    return { url: ex.instagramPostUrl(pageUrl, pageUrl) || ex.cleanUrl(pageUrl) };
-  }
-  if (site) return { url: link || ex.cleanUrl(pageUrl) };
-  if (link) return { url: link };
-  if (info.srcUrl && !info.srcUrl.startsWith('blob:') && (info.mediaType === 'image' || info.mediaType === 'video')) {
-    return { url: info.srcUrl, type: info.mediaType };
-  }
-  return { url: pageUrl };
-}
-
 function flashBadge(text, color) {
   chrome.action.setBadgeText({ text });
   chrome.action.setBadgeBackgroundColor({ color });
@@ -270,7 +247,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
     // The content script answers url: null with reason 'no-target' when it never saw the right-click (just injected).
     const usable = response && (response.url || (response.reason && response.reason !== 'no-target'));
-    const target = usable ? response : fallbackTarget(info, tab);
+    const target = usable ? response : self.inntoitExtract.fallbackTarget(info, tab.url);
     console.log('[inntoit] target', { fromPage: !!usable, ...target });
 
     // Instagram feed / X timeline with no post under the mouse: never save the feed address.
