@@ -1,0 +1,48 @@
+{
+ "allSameType": true,
+ "article": null,
+ "combinedMediaUrl": null,
+ "communityNote": null,
+ "conversationID": "1969515038512926823",
+ "date": "Sat Sep 20 21:32:31 +0000 2025",
+ "date_epoch": 1758403951,
+ "fetched_on": 1792025091,
+ "hasMedia": true,
+ "hashtags": [],
+ "lang": "en",
+ "likes": 2338,
+ "mediaURLs": [
+  "https://video.twimg.com/amplify_video/1969513398892445696/vid/avc1/1828x1210/0B4vTK2y6e2J12C2.mp4"
+ ],
+ "media_extended": [
+  {
+   "altText": null,
+   "duration_millis": 19381,
+   "id_str": "1969513398892445696",
+   "size": {
+    "height": 1210,
+    "width": 1828
+   },
+   "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/1969513398892445696/img/-rM_b8k6Zt_CqfYA.jpg",
+   "type": "video",
+   "url": "https://video.twimg.com/amplify_video/1969513398892445696/vid/avc1/1828x1210/0B4vTK2y6e2J12C2.mp4"
+  }
+ ],
+ "pollData": null,
+ "possibly_sensitive": false,
+ "qrt": null,
+ "qrtURL": null,
+ "replies": 56,
+ "replyingTo": null,
+ "replyingToID": null,
+ "retweet": null,
+ "retweetURL": null,
+ "retweets": 159,
+ "text": "Turso is an incredible technical feat. A Rust rewrite of sqlite, with an async-first architecture, incoming support for concurrent writes, vector search, and browser / wasm support out of the box.\n\nI think this has a very good chance of being a foundational piece of infrastructure of the vibe-coding age. On-demand, sqlite-compatible global databases that can also run in-browser and on-device.\n\nThe pace at which the project is evolving is most definitely *not normal*. @penberg and @glcst are built different.\n\nDemo:",
+ "translation": null,
+ "tweetID": "1969515038512926823",
+ "tweetURL": "https://twitter.com/rauchg/status/1969515038512926823",
+ "user_name": "Guillermo Rauch",
+ "user_profile_image_url": "https://pbs.twimg.com/profile_images/1783856060249595904/8TfcCN0r_normal.jpg",
+ "user_screen_name": "rauchg"
+}

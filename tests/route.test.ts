@@ -18,6 +18,14 @@ import { fakeSupabase, FakeOptions } from './helpers/fakeSupabase'
 
 const ORIGIN = 'https://smart-bookmark-app-lime.vercel.app'
 
+// X posts are read from two free sources. `vx` = what vxtwitter answers; the embed source is down unless `syn` is given.
+function xFetch(vx: Record<string, unknown>, syn?: unknown) {
+  vi.mocked(safeFetch).mockImplementation(async (u: any) =>
+    String(u).includes('syndication')
+      ? (syn ? new Response(JSON.stringify(syn)) : new Response('', { status: 500 }))
+      : new Response(JSON.stringify({ tweetID: '20', ...vx })))
+}
+
 function post(body: any, headers: Record<string, string> = {}) {
   return POST(new Request('http://localhost/api/save', {
     method: 'POST',
@@ -429,10 +437,10 @@ describe('POST /api/save: social types, titles and notes', () => {
   it('fills in a social title from the post even though the client sent one', async () => {
     const fake = loggedIn()
     vi.mocked(isSafeUrl).mockResolvedValue(true)
-    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    xFetch({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })
     await post({ url: 'https://x.com/jack/status/20', title: 'Tab title / X' })
     await finishBackgroundWork()
-    expect(fake.updates[0].patch.title).toBe('Post by Jack (@jack) on X')
+    expect(fake.updates[0].patch.title).toBe('Jack on X: hi')
   })
 
   it('cleans titles of other links', async () => {
@@ -444,7 +452,7 @@ describe('POST /api/save: social types, titles and notes', () => {
   it('saves a selection sent with a social URL as the personal note and still enriches', async () => {
     const fake = loggedIn()
     vi.mocked(isSafeUrl).mockResolvedValue(true)
-    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'post text', user_name: 'Jack', user_screen_name: 'jack' })))
+    xFetch({ text: 'post text', user_name: 'Jack', user_screen_name: 'jack' })
     await post({ url: 'https://x.com/jack/status/20?s=20', type: 'note', content: '<p>my <b>thought</b></p>', title: 'x' })
     const row = fake.inserted[0]
     expect(row.type).toBe('twitter')
@@ -507,7 +515,7 @@ describe('POST /api/save: X duplicates by status ID', () => {
   it('upgrades an /i/status/<id> address to the full handle form once the post is read', async () => {
     const fake = loggedIn()
     vi.mocked(isSafeUrl).mockResolvedValue(true)
-    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    xFetch({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })
     await post({ url: 'https://x.com/i/status/20' })
     await finishBackgroundWork()
     expect(fake.updates[0].patch.url).toBe('https://x.com/jack/status/20')
@@ -517,19 +525,19 @@ describe('POST /api/save: X duplicates by status ID', () => {
   it('keeps the /i/status address but still fills details when the handle URL is already saved', async () => {
     const fake = loggedIn({ updateError: (p: any) => (p.url ? { code: '23505', message: 'dup' } : null) })
     vi.mocked(isSafeUrl).mockResolvedValue(true)
-    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    xFetch({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })
     await post({ url: 'https://x.com/i/status/20' })
     await finishBackgroundWork()
     expect(fake.updates).toHaveLength(2)
     expect(fake.updates[1].patch.url).toBe(undefined)
-    expect(fake.updates[1].patch.title).toContain('jack')
+    expect(fake.updates[1].patch.title).toBe('Jack on X: hi')
     expect(fake.updates[1].filters).toContainEqual(['user_id', 'user-1'])
   })
 
   it('leaves a handle address as it is', async () => {
     const fake = loggedIn()
     vi.mocked(isSafeUrl).mockResolvedValue(true)
-    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })))
+    xFetch({ text: 'hi', user_name: 'Jack', user_screen_name: 'jack' })
     await post({ url: 'https://x.com/jack/status/20' })
     await finishBackgroundWork()
     expect(fake.updates[0].patch.url).toBe(undefined)
@@ -538,7 +546,7 @@ describe('POST /api/save: X duplicates by status ID', () => {
   it('ignores a handle that is not a valid X handle', async () => {
     const fake = loggedIn()
     vi.mocked(isSafeUrl).mockResolvedValue(true)
-    vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({ text: 'hi', user_name: 'J', user_screen_name: 'bad/handle' })))
+    xFetch({ text: 'hi', user_name: 'J', user_screen_name: 'bad/handle' })
     await post({ url: 'https://x.com/i/status/20' })
     await finishBackgroundWork()
     expect(fake.updates[0].patch.url).toBe(undefined)

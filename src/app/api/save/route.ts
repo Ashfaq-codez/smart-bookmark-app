@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
+import { enrichSocialPost } from '@/lib/enrichSocialPost';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
@@ -265,21 +266,19 @@ export async function POST(request: Request) {
       const savedId = newBookmark.id;
       const db = supabase;
       runAfterResponse(async () => {
+        // X posts: a full snapshot of the post (author, text, media, quoted post, link card, counts).
+        if (detectedType === 'twitter') {
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'twitter' }, 'save', { description: !!customDesc, image: !!customImg });
+          return;
+        }
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Only fill in what the person did not give us themselves.
         const patch: Record<string, string> = {};
         if (!givenTitle && details.title) patch.title = details.title;
         if (!customDesc && details.description) patch.description = details.description;
         if (!customImg && details.image) patch.image_url = details.image;
-        if (details.canonicalUrl && cleanUrl.startsWith('https://x.com/i/status/')) patch.url = details.canonicalUrl;
         if (Object.keys(patch).length === 0) return;
-        let { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
-        // The handle address is already saved as another row: keep the /i/status one, still fill in the details.
-        if (error?.code === '23505' && patch.url) {
-          delete patch.url;
-          if (Object.keys(patch).length === 0) return;
-          ({ error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId));
-        }
+        const { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
         if (error) console.error('[after-save] update failed:', error.message);
       });
     }
