@@ -4,7 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { normalizeUrl, detectSiteType, canonicalizeXUrl, isSocialType, cleanTitle } from '@/lib/urlTools';
 import { fetchPageDetails } from '@/lib/pageDetails';
-import { enrichSocialPost } from '@/lib/enrichSocialPost';
+import { enrichSocialPost, isInstagramPostUrl } from '@/lib/enrichSocialPost';
 import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
@@ -269,6 +269,11 @@ export async function POST(request: Request) {
         // X posts: a full snapshot of the post (author, text, media, quoted post, link card, counts).
         if (detectedType === 'twitter') {
           await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'twitter' }, 'save', { description: !!customDesc, image: !!customImg });
+          return;
+        }
+        // Instagram posts: page details plus who posted it (stored as an Instagram snapshot).
+        if (detectedType === 'instagram' && isInstagramPostUrl(cleanUrl)) {
+          await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'instagram' }, 'save', { title: !!givenTitle, description: !!customDesc, image: !!customImg });
           return;
         }
         const details = await fetchPageDetails(cleanUrl, detectedType);

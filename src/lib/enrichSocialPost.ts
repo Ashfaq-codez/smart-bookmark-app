@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { canonicalizeXUrl } from '@/lib/urlTools';
+import { canonicalizeXUrl, hostIs } from '@/lib/urlTools';
+import { cleanHandle, handleFromUrl, handleFromDescription, captionFromDescription, fetchInstagramPage, instagramSnapshot } from '@/lib/instagramMeta';
 import { fetchXSnapshot, xTitle } from '@/lib/xSnapshot';
 import type { XPost } from '@/types';
 
@@ -14,6 +15,7 @@ export type EnrichRow = {
   url: string;
   type?: string | null;
   title?: string | null;
+  description?: string | null;
   image_url?: string | null;
   post_data?: unknown;
   post_data_failed_at?: string | null;
@@ -23,11 +25,25 @@ export type EnrichMode =
   | 'save'      // brand-new save: fill title, description and cover from the post
   | 'repair';   // older save: never overwrite what the person may have edited
 
-export type EnrichResult = 'stored' | 'failed' | 'skipped';
+// 'not-found' = nothing usable yet (login wall, deleted post): the preview stays, tried again after a day.
+export type EnrichResult = 'stored' | 'failed' | 'not-found' | 'skipped';
+
+// An Instagram post address (/p/, /reel/, /reels/, /tv/, also with a handle in front).
+export function isInstagramPostUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    return hostIs(u.hostname.toLowerCase(), 'instagram.com') && /^\/(?:[^/]+\/)?(p|reel|reels|tv)\/[A-Za-z0-9_-]+/.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
 
 // Does this bookmark still need a snapshot (and is it allowed to try now)?
 export function needsSnapshot(row: Pick<EnrichRow, 'type' | 'url' | 'post_data' | 'post_data_failed_at'>, now = Date.now()): boolean {
-  if (row.type !== 'twitter' || row.post_data || !canonicalizeXUrl(row.url || '')) return false;
+  if (row.post_data) return false;
+  const supported = (row.type === 'twitter' && !!canonicalizeXUrl(row.url || '')) || (row.type === 'instagram' && isInstagramPostUrl(row.url));
+  if (!supported) return false;
   if (!row.post_data_failed_at) return true;
   const failed = Date.parse(row.post_data_failed_at);
   return isNaN(failed) || now - failed >= RETRY_AFTER_MS;
@@ -47,10 +63,14 @@ export function coverImage(p: XPost): string | null {
 const isVideoAddress = (u?: string | null) => !!u && /\.(mp4|m3u8|mov|webm)(\?|$)/i.test(u);
 
 // `keep`: fields the person sent with the save themselves (never replaced).
+// `captured`: what the extension read on the page (Instagram only); checked here, never trusted as is.
+export type EnrichKeep = { title?: boolean; description?: boolean; image?: boolean };
+
 export async function enrichSocialPost(
   db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode,
-  keep: { description?: boolean; image?: boolean } = {},
+  keep: EnrichKeep = {}, captured: { handle?: unknown } = {},
 ): Promise<EnrichResult> {
+  if (row.type === 'instagram') return enrichInstagram(db, userId, row, mode, keep, captured);
   const canonical = row.type === 'twitter' ? canonicalizeXUrl(row.url) : null;
   if (!canonical) return 'skipped';
   const id = canonical.split('/status/')[1];
@@ -85,4 +105,56 @@ export async function enrichSocialPost(
     return 'failed';
   }
   return 'stored';
+}
+
+// ---------- Instagram ----------
+// Titles the app made itself for Instagram: empty, the address, or Instagram's bare site name ("(4) Instagram").
+const isAutoInstagramTitle = (t: string | null | undefined, url: string) => {
+  const v = (t || '').trim();
+  return !v || v === url || /^(\(\d+\)\s*)?Instagram$/i.test(v);
+};
+
+async function enrichInstagram(
+  db: SupabaseClient, userId: string, row: EnrichRow, mode: EnrichMode, keep: EnrichKeep, captured: { handle?: unknown },
+): Promise<EnrichResult> {
+  if (!isInstagramPostUrl(row.url)) return 'skipped';
+  const now = new Date().toISOString();
+  const update = async (patch: Record<string, unknown>) => {
+    const { error } = await db.from('bookmarks').update(patch).eq('id', row.id).eq('user_id', userId);
+    if (error) console.error('[instagram] update failed:', error.message);
+    return !error;
+  };
+
+  // a) the extension, b) the address, then (repair) c) the page details read when it was saved.
+  let handle = cleanHandle(captured.handle);
+  let source: 'extension' | 'url' | 'page' = 'extension';
+  if (!handle) { handle = handleFromUrl(row.url); source = 'url'; }
+  if (!handle && mode === 'repair') { handle = handleFromDescription(row.description); source = 'page'; }
+
+  // A new save always reads the page (title, caption, cover). A repair only when the handle is still unknown,
+  // so most old cards are fixed without contacting Instagram at all.
+  const patch: Record<string, unknown> = {};
+  let caption = captionFromDescription(row.description);
+  let isVideo = /\/(reels?|tv)\//.test(row.url);
+  if (mode === 'save' || !handle) {
+    const page = await fetchInstagramPage(row.url);
+    if (page.ok) {
+      const p = page.page;
+      if (!handle && p.handle) { handle = p.handle; source = 'page'; }
+      caption = captionFromDescription(p.description) || caption;
+      isVideo = isVideo || p.is_video;
+      const titleIsAuto = mode === 'save' ? !keep.title : isAutoInstagramTitle(row.title, row.url);
+      if (titleIsAuto && p.title) patch.title = p.title;
+      if (mode === 'save' ? !keep.description : !row.description) { if (p.description) patch.description = p.description; }
+      if (mode === 'save' ? !keep.image : !row.image_url) { if (p.image) patch.image_url = p.image; }
+    }
+    // Login wall or no answer: not an error, just nothing found for now.
+  }
+
+  if (!handle) {
+    await update({ ...patch, post_data_failed_at: now });
+    return 'not-found';
+  }
+  const ok = await update({ ...patch, post_data: instagramSnapshot(handle, source, caption, isVideo), post_data_fetched_at: now, post_data_failed_at: null });
+  return ok ? 'stored' : 'failed';
 }
