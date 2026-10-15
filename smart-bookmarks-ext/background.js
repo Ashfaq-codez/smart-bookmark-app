@@ -1,3 +1,5 @@
+importScripts('extract.js');   // shared URL rules (self.inntoitExtract)
+
 const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
 
 // Fallback when the content script can't supply HTML (inputs, restricted pages)
@@ -192,66 +194,96 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// Asks the page what was right-clicked. A tab opened before the extension was (re)loaded, or a frame,
+// may have no content script yet: inject it and ask once more. null = still no answer.
+function askPage(tabId, frameId) {
+  const ask = () => new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { type: 'GET_CLICKED_CONTEXT' }, { frameId }, (response) => {
+      resolve(chrome.runtime.lastError ? null : response || null);
+    });
+  });
+  return ask().then((first) => {
+    if (first) return first;
+    return chrome.scripting
+      .executeScript({ target: { tabId, frameIds: [frameId] }, files: ['extract.js', 'content.js'] })
+      .then(ask)
+      .catch((err) => { console.log('[inntoit] inject failed:', err?.message); return null; });
+  });
+}
+
+// No usable answer from the page: decide from what Chrome tells us about the click.
+//   social sites -> the post link or the page itself (never a CDN picture address)
+//   elsewhere    -> the link, else a picture/video file as that media type, else the page
+function fallbackTarget(info, tab) {
+  const ex = self.inntoitExtract;
+  const pageUrl = info.pageUrl || tab.url;
+  const link = info.linkUrl && !info.linkUrl.startsWith('blob:') ? info.linkUrl : null;
+  const site = ex.siteOf(pageUrl);
+  if (site === 'instagram' || site === 'twitter') {
+    const post = link && (ex.instagramPostUrl(link, pageUrl) || (ex.isXPostUrl(link) ? ex.cleanUrl(link) : null));
+    if (post) return { url: post };
+    const problem = ex.pageProblem(pageUrl);
+    if (problem) return { url: null, reason: problem };
+    return { url: ex.instagramPostUrl(pageUrl, pageUrl) || ex.cleanUrl(pageUrl) };
+  }
+  if (site) return { url: link || ex.cleanUrl(pageUrl) };
+  if (link) return { url: link };
+  if (info.srcUrl && !info.srcUrl.startsWith('blob:') && (info.mediaType === 'image' || info.mediaType === 'video')) {
+    return { url: info.srcUrl, type: info.mediaType };
+  }
+  return { url: pageUrl };
+}
+
+function flashBadge(text, color) {
+  chrome.action.setBadgeText({ text });
+  chrome.action.setBadgeBackgroundColor({ color });
+  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2200);
+}
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "save-to-inntoit") return;
 
   chrome.action.setBadgeText({ text: "..." });
   chrome.action.setBadgeBackgroundColor({ color: "#4D6A51" });
 
-  let resolvedUrl = info.linkUrl || info.srcUrl || info.pageUrl || tab.url;
-  
-  // FIX: YouTube passes temporary 'blob:https...' links when right-clicking a video.
-  // We must immediately block it and fall back to the actual page URL.
-  if (resolvedUrl && resolvedUrl.startsWith('blob:')) {
-    resolvedUrl = info.linkUrl || info.pageUrl || tab.url;
-  }
-
+  const frameId = info.frameId || 0;
   let capturedContent = info.selectionText || null;
   let detectedType = capturedContent ? 'note' : null;
 
   // Read the formatted selection straight from the page (works even if the tab runs an old content script)
   const pageHtmlPromise = capturedContent
     ? chrome.scripting
-        .executeScript({ target: { tabId: tab.id, frameIds: [info.frameId || 0] }, func: extractSelectionHtmlInPage })
+        .executeScript({ target: { tabId: tab.id, frameIds: [frameId] }, func: extractSelectionHtmlInPage })
         .then((r) => r?.[0]?.result || null)
         .catch((err) => { console.log('[inntoit] executeScript failed:', err?.message); return null; })
     : Promise.resolve(null);
 
-  pageHtmlPromise.then((pageHtml) => {
-  chrome.tabs.sendMessage(tab.id, { type: 'GET_CLICKED_CONTEXT' }, { frameId: info.frameId || 0 }, (response) => {
-    // Keep formatting: prefer the HTML captured by the content script,
+  Promise.all([pageHtmlPromise, askPage(tab.id, frameId)]).then(([pageHtml, response]) => {
+    // Keep formatting: prefer the HTML captured in the page,
     // otherwise rebuild paragraphs/line breaks from the plain selection text.
     let formatKept = false;
     if (capturedContent) {
-      const html = pageHtml || (!chrome.runtime.lastError && response?.html);
+      const html = pageHtml || response?.html;
       formatKept = !!html;
       capturedContent = html || plainTextToHtml(capturedContent);
-      console.log('[inntoit] selection saved as', formatKept ? 'HTML' : 'PLAIN fallback', {
-        fromPageScript: !!pageHtml,
-        contentScriptReplied: !chrome.runtime.lastError,
-        contentScriptVersion: response?.v,
-        error: chrome.runtime.lastError?.message
-      });
     }
 
+    // The content script answers url: null with reason 'no-target' when it never saw the right-click (just injected).
+    const usable = response && (response.url || (response.reason && response.reason !== 'no-target'));
+    const target = usable ? response : fallbackTarget(info, tab);
+    console.log('[inntoit] target', { fromPage: !!usable, ...target });
+
     // Instagram feed / X timeline with no post under the mouse: never save the feed address.
-    if (!chrome.runtime.lastError && response && response.url === null && response.reason && !capturedContent) {
-      chrome.action.setBadgeText({ text: "?" });
-      chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
-      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2200);
+    if (!target.url && !capturedContent) {
+      flashBadge("?", "#D97706");
       return;
     }
 
-    if (!chrome.runtime.lastError && response?.url) {
-      // Final safety check just in case the content script failed and returned a blob
-      if (!response.url.startsWith('blob:')) {
-        resolvedUrl = response.url;
-      }
-      if (response.type) detectedType = response.type;
-    }
+    const resolvedUrl = target.url && !target.url.startsWith('blob:') ? target.url : null;
+    if (target.type) detectedType = target.type;
 
     const payload = {
-      url: resolvedUrl,
+      ...(resolvedUrl && { url: resolvedUrl }),
       title: tab.title,
       ...(capturedContent && { content: capturedContent }),
       ...(detectedType && { type: detectedType })
@@ -265,26 +297,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     })
     .then(res => {
       if (res.status === 409) {
-        chrome.action.setBadgeText({ text: "DUP" });
-        chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
+        flashBadge("DUP", "#D97706");
       } else if (res.status === 429) {
-        chrome.action.setBadgeText({ text: "LIM" });
-        chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
+        flashBadge("LIM", "#D97706");
       } else if (res.ok) {
         // "OK" = formatting captured, "TXT" = fell back to plain text (content script didn't reply)
-        chrome.action.setBadgeText({ text: capturedContent && !formatKept ? "TXT" : "OK" });
-        chrome.action.setBadgeBackgroundColor({ color: "#4D6A51" });
+        flashBadge(capturedContent && !formatKept ? "TXT" : "OK", "#4D6A51");
       } else {
         throw new Error("Failed");
       }
     })
-    .catch(() => {
-      chrome.action.setBadgeText({ text: "ERR" });
-      chrome.action.setBadgeBackgroundColor({ color: "#B91C1C" });
-    })
-    .finally(() => {
-      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2200);
-    });
-  });
+    .catch(() => flashBadge("ERR", "#B91C1C"));
   });
 });

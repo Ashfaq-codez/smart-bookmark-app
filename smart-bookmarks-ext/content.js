@@ -1,7 +1,8 @@
 // Remembers what was right-clicked and the selection at that moment. Needs extract.js loaded first.
-// Wrapped and guarded: the background script may inject this file again into a tab that already has it.
-if (!globalThis.__inntoitContentLoaded) {
-globalThis.__inntoitContentLoaded = true;
+// Wrapped in a block: the background script may inject this file again (after an extension reload the old copy
+// is cut off). A new copy removes the old copy's page listeners first, so only one copy ever listens.
+{
+if (globalThis.__inntoitCleanup) globalThis.__inntoitCleanup();
 
 let rightClickedElement = null;
 let selectedHtml = null;
@@ -178,26 +179,37 @@ function getSelectionHtml() {
 // Remember the latest non-empty selection, in case a site clears it when the context menu opens
 let lastSelectionHtml = null;
 let selTimer = null;
-document.addEventListener('selectionchange', () => {
+const onSelectionChange = () => {
   clearTimeout(selTimer);
   selTimer = setTimeout(() => {
     const h = getSelectionHtml();
     if (h) lastSelectionHtml = h;
   }, 120);
-});
+};
+document.addEventListener('selectionchange', onSelectionChange);
 
-document.addEventListener('contextmenu', (e) => {
+const onContextMenu = (e) => {
   rightClickedElement = e.target;
   // Grab the selection NOW, before the context menu / page can change it
   selectedHtml = getSelectionHtml() || lastSelectionHtml;
-}, true);
+};
+document.addEventListener('contextmenu', onContextMenu, true);
+globalThis.__inntoitCleanup = () => {
+  document.removeEventListener('selectionchange', onSelectionChange);
+  document.removeEventListener('contextmenu', onContextMenu, true);
+};
 
 // Listen for the background script and reply with the precise URL
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_CLICKED_CONTEXT') {
+    // Injected after the right-click happened: we never saw it, let the background decide.
+    if (!rightClickedElement) {
+      sendResponse({ url: null, reason: 'no-target', html: getSelectionHtml(), v: 4 });
+      return;
+    }
     const result = globalThis.inntoitExtract.extractExactUrl(rightClickedElement, window.location.href);
     // Nothing specific found: save the page itself. On Instagram / X a missing post stays url: null (never the feed).
-    sendResponse({ ...(result || { url: window.location.href }), html: selectedHtml || getSelectionHtml() || lastSelectionHtml, v: 3 });
+    sendResponse({ ...(result || { url: window.location.href }), html: selectedHtml || getSelectionHtml() || lastSelectionHtml, v: 4 });
   }
 });
 }
