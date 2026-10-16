@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react'
 //   Wide screens: the whole painting along the bottom, the card where the design has it (sizes follow the
 //   painting's width, so it matches at every screen size).
 //   Phones and tall screens: the window on top, the card below it, the tiles along the bottom.
+// Always the light painting, also when the app is in dark mode: the page is the artwork.
 
 const hand = Merienda({ weight: ['400', '500'], subsets: ['latin'], display: 'swap' })
 
@@ -26,8 +27,8 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 // The card's paper: warm, slightly uneven, soft edges, like the painted one.
-const PAPER = 'bg-[linear-gradient(160deg,#FBF4E8_0%,#F5EAD7_55%,#F1E3CC_100%)] dark:bg-[linear-gradient(160deg,#2C261E_0%,#26201A_60%,#221C16_100%)] border border-[#E6D6BC] dark:border-[#3F362A] shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_10px_30px_rgba(120,90,50,0.10)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]'
-const INK = 'text-[#4A3F33] dark:text-[#EFE3D0]'
+const PAPER = 'bg-[linear-gradient(160deg,#FBF4E8_0%,#F5EAD7_55%,#F1E3CC_100%)] border border-[#E6D6BC] shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_10px_30px_rgba(120,90,50,0.10)]'
+const INK = 'text-[#4A3F33]'
 
 function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading: boolean; error: string | null; onSignIn: () => void }) {
   // Wide: sizes in cqw (hundredths of the painting's width) so the card scales with it. Phone: fixed sizes.
@@ -47,12 +48,12 @@ function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading
         type="button"
         onClick={onSignIn}
         disabled={loading}
-        className={`${s.btn} flex items-center justify-center border border-[#D9C7A9] dark:border-[#4A3F31] bg-[linear-gradient(180deg,#F6EDDF,#EDE0CB)] dark:bg-[linear-gradient(180deg,#352E24,#2D261E)] shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_2px_6px_rgba(120,90,50,0.12)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)] transition-[filter,transform] duration-200 hover:brightness-[1.03] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8A6E4B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5EAD7] dark:focus-visible:ring-offset-[#26201A] disabled:opacity-70 disabled:cursor-wait cursor-pointer`}
+        className={`${s.btn} flex items-center justify-center border border-[#D9C7A9] bg-[linear-gradient(180deg,#F6EDDF,#EDE0CB)] shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_2px_6px_rgba(120,90,50,0.12)] transition-[filter,transform] duration-200 hover:brightness-[1.03] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8A6E4B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5EAD7] disabled:opacity-70 disabled:cursor-wait cursor-pointer`}
       >
         {loading ? <Loader2 className={`${s.icon} animate-spin`} strokeWidth={1.75} /> : <GoogleIcon className={s.icon} />}
         <span>{loading ? 'Connecting…' : 'Sign in with Google'}</span>
       </button>
-      {error && <p role="alert" className={`${s.err} font-sans text-[#A3402F] dark:text-[#F0A493]`}>{error}</p>}
+      {error && <p role="alert" className={`${s.err} font-sans text-[#A3402F]`}>{error}</p>}
     </motion.div>
   )
 }
@@ -86,7 +87,7 @@ export default function LoginPage() {
   const card = { loading, error, onSignIn: handleLogin }
 
   return (
-    <main className="min-h-dvh bg-[#FAF4EE] dark:bg-[#1B1612] overflow-hidden">
+    <main className="min-h-dvh bg-[#FAF4EE] overflow-hidden">
       {/* Wide screens (at least 900px wide and wider than tall by 3:2) */}
       <div className="hidden [@media(min-width:900px)_and_(min-aspect-ratio:3/2)]:flex min-h-dvh flex-col justify-end">
         <div className="relative w-full aspect-[3168/1344] [container-type:inline-size]">
@@ -94,7 +95,7 @@ export default function LoginPage() {
           <img
             src="/login-bg.webp"
             alt=""
-            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none [mask-image:linear-gradient(to_bottom,transparent,black_10%)] dark:brightness-[0.55] dark:saturate-[0.85]"
+            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none [mask-image:linear-gradient(to_bottom,transparent,black_10%)]"
             draggable={false}
           />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
@@ -109,7 +110,7 @@ export default function LoginPage() {
         <img
           src="/login-art.webp"
           alt=""
-          className="w-full h-[46dvh] min-h-[260px] object-cover object-[35%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_82%,transparent)] dark:brightness-[0.55] dark:saturate-[0.85]"
+          className="w-full h-[46dvh] min-h-[260px] object-cover object-[35%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_82%,transparent)]"
           draggable={false}
         />
         <div className="flex-1 flex items-start justify-center px-4 -mt-4 pb-8">
@@ -117,7 +118,7 @@ export default function LoginPage() {
         </div>
         <div
           aria-hidden="true"
-          className="h-[88px] w-full shrink-0 bg-[url('/login-tiles.webp')] bg-repeat-x bg-[length:auto_100%] bg-left-bottom dark:brightness-[0.55] dark:saturate-[0.85]"
+          className="h-[88px] w-full shrink-0 bg-[url('/login-tiles.webp')] bg-repeat-x bg-[length:auto_100%] bg-left-bottom"
         />
       </div>
     </main>
