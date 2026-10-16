@@ -54,14 +54,15 @@ export async function findPreview(db: SupabaseClient, userId: string, row: Pick<
   return { stored: null, details, steps };
 }
 
-export async function repairPreview(db: SupabaseClient, userId: string, row: Row): Promise<PreviewOutcome> {
+// `force` (the owner's "fix all now"): ignore when the card was last tried.
+export async function repairPreview(db: SupabaseClient, userId: string, row: Row, force = false): Promise<PreviewOutcome> {
   // Claim the attempt first, so two open tabs never repair the same card at once.
   const since = new Date(Date.now() - PREVIEW_RETRY_MS).toISOString();
-  const { data: claimed, error: claimError } = await db.from('bookmarks')
+  let claim = db.from('bookmarks')
     .update({ preview_tried_at: new Date().toISOString() })
-    .eq('id', row.id).eq('user_id', userId)
-    .or(`preview_tried_at.is.null,preview_tried_at.lt.${since}`)
-    .select('id');
+    .eq('id', row.id).eq('user_id', userId);
+  if (!force) claim = claim.or(`preview_tried_at.is.null,preview_tried_at.lt.${since}`);
+  const { data: claimed, error: claimError } = await claim.select('id');
   if (claimError || !claimed?.length) return { status: 'skipped', steps: [{ step: 'claim', result: claimError?.message || 'tried recently' }] };
 
   const { stored, details, steps } = await findPreview(db, userId, row);

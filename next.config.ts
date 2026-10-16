@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/save': ['./node_modules/@sparticuz/chromium/bin/**'],
     '/api/bookmarks/[id]/preview': ['./node_modules/@sparticuz/chromium/bin/**'],
+    '/api/admin/preview-check': ['./node_modules/@sparticuz/chromium/bin/**'],
+    '/api/admin/preview-backfill': ['./node_modules/@sparticuz/chromium/bin/**'],
   },
 };
 
