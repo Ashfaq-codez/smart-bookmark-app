@@ -60,26 +60,29 @@ function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading
   )
 }
 
-// Cherry blossom petals drifting off the branch. Start points are in % of the box they float in, the drift in
-// petal sizes (dx, dy); the same
-// "random" values on the server and in the browser (seeded), so the page never flickers while loading.
-type Petal = { x: number; y: number; dx: number; dy: number; size: number; spin: number; dur: number; delay: number; tint: string }
+// Cherry blossom petals: each one leaves the branch, sways side to side and falls all the way to the bottom of
+// the box it floats in, then starts again. Positions and drift are in % of that box; the same "random" values on
+// the server and in the browser (seeded), so the page never flickers while loading.
+type Petal = { x: number; y: number; dx: number; sway: number; size: number; spin: number; dur: number; delay: number; tint: string }
 
-function makePetals(n: number, seed: number, area: { x: [number, number]; y: [number, number] }, drift: { dx: [number, number]; dy: [number, number] }): Petal[] {
+function makePetals(n: number, seed: number, area: { x: [number, number]; y: [number, number] }, drift: [number, number], dur: [number, number]): Petal[] {
   let s = seed
   const r = () => ((s = (s * 9301 + 49297) % 233280) / 233280)
   const span = (a: [number, number]) => a[0] + r() * (a[1] - a[0])
-  return Array.from({ length: n }, () => ({
-    x: span(area.x), y: span(area.y), dx: span(drift.dx), dy: span(drift.dy),
-    size: 1 + r() * 0.8, spin: (r() > 0.5 ? 1 : -1) * (200 + r() * 340),
-    dur: 7 + r() * 6, delay: r() * 4, tint: ['#F6C1CC', '#F2AFBF', '#F9D3DA', '#EE9FB2'][Math.floor(r() * 4)],
+  return Array.from({ length: n }, (_, i) => ({
+    x: span(area.x), y: span(area.y), dx: span(drift), sway: 2 + r() * 4,
+    size: 1 + r() * 0.9, spin: (r() > 0.5 ? 1 : -1) * (240 + r() * 420),
+    dur: span(dur),
+    // spread over one whole fall, so some are always on their way down
+    delay: (i / n) * dur[1] * 0.6 + r(),
+    tint: ['#F3A9BB', '#EE97AD', '#F6B8C6', '#E9889F', '#F2A3B6'][Math.floor(r() * 5)],
   }))
 }
 
-// Desktop: the branch is between 33% and 65% across the painting, petals blow to the right and down.
-const DESKTOP_PETALS = makePetals(16, 7, { x: [34, 58], y: [36, 66] }, { dx: [8, 30], dy: [8, 24] })
-// Phone: the branch is on the right of the window picture.
-const PHONE_PETALS = makePetals(9, 11, { x: [62, 92], y: [40, 78] }, { dx: [-30, -6], dy: [10, 30] })
+// Desktop: the branch is between 33% and 62% across the painting; petals blow right and fall to the tiles.
+const DESKTOP_PETALS = makePetals(30, 7, { x: [33, 62], y: [34, 70] }, [4, 26], [9, 15])
+// Phone: the branch is on the right of the window picture at the top; petals fall down the whole screen.
+const PHONE_PETALS = makePetals(18, 11, { x: [64, 96], y: [14, 38] }, [-38, 4], [10, 16])
 
 function Petals({ petals, unit }: { petals: Petal[]; unit: 'cqw' | 'px' }) {
   const reduce = useReducedMotion()
@@ -87,31 +90,38 @@ function Petals({ petals, unit }: { petals: Petal[]; unit: 'cqw' | 'px' }) {
   return (
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
       {petals.map((p, i) => {
-        const size = unit === 'cqw' ? `${p.size}cqw` : `${Math.round(p.size * 12)}px`
+        const size = unit === 'cqw' ? `${p.size}cqw` : `${Math.round(p.size * 13)}px`
+        const end = p.x + p.dx
         return (
-          <motion.svg
+          <motion.div
             key={i}
-            viewBox="0 0 20 24"
             className="absolute"
-            style={{ left: `${p.x}%`, top: `${p.y}%`, width: size, height: size }}
+            style={{ width: size, height: size, left: `${p.x}%`, top: `${p.y}%` }}
             initial={{ opacity: 0 }}
             animate={{
-              x: ['0%', `${p.dx * 25}%`, `${p.dx * 60}%`],
-              y: ['0%', `${p.dy * 30}%`, `${p.dy * 60}%`],
-              rotate: [0, p.spin / 2, p.spin],
-              opacity: [0, 1, 1, 0],
+              top: [`${p.y}%`, '104%'],
+              left: [`${p.x}%`, `${p.x + p.dx * 0.3 + p.sway}%`, `${p.x + p.dx * 0.55 - p.sway}%`, `${p.x + p.dx * 0.8 + p.sway}%`, `${end}%`],
+              opacity: [0, 1, 1, 1, 0.9],
             }}
             transition={{
-              default: { duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'easeInOut' },
-              // fade in quickly, stay, fade out before the next round
-              opacity: { duration: p.dur, delay: p.delay, repeat: Infinity, times: [0, 0.12, 0.8, 1], ease: 'linear' },
+              top: { duration: p.dur, delay: p.delay, repeat: Infinity, ease: [0.45, 0.05, 0.75, 0.95] },
+              left: { duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'easeInOut' },
+              opacity: { duration: p.dur, delay: p.delay, repeat: Infinity, times: [0, 0.06, 0.5, 0.95, 1], ease: 'linear' },
             }}
           >
-            {/* a cherry blossom petal: an oval, narrow at the base, with the little notch at its tip */}
-            <path d="M10 23C5 19 2 13 3 8 4 4 7 1.5 8.5 3L10 5l1.5-2C13 1.5 16 4 17 8c1 5-2 11-7 15z" fill={p.tint} />
-            <path d="M10 22c-.6-4-.6-9 0-15" stroke="#D97F96" strokeOpacity="0.35" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-            <path d="M6 9c1.5-2 3-2.5 3.5-2" stroke="#fff" strokeOpacity="0.5" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-          </motion.svg>
+            <motion.svg
+              viewBox="0 0 20 24"
+              className="w-full h-full block [filter:drop-shadow(0_1px_1.5px_rgba(150,70,90,0.28))]"
+              // turns as it falls, and flutters (gets a little narrower and back) like a real petal
+              animate={{ rotate: [0, p.spin], scaleX: [1, 0.55, 1] }}
+              transition={{ rotate: { duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'linear' }, scaleX: { duration: 1.6 + (i % 4) * 0.4, repeat: Infinity, ease: 'easeInOut' } }}
+            >
+              {/* a cherry blossom petal: an oval, narrow at the base, with the little notch at its tip */}
+              <path d="M10 23C5 19 2 13 3 8 4 4 7 1.5 8.5 3L10 5l1.5-2C13 1.5 16 4 17 8c1 5-2 11-7 15z" fill={p.tint} stroke="#C96F88" strokeOpacity="0.45" strokeWidth="0.7" />
+              <path d="M10 22c-.6-4-.6-9 0-15" stroke="#D97F96" strokeOpacity="0.35" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+              <path d="M6 9c1.5-2 3-2.5 3.5-2" stroke="#fff" strokeOpacity="0.5" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+            </motion.svg>
+          </motion.div>
         )
       })}
     </div>
@@ -166,7 +176,7 @@ export default function LoginPage() {
       </div>
 
       {/* Phones and tablets: the window on top, the card centred in the space below it, the tiles along the bottom */}
-      <div className="flex min-[900px]:hidden min-h-dvh flex-col bg-[#FAF4EE]">
+      <div className="relative flex min-[900px]:hidden min-h-dvh flex-col bg-[#FAF4EE]">
         <div className="relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -175,9 +185,9 @@ export default function LoginPage() {
             className="w-full h-[42dvh] min-h-[240px] max-h-[520px] object-cover object-[30%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_80%,transparent)]"
             draggable={false}
           />
-          <Petals petals={PHONE_PETALS} unit="px" />
         </div>
-        <div className="flex-1 flex items-center justify-center px-4 py-6">
+        <Petals petals={PHONE_PETALS} unit="px" />
+        <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
         <div
