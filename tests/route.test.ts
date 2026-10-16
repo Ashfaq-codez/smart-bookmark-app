@@ -228,6 +228,49 @@ describe('POST /api/save: reading the page (after saving)', () => {
     expect(fake.updates[0].filters).toEqual([['id', 1], ['user_id', 'user-1']])
   })
 
+  it('uses the picture the browser saw when the server got a title but no picture', async () => {
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response('<html><head><title>Shop item</title></head></html>', { status: 200 }))
+    const fake = loggedIn()
+    await post({ url: 'https://shop.example.com/1', page: { title: 'Shop item', image: 'https://cdn.example.com/p.jpg' } })
+    await finishBackgroundWork()
+    expect(fake.updates[0].patch).toMatchObject({ title: 'Shop item', image_url: 'https://cdn.example.com/p.jpg' })
+  })
+
+  it('keeps the extension screenshot (as our own WebP) only when the page has no picture at all', async () => {
+    const sharp = (await import('sharp')).default
+    const jpeg = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#4d6a51' } }).jpeg().toBuffer()
+    const shot = `data:image/jpeg;base64,${jpeg.toString('base64')}`
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockImplementation(async () => new Response('<html><head><title>No picture</title></head></html>', { status: 200 }))
+    const fake = loggedIn()
+    await post({ url: 'https://plain.example.com/a', page: { title: 'No picture' }, screenshot: shot })
+    await finishBackgroundWork()
+    expect(fake.uploads).toHaveLength(1)
+    expect(fake.uploads[0].path).toMatch(/^user-1\/shot-[0-9a-f-]{36}\.webp$/)
+    expect(fake.uploads[0].contentType).toBe('image/webp')
+    expect(fake.updates[0].patch).toMatchObject({ image_url: `https://storage.test/attachments/${fake.uploads[0].path}`, file_path: fake.uploads[0].path })
+
+    // a page with its own picture: the screenshot is ignored
+    const fake2 = loggedIn()
+    vi.mocked(safeFetch).mockImplementation(async () => new Response(PAGE_HTML, { status: 200 }))
+    await post({ url: 'https://example.com/b', page: { title: 'x' }, screenshot: shot })
+    await finishBackgroundWork()
+    expect(fake2.uploads).toHaveLength(0)
+    expect(fake2.updates[0].patch.image_url).toBe('https://example.com/cover.png')
+  })
+
+  it('ignores a screenshot that is not a picture', async () => {
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response('<html><head><title>T</title></head></html>', { status: 200 }))
+    const fake = loggedIn()
+    await post({ url: 'https://plain.example.com/a', screenshot: `data:image/png;base64,${Buffer.from('<svg onload=alert(1)>'.repeat(20)).toString('base64')}` })
+    await post({ url: 'https://plain.example.com/b', screenshot: 'data:text/html;base64,PGgxPg==' })
+    await finishBackgroundWork()
+    expect(fake.uploads).toHaveLength(0)
+    expect(fake.updates.every((u) => !u.patch.image_url)).toBe(true)
+  })
+
   it('keeps the title it was given and never overwrites it', async () => {
     vi.mocked(isSafeUrl).mockResolvedValue(true)
     vi.mocked(safeFetch).mockResolvedValue(new Response(PAGE_HTML, { status: 200 }))

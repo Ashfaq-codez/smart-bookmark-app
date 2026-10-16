@@ -16,7 +16,7 @@ export const BROWSER_HEADERS = {
 
 // A page's preview picture, from the usual places in order: og:image, twitter:image, <link rel="image_src">,
 // itemprop="image", then the structured data (ld+json). Relative addresses are made full; https only.
-export function pickPreviewImage($: cheerio.CheerioAPI, pageUrl: string): string | null {
+export function pickPreviewImage($: ReturnType<typeof cheerio.load>, pageUrl: string): string | null {
   const metas = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
   const candidates: unknown[] = metas.map((k) => $(`meta[property="${k}"]`).attr('content') || $(`meta[name="${k}"]`).attr('content'));
   candidates.push($('link[rel="image_src"]').attr('href'), $('meta[itemprop="image"]').attr('content'));

@@ -19,6 +19,7 @@ import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
 import { isOverSaveLimit } from '@/lib/saveLimit';
 import { parseInstagramCapture, instagramTitle, storeInstagramImage } from '@/lib/instagramCapture';
+import { parseScreenshot, storeScreenshot } from '@/lib/pageScreenshot';
 
 // The page details are read after the answer is sent; give that background work room to finish.
 export const maxDuration = 30;
@@ -68,7 +69,8 @@ export async function POST(request: Request) {
       sub_category,
       capture: rawCapture,
       page: rawPage,
-      page_html: rawPageHtml
+      page_html: rawPageHtml,
+      screenshot: rawScreenshot
     } = body;
 
     // A social type from the client is not trusted: it is a plain link, and the real type comes from the address below.
@@ -357,13 +359,23 @@ export async function POST(request: Request) {
         if (!givenTitle && !youTubeTitle && title && !/^(\(\d+\)\s*)?YouTube$/i.test(title)) patch.title = title;
         if (!customDesc && description) patch.description = description;
         if (!customImg && image) patch.image_url = image;
+        // No picture anywhere: the screenshot the extension took of the page (kept in our own storage).
+        const shot = !customImg && !image && detectedType === 'link' ? parseScreenshot(rawScreenshot) : null;
+        let shotPath: string | null = null;
+        if (shot) {
+          const stored = await storeScreenshot(db, userId, shot);
+          if (stored) { patch.image_url = stored.publicUrl; patch.file_path = stored.path; shotPath = stored.path; }
+        }
         if (article && detectedType === 'link') {
           patch.post_data = article;
           patch.post_data_fetched_at = new Date().toISOString();
         }
         if (Object.keys(patch).length === 0) return;
         const { error } = await db.from('bookmarks').update(patch).eq('id', savedId).eq('user_id', userId);
-        if (error) console.error('[after-save] update failed:', error.message);
+        if (error) {
+          console.error('[after-save] update failed:', error.message);
+          if (shotPath) await db.storage.from('attachments').remove([shotPath]);
+        }
       });
     }
 

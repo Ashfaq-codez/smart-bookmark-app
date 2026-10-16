@@ -27,6 +27,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     captureInstagram: () => inTab(tab.id, () => globalThis.inntoitExtract.captureInstagram(null, location.href, document)),
     capturePage: () => inTab(tab.id, () => globalThis.inntoitExtract.capturePageMeta(document)),
     send: async (payload) => {
+      // A page with no picture of its own: a screenshot of what the tab shows (the popup isn't in it).
+      if (payload.page && globalThis.inntoitShot.needsShot(payload.page)) {
+        const shot = await globalThis.inntoitShot.captureTab(tab.windowId);
+        if (shot) payload = { ...payload, screenshot: shot };
+      }
       const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
       return { status: res.status, data: await res.json().catch(() => ({})) };
     },

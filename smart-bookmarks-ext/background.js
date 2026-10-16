@@ -1,4 +1,4 @@
-importScripts('extract.js');   // shared URL rules (self.inntoitExtract)
+importScripts('extract.js', 'shot.js');   // shared URL rules (self.inntoitExtract), screenshots (self.inntoitShot)
 
 const API_URL = 'https://smart-bookmark-app-lime.vercel.app/api/save';
 
@@ -260,7 +260,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         .catch((err) => { console.log('[inntoit] executeScript failed:', err?.message); return null; })
     : Promise.resolve(null);
 
-  Promise.all([pageHtmlPromise, askPage(tab.id, frameId)]).then(([pageHtml, response]) => {
+  Promise.all([pageHtmlPromise, askPage(tab.id, frameId)]).then(async ([pageHtml, response]) => {
     // Keep formatting: prefer the HTML captured in the page,
     // otherwise rebuild paragraphs/line breaks from the plain selection text.
     let formatKept = false;
@@ -295,6 +295,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       ...(resolvedUrl && target.capture && { capture: target.capture }),
       ...(resolvedUrl && detectedType !== 'note' && target.page && { page: target.page })
     };
+    // Saving this page itself and it has no picture: a screenshot of what you see.
+    if (payload.page && self.inntoitShot.needsShot(payload.page)) {
+      const shot = await self.inntoitShot.captureTab(tab.windowId);
+      if (shot) payload.screenshot = shot;
+    }
 
     fetch(API_URL, {
       method: 'POST',
@@ -350,8 +355,14 @@ function togglePanel(tabId) {
   });
 }
 
+// Screenshot taken the moment the icon is clicked (before the panel covers the page), used by PANEL_SAVE
+// only if the page turns out to have no picture. One per tab, forgotten after the save or 10 minutes.
+const shots = new Map();
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (!/^https?:/.test(tab.url || '')) return openNormalPopup(tab.id);
+  const raw = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 85 }).catch(() => null);
+  if (raw) shots.set(tab.id, { url: tab.url, raw, at: Date.now() });
   if (await togglePanel(tab.id)) return;
   // A tab opened before the extension was (re)loaded has no panel script yet: add it and try once more.
   try {
@@ -367,12 +378,17 @@ chrome.action.onClicked.addListener(async (tab) => {
 // a script on the page can't.
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'PANEL_SAVE' && sender.tab?.id != null) {
-    fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(request.payload || {}),
-    })
+    const payload = request.payload || {};
+    const kept = shots.get(sender.tab.id);
+    shots.delete(sender.tab.id);
+    const fresh = kept && kept.url === sender.tab.url && Date.now() - kept.at < 10 * 60_000;
+    (fresh && payload.page && self.inntoitShot.needsShot(payload.page) ? self.inntoitShot.shrink(kept.raw) : Promise.resolve(null))
+      .then((shot) => fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(shot ? { ...payload, screenshot: shot } : payload),
+      }))
       .then(async (res) => sendResponse({ status: res.status, data: await res.json().catch(() => ({})) }))
       .catch(() => sendResponse({ networkError: true }));
     return true;   // answers later
