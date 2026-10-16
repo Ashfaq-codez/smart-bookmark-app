@@ -32,7 +32,8 @@
     "react-dom": "19.0.0",
     "react-hot-toast": "^2.4.1",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.4",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -41,6 +42,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.186.0",
     "eslint": "^9",
     "eslint-config-next": "^15.5.20",
     "jsdom": "^29.1.1",

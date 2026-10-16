@@ -5,6 +5,14 @@ import { useState, useEffect, useId } from 'react'
 import { Merienda } from 'next/font/google'
 import { motion, useReducedMotion } from 'motion/react'
 import { Loader2 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+// The 3D bird (three.js) loads only in the browser, after the page itself, so the login stays quick.
+const Bird3D = dynamic(() => import('@/components/login/Bird3D'), { ssr: false })
+
+// Its looping route, in % of the box; clear of the sign-in card (desktop: right side, 72%–95% across).
+const DESKTOP_ROUTE: [number, number][] = [[8, 40], [22, 18], [42, 12], [60, 22], [64, 40], [48, 54], [30, 46], [14, 60]]
+const PHONE_ROUTE: [number, number][] = [[12, 14], [50, 8], [86, 20], [70, 36], [30, 30], [10, 70], [50, 92], [88, 74], [60, 40], [20, 26]]
 
 // The watercolour wall: arched stained-glass window, blossom branch, tiled skirting (public/login-bg.webp,
 // made from public/login.png with the painted card taken out). The sign-in card is real HTML on top of it.
@@ -269,6 +277,19 @@ function Bird({ path, size }: { path: { from: Pt; legs: Leg[] }; size: string })
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // the 3D bird, unless it can't be shown (no model file, no 3D graphics) or motion is turned down: then the painted one
+  const reduceMotion = useReducedMotion()
+  const [bird3d, setBird3d] = useState(true)
+  // only one 3D bird runs at a time: the desktop one or the phone one, whichever layout is showing
+  const [wide, setWide] = useState<boolean | null>(null)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 900px)')
+    const on = () => setWide(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const use3d = bird3d && !reduceMotion
 
   useEffect(() => {
     const supabase = createClient()
@@ -307,7 +328,7 @@ export default function LoginPage() {
             draggable={false}
           />
           <Petals petals={DESKTOP_PETALS} unit="cqw" />
-          <Bird path={DESKTOP_FLIGHT} size="4cqw" />
+          {use3d ? (wide && <Bird3D route={DESKTOP_ROUTE} size={0.07} speed={0.09} onFail={() => setBird3d(false)} />) : <Bird path={DESKTOP_FLIGHT} size="4cqw" />}
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
             <SignInCard wide {...card} />
           </div>
@@ -326,7 +347,7 @@ export default function LoginPage() {
           />
         </div>
         <Petals petals={PHONE_PETALS} unit="px" />
-        <Bird path={PHONE_FLIGHT} size="50px" />
+        {use3d ? (wide === false && <Bird3D route={PHONE_ROUTE} size={0.16} speed={0.12} onFail={() => setBird3d(false)} />) : <Bird path={PHONE_FLIGHT} size="50px" />}
         <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
