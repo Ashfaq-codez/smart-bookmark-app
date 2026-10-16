@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/utils/supabase/client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { Merienda } from 'next/font/google'
 import { motion, useReducedMotion } from 'motion/react'
 import { Loader2 } from 'lucide-react'
@@ -128,66 +128,109 @@ function Petals({ petals, unit }: { petals: Petal[]; unit: 'cqw' | 'px' }) {
   )
 }
 
-// A small bluebird (blue body, orange beak) flying a loop around the picture, flapping its wings and turning to
-// face the way it flies. Its path keeps clear of the sign-in card. Points are in % of the box it flies in.
+// A small bluebird (blue body, orange beak) flying around the picture like a real small bird: a few quick wingbeats,
+// then a glide with the wings held out, over and over. It follows a smooth curve at a steady speed, tilts nose-up
+// when climbing and nose-down when diving, rises a little on every downstroke and turns to face the way it flies.
+// Its path keeps clear of the sign-in card. Points are in % of the box it flies in.
 type Pt = [number, number]
 // Desktop: around the window and the branch, and over the top of the wall (the card is on the right, 72%–95%).
-const DESKTOP_FLIGHT: Pt[] = [[-6, 30], [18, 12], [40, 22], [58, 10], [66, 34], [52, 48], [36, 36], [24, 54], [8, 40], [-6, 30]]
+const DESKTOP_FLIGHT: Pt[] = [[-8, 34], [12, 16], [32, 10], [50, 18], [64, 12], [68, 30], [56, 46], [40, 38], [26, 52], [10, 44], [-8, 34]]
 // Phone: over the window picture at the top, then down past the card and back up.
-const PHONE_FLIGHT: Pt[] = [[-12, 12], [30, 5], [70, 16], [88, 34], [60, 30], [20, 40], [8, 82], [46, 90], [84, 80], [60, 24], [-12, 12]]
+const PHONE_FLIGHT: Pt[] = [[-14, 14], [20, 6], [56, 10], [86, 24], [74, 38], [40, 34], [14, 56], [20, 84], [56, 90], [88, 76], [70, 30], [30, 20], [-14, 14]]
 
-function flight(points: Pt[]) {
-  // time at each point, by the distance flown, so the bird keeps a steady speed
-  const d = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]))
-  const total = d.reduce((a, b) => a + b, 0)
+// A smooth curve through the points (Catmull-Rom), sampled finely; each sample gets its time (by distance, so the
+// speed is steady), its facing (right or left) and its tilt (from how steeply it climbs or dives, at most 20°).
+function flight(points: Pt[], steps = 14) {
+  const P = (i: number) => points[Math.max(0, Math.min(points.length - 1, i))]
+  const pts: Pt[] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const [p0, p1, p2, p3] = [P(i - 1), P(i), P(i + 1), P(i + 2)]
+    for (let k = 0; k < steps; k++) {
+      const t = k / steps, t2 = t * t, t3 = t2 * t
+      const c = (a: number, b: number, c2: number, d: number) => 0.5 * (2 * b + (-a + c2) * t + (2 * a - 5 * b + 4 * c2 - d) * t2 + (-a + 3 * b - 3 * c2 + d) * t3)
+      pts.push([c(p0[0], p1[0], p2[0], p3[0]), c(p0[1], p1[1], p2[1], p3[1])])
+    }
+  }
+  pts.push(points[points.length - 1])
+  const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]))
+  const total = seg.reduce((x, y) => x + y, 0)
   const times = [0]
-  d.forEach((len, i) => times.push(times[i] + len / total))
-  // facing: right (1) or left (-1) along each stretch, switching just after each turn
-  const face: number[] = [], faceTimes: number[] = []
-  d.forEach((_, i) => {
-    const f = points[i + 1][0] >= points[i][0] ? 1 : -1
-    face.push(f, f)
-    faceTimes.push(i === 0 ? 0 : Math.min(times[i] + 0.008, 1), times[i + 1])
-  })
-  return { left: points.map((p) => `${p[0]}%`), top: points.map((p) => `${p[1]}%`), times, face, faceTimes }
+  seg.forEach((len, i) => times.push(times[i] + len / total))
+  times[times.length - 1] = 1
+  const dir = pts.map((p, i) => { const q = pts[Math.min(i + 1, pts.length - 1)], o = pts[Math.max(i - 1, 0)]; return [q[0] - o[0], q[1] - o[1]] })
+  const face = dir.map(([dx]) => (dx >= 0 ? 1 : -1))
+  const tilt = dir.map(([dx, dy]) => Math.max(-20, Math.min(20, (Math.atan2(dy, Math.abs(dx) || 0.001) * 180) / Math.PI * 0.75)))
+  return { left: pts.map((p) => `${p[0]}%`), top: pts.map((p) => `${p[1]}%`), times, face, tilt }
 }
+
+// The near wing in three positions (same drawing steps, so it can move smoothly between them):
+// raised, held out level (gliding) and swept down. The shoulder is at (28, 18).
+const WING_UP = 'M28 18 C25 7 17 0 7 1 C11 4 14 7 17 10 C14 9 11 9 9 10 C14 13 20 16 26 20 Z'
+const WING_LEVEL = 'M28 18 C22 13 12 12 2 13 C7 16 11 17 14 18 C11 19 9 20 7 21 C13 22 20 22 26 21 Z'
+const WING_DOWN = 'M28 18 C25 24 19 32 11 37 C14 32 16 29 17 26 C15 27 13 29 11 31 C15 26 20 22 26 20 Z'
+
+// One round: four quick wingbeats, then a glide, then lifting the wings for the next beats (2.4 s).
+const BEAT = 2.4
+const WING_KEYS = [WING_LEVEL, WING_UP, WING_DOWN, WING_UP, WING_DOWN, WING_UP, WING_DOWN, WING_UP, WING_DOWN, WING_LEVEL, WING_LEVEL, WING_LEVEL]
+const WING_TIMES = [0, 0.04, 0.1, 0.16, 0.22, 0.28, 0.34, 0.4, 0.46, 0.54, 0.92, 1]
+// the body rises a little on each downstroke, then sinks gently while gliding
+const BOB_KEYS = [0, 0.6, -2.2, 0.6, -2.2, 0.6, -2.2, 0.6, -2.2, -1.5, 1.2, 0]
+const ease = (n: number) => Array.from({ length: n }, () => 'easeInOut' as const)
 
 function Bird({ path, size, duration }: { path: Pt[]; size: string; duration: number }) {
   const reduce = useReducedMotion()
+  // each bird's colour fills need their own names (the desktop and the phone bird are both on the page)
+  const id = useId().replace(/:/g, '')
   if (reduce) return null
   const f = flight(path)
+  const loop = { duration, times: f.times, repeat: Infinity, ease: 'linear' as const }
+  const flap = { duration: BEAT, times: WING_TIMES, repeat: Infinity, ease: ease(WING_KEYS.length - 1) }
   return (
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
       <motion.div
         className="absolute"
-        style={{ width: size, height: size, left: f.left[0], top: f.top[0] }}
+        style={{ width: size, height: `calc(${size} * 0.67)`, left: f.left[0], top: f.top[0], marginLeft: `calc(${size} / -2)` }}
         animate={{ left: f.left, top: f.top, scaleX: f.face }}
-        transition={{
-          left: { duration, times: f.times, repeat: Infinity, ease: 'easeInOut' },
-          top: { duration, times: f.times, repeat: Infinity, ease: 'easeInOut' },
-          scaleX: { duration, times: f.faceTimes, repeat: Infinity, ease: 'linear' },
-        }}
+        transition={{ left: loop, top: loop, scaleX: loop }}
       >
-        {/* bobs up and down a little as it flaps */}
-        <motion.svg viewBox="0 0 40 30" className="w-full h-full block overflow-visible [filter:drop-shadow(0_2px_2px_rgba(40,60,90,0.25))]"
-          animate={{ y: [0, -3, 0] }} transition={{ duration: 0.5, repeat: Infinity, ease: 'easeInOut' }}>
-          {/* tail */}
-          <path d="M8 16 L0 11 L2 17 L0 22 Z" fill="#2C6CB0" />
-          {/* far wing, behind the body */}
-          <motion.path d="M20 14 C16 4 10 2 6 4 C10 8 13 12 18 16 Z" fill="#2A63A3" style={{ originX: '20px', originY: '14px' }}
-            animate={{ rotate: [10, -35, 10] }} transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut' }} />
-          {/* body and belly */}
-          <ellipse cx="19" cy="17" rx="12" ry="7.5" fill="#3B82C9" />
-          <path d="M11 19 C15 25 25 25 29 19 C24 21 16 21 11 19 Z" fill="#A9D3F5" />
-          {/* head, eye, cheek and the orange beak */}
-          <circle cx="30" cy="12.5" r="6" fill="#3B82C9" />
-          <circle cx="32" cy="11.5" r="1.4" fill="#fff" />
-          <circle cx="32.4" cy="11.6" r="0.75" fill="#1B2430" />
-          <path d="M35.2 12 L40 13.6 L35.2 15.2 Z" fill="#F5992B" />
-          {/* near wing, in front */}
-          <motion.path d="M21 15 C19 3 12 0 7 2 C11 7 14 12 17 18 Z" fill="#5A9BDB" style={{ originX: '21px', originY: '15px' }}
-            animate={{ rotate: [0, -50, 0] }} transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut' }} />
-        </motion.svg>
+        <motion.div className="w-full h-full" animate={{ rotate: f.tilt }} transition={{ rotate: loop }}>
+          <motion.svg viewBox="0 0 60 40" className="w-full h-full block overflow-visible [filter:drop-shadow(0_3px_3px_rgba(30,50,80,0.22))]"
+            animate={{ y: BOB_KEYS }} transition={{ y: flap }}>
+            <defs>
+              <linearGradient id={`bird-back-${id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#2F6FB8" /><stop offset="0.55" stopColor="#3D86CF" /><stop offset="1" stopColor="#7DB6E8" />
+              </linearGradient>
+              <linearGradient id={`bird-wing-${id}`} x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#3E86D0" /><stop offset="1" stopColor="#1F4F8C" />
+              </linearGradient>
+              <radialGradient id={`bird-belly-${id}`} cx="0.55" cy="0.35" r="0.7">
+                <stop offset="0" stopColor="#E6F2FC" /><stop offset="1" stopColor="#9CC8EE" />
+              </radialGradient>
+            </defs>
+            {/* far wing, behind the body (darker, a moment behind the near one) */}
+            <motion.path fill="#244F86" opacity={0.85} animate={{ d: WING_KEYS }}
+              transition={{ d: { ...flap, delay: 0.03 } }} style={{ x: 3, y: -1 }} />
+            {/* forked tail */}
+            <path d="M14 21 L2 15 L5 20 L0 23 L5 24 L3 28 L15 24 Z" fill="#265E9E" />
+            <path d="M14 21 L4 18 M14 23 L3 25" stroke="#1C477A" strokeWidth="0.6" strokeOpacity="0.6" />
+            {/* body: round chest, tapering to the tail */}
+            <path d="M13 22 C15 14 25 11 34 12 C41 12 46 16 46 21 C46 27 38 30 29 29 C21 28 15 26 13 22 Z" fill={`url(#bird-back-${id})`} />
+            <path d="M20 25 C26 29 37 29 43 23 C40 27 33 29 27 28 C24 28 22 27 20 25 Z" fill={`url(#bird-belly-${id})`} />
+            <path d="M24 26 C30 28.5 37 28 42 24" stroke="#fff" strokeOpacity="0.35" strokeWidth="0.8" fill="none" />
+            {/* head */}
+            <circle cx="45" cy="15.5" r="7.2" fill="#3479C2" />
+            <path d="M40 12 C43 9 48 9 51 12" stroke="#5E9EDD" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.7" />
+            {/* eye with a highlight */}
+            <circle cx="48" cy="14.4" r="1.7" fill="#14202C" />
+            <circle cx="48.6" cy="13.8" r="0.55" fill="#fff" />
+            {/* orange beak: upper and lower half */}
+            <path d="M51.6 14.2 L58.5 15.8 L51.8 16.6 Z" fill="#F59A2E" />
+            <path d="M51.8 16.6 L57 16.2 L52 17.6 Z" fill="#D9771A" />
+            {/* near wing, in front, with darker flight feathers along its edge */}
+            <motion.path fill={`url(#bird-wing-${id})`} animate={{ d: WING_KEYS }} transition={{ d: flap }} />
+            <motion.path fill="none" stroke="#173F70" strokeWidth="0.7" strokeOpacity="0.55" animate={{ d: WING_KEYS }} transition={{ d: flap }} />
+          </motion.svg>
+        </motion.div>
       </motion.div>
     </div>
   )
@@ -234,7 +277,7 @@ export default function LoginPage() {
             draggable={false}
           />
           <Petals petals={DESKTOP_PETALS} unit="cqw" />
-          <Bird path={DESKTOP_FLIGHT} size="3.2cqw" duration={26} />
+          <Bird path={DESKTOP_FLIGHT} size="3.6cqw" duration={30} />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
             <SignInCard wide {...card} />
           </div>
@@ -253,7 +296,7 @@ export default function LoginPage() {
           />
         </div>
         <Petals petals={PHONE_PETALS} unit="px" />
-        <Bird path={PHONE_FLIGHT} size="36px" duration={24} />
+        <Bird path={PHONE_FLIGHT} size="44px" duration={28} />
         <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
