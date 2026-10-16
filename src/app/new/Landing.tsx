@@ -7,6 +7,7 @@ import { Cormorant_Garamond, IBM_Plex_Mono } from 'next/font/google'
 import Lenis from 'lenis'
 import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useReducedMotion } from 'motion/react'
 import { ArrowRight, ArrowUpRight, ShieldCheck, EyeOff, MonitorSmartphone, ImageIcon, Search, PenLine, FolderTree, Plus, Check, Ruler, BookOpen, ChefHat, GraduationCap } from 'lucide-react'
+import { ArchShape } from './Arch'
 import { AppWindow, ContextMenuDemo, ShareSheetDemo, SearchDemo, FocusDemo, FolderDemo, XCard, RedditCard, ArticleCard, VideoCard, NoteCard, LinkCard, TURQ, WOOD } from './ProductMock'
 
 // The landing page as an architect's portfolio, with the product as the subject: warm parchment, fine serif
@@ -77,20 +78,19 @@ function Words({ text, delay = 0 }: { text: string; delay?: number }) {
 }
 
 function Cta({ children = 'Start saving, free', dark = true }: { children?: React.ReactNode; dark?: boolean }) {
-  // leans a little toward the pointer
+  // an arched doorway of a button; it leans a little toward the pointer
   const x = useMotionValue(0), y = useMotionValue(0)
   const sx = useSpring(x, { stiffness: 220, damping: 16 }), sy = useSpring(y, { stiffness: 220, damping: 16 })
   return (
     <motion.span style={{ x: sx, y: sy }} className="inline-block"
-      onPointerMove={(e) => { if (e.pointerType !== 'mouse') return; const r = e.currentTarget.getBoundingClientRect(); x.set((e.clientX - r.left - r.width / 2) * 0.16); y.set((e.clientY - r.top - r.height / 2) * 0.28) }}
+      onPointerMove={(e) => { if (e.pointerType !== 'mouse') return; const r = e.currentTarget.getBoundingClientRect(); x.set((e.clientX - r.left - r.width / 2) * 0.14); y.set((e.clientY - r.top - r.height / 2) * 0.24) }}
       onPointerLeave={() => { x.set(0); y.set(0) }}>
-      <Link href="/login"
-        className={`group inline-flex h-14 items-center gap-3 rounded-full pl-7 pr-2 text-[15px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F1E9DB] ${dark ? 'bg-[#2A241D] text-[#F1E9DB] hover:bg-[#3A3128]' : 'bg-[#F6EEE1] text-[#2A241D] hover:bg-white'}`}
-        style={{ ['--tw-ring-color' as string]: TURQ }}>
-        {children}
-        <span className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-transform duration-300 group-hover:rotate-[-35deg]" style={{ background: WOOD }}>
-          <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
-        </span>
+      <Link href="/login" className="group inline-block rounded-[6px] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4" style={{ outlineColor: TURQ }}>
+        <ArchShape fill={dark ? '#2A241D' : '#F6EEE1'} line={dark ? 'rgba(231,180,138,0.55)' : 'rgba(162,104,60,0.5)'}
+          className={`h-[66px] px-9 pt-[22px] text-[15px] font-medium transition-transform duration-300 group-hover:-translate-y-0.5 ${dark ? 'text-[#F1E9DB]' : 'text-[#2A241D]'}`}>
+          {children}
+          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={1.75} style={{ color: dark ? '#E7B48A' : WOOD }} />
+        </ArchShape>
       </Link>
     </motion.span>
   )
@@ -98,7 +98,16 @@ function Cta({ children = 'Start saving, free', dark = true }: { children?: Reac
 
 // the product window tilts toward the pointer and settles flat as it scrolls in
 function Tilt({ children }: { children: React.ReactNode }) {
-  const reduce = useReducedMotion()
+  const reduceMotion = useReducedMotion()
+  const [small, setSmall] = useState(true)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const on = () => setSmall(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const reduce = reduceMotion || small
   const ref = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 25%'] })
   const settle = useTransform(scrollYProgress, [0, 1], [reduce ? 0 : 14, 0])
@@ -188,12 +197,11 @@ export default function Landing() {
 
   const court = useRef<HTMLDivElement>(null)
   const { scrollYProgress: courtP } = useScroll({ target: court, offset: ['start end', 'end start'] })
-  const courtY = useTransform(courtP, [0, 1], reduce ? ['0%', '0%'] : ['-10%', '10%'])
-  const courtScale = useTransform(courtP, [0, 0.5, 1], reduce ? [1, 1, 1] : [1.12, 1.04, 1])
+  const courtY = useTransform(courtP, [0, 1], reduce ? ['0%', '0%'] : ['-5%', '5%'])
 
   const door = useRef<HTMLDivElement>(null)
   const { scrollYProgress: doorP } = useScroll({ target: door, offset: ['start end', 'end end'] })
-  const doorScale = useTransform(doorP, [0, 1], reduce ? [1, 1] : [1.18, 1])
+  const doorScale = useTransform(doorP, [0, 0.6], reduce ? [1, 1] : [0.94, 1])
 
   const { scrollYProgress } = useScroll()
   const bar = useSpring(scrollYProgress, { stiffness: 120, damping: 30 })
@@ -210,11 +218,13 @@ export default function Landing() {
         <div className="mx-auto mt-4 flex max-w-6xl items-center justify-between gap-4 rounded-full border border-[#D9CBB2]/80 bg-[#F1E9DB]/80 px-4 py-2.5 backdrop-blur-md sm:px-6">
           <Link href="/new" className="font-serif text-[24px] font-semibold leading-none tracking-tight">inntoit</Link>
           <nav className="hidden items-center gap-7 font-mono text-[11px] tracking-[0.2em] uppercase text-[#5E5446] md:flex">
-            {[['#save', 'Save'], ['#keep', 'Keep'], ['#find', 'Find'], ['#pricing', 'Pricing'], ['#faq', 'FAQ']].map(([h, t]) => <a key={h} href={h} className="transition-colors hover:text-[#2A241D]">{t}</a>)}
+            {[['#save', 'Save'], ['#keep', 'Keep'], ['#find', 'Find'], ['#real', 'The app'], ['#faq', 'FAQ']].map(([h, t]) => <a key={h} href={h} className="transition-colors hover:text-[#2A241D]">{t}</a>)}
           </nav>
           <div className="flex items-center gap-2">
             <Link href="/login" className="hidden h-9 items-center px-4 text-[14px] text-[#5E5446] transition-colors hover:text-[#2A241D] sm:inline-flex">Sign in</Link>
-            <Link href="/login" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#2A241D] px-4 text-[13.5px] text-[#F1E9DB] transition-colors hover:bg-[#3A3128]">Begin <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} /></Link>
+            <Link href="/login" className="group rounded-[4px] focus:outline-none focus-visible:outline-2" style={{ outlineColor: TURQ }}>
+              <ArchShape fill="#2A241D" line="rgba(231,180,138,0.5)" className="h-[46px] px-5 pt-[16px] text-[13.5px] text-[#F1E9DB]">Begin <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5" strokeWidth={1.75} style={{ color: '#E7B48A' }} /></ArchShape>
+            </Link>
           </div>
         </div>
       </header>
@@ -248,7 +258,7 @@ export default function Landing() {
                 <Image src="/landing/11.webp" alt="A painted wooden door in a pink wall, with a green parrot" fill priority sizes="(min-width: 1024px) 420px, 90vw" className="object-cover object-[50%_70%]" />
               </motion.div>
             </div>
-            <motion.div style={{ y: chipY }} className="absolute -left-6 bottom-16 w-[210px] rotate-[-3deg] sm:-left-14">
+            <motion.div style={{ y: chipY }} className="absolute bottom-16 left-2 w-[200px] rotate-[-3deg] sm:-left-14 sm:w-[210px]">
               <NoteCard text="This pink. This door. Front of the café." />
             </motion.div>
             <motion.div style={{ y: chipY }} className="absolute -right-4 top-24 hidden w-[190px] rotate-[3deg] sm:block lg:-right-10">
@@ -377,20 +387,49 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ---------- the courtyard ---------- */}
-      <section ref={court} className="relative h-[86vh] min-h-[540px] overflow-hidden bg-[#2A241D]" aria-label="Not a feed. A place.">
-        <motion.div style={{ y: courtY, scale: courtScale }} className="absolute inset-[-12%_0]">
-          <Image src="/landing/7.webp" alt="" fill sizes="100vw" className="object-cover object-[50%_45%]" />
-        </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1E1913]/90 via-[#1E1913]/35 to-[#1E1913]/30" />
-        <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-16 sm:px-6 sm:pb-24">
-          <Reveal><Fig n="06" light>The courtyard</Fig></Reveal>
-          <Reveal delay={0.08}>
-            <p className="mt-5 max-w-3xl font-serif text-[clamp(42px,6.6vw,88px)] font-medium leading-[0.96] tracking-[-0.02em] text-[#F6EEE1]">
-              Not a feed.<br /><em className="font-normal" style={{ color: '#9FD6DB' }}>A</em> <em className="font-normal" style={{ color: '#E7B48A' }}>place.</em>
-            </p>
+      {/* ---------- the real app: actual screenshots (dark mode) ---------- */}
+      <section id="real" className="mx-auto max-w-6xl px-4 py-28 sm:px-6 sm:py-36">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-end">
+          <div>
+            <Reveal><Fig n="06">Plate III · As it is today</Fig></Reveal>
+            <Reveal delay={0.08}><h2 className="mt-5 font-serif text-[clamp(38px,5.4vw,62px)] font-medium leading-[1] tracking-[-0.02em]">The real <T>wall.</T> The real <W>room.</W></h2></Reveal>
+          </div>
+          <Reveal delay={0.14}><p className="text-[16px] leading-relaxed text-[#5E5446]">Not a mock-up: this is inntoit today, in dark mode. Your wall of saves, and a save opened with its folders and your notes beside it.</p></Reveal>
+        </div>
+        <div className="relative mt-14 pb-[18%]">
+          <Reveal>
+            <figure className="overflow-hidden rounded-[18px] bg-[#1C1C1C] p-1.5 ring-1 ring-[#2E2A25] shadow-[0_50px_100px_-40px_rgba(40,28,12,0.65)]">
+              <Image src="/landing/real-dashboard.webp" alt="The inntoit dashboard: a wall of saved links, posts and videos" width={1600} height={889} sizes="(min-width: 1152px) 1100px, 94vw" className="h-auto w-full rounded-[13px]" />
+            </figure>
           </Reveal>
-          <Reveal delay={0.16}><p className="mt-6 max-w-md text-[16px] leading-relaxed text-[#E6DACA]/85">Nothing here is ranked, pushed or sold. It’s a room you walk into when you want to, and everything is still on the wall.</p></Reveal>
+          <Reveal delay={0.15} className="absolute bottom-0 right-[-2%] w-[62%] sm:right-[-4%]">
+            <figure className="overflow-hidden rounded-[16px] bg-[#1C1C1C] p-1.5 ring-1 ring-[#2E2A25] shadow-[0_40px_80px_-30px_rgba(20,14,6,0.7)]">
+              <Image src="/landing/real-editor.webp" alt="A save opened in inntoit, with its folder and a notes area" width={1400} height={742} sizes="(min-width: 1152px) 700px, 62vw" className="h-auto w-full rounded-[11px]" />
+            </figure>
+          </Reveal>
+        </div>
+        <div className="mt-6 flex justify-between font-mono text-[10px] tracking-[0.2em] uppercase text-[#8F8169]"><span>Fig. 06.a · The wall</span><span>Fig. 06.b · A save, opened</span></div>
+      </section>
+
+      {/* ---------- the courtyard: the picture in an arched window, at its own size (stays sharp) ---------- */}
+      <section ref={court} className="relative overflow-hidden bg-[#2A241D]" aria-label="Not a feed. A place.">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-24 sm:px-6 sm:py-28 lg:grid-cols-[1fr_0.9fr] lg:gap-16">
+          <div>
+            <Reveal><Fig n="07" light>The courtyard</Fig></Reveal>
+            <Reveal delay={0.08}>
+              <p className="mt-5 max-w-3xl font-serif text-[clamp(42px,6vw,84px)] font-medium leading-[0.96] tracking-[-0.02em] text-[#F6EEE1]">
+                Not a feed.<br /><em className="font-normal" style={{ color: '#9FD6DB' }}>A</em> <em className="font-normal" style={{ color: '#E7B48A' }}>place.</em>
+              </p>
+            </Reveal>
+            <Reveal delay={0.16}><p className="mt-6 max-w-md text-[16px] leading-relaxed text-[#E6DACA]/85">Nothing here is ranked, pushed or sold. It’s a room you walk into when you want to, and everything is still on the wall.</p></Reveal>
+          </div>
+          <Reveal delay={0.1} className="mx-auto w-full max-w-[460px]">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[999px] ring-1 ring-[#5A4C3C]">
+              <motion.div style={{ y: courtY }} className="absolute inset-[-6%_0]">
+                <Image src="/landing/7.webp" alt="A lantern-lit arcade with flowers and carpets" fill sizes="460px" className="object-cover" />
+              </motion.div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -398,7 +437,7 @@ export default function Landing() {
       <section className="mx-auto max-w-6xl px-4 py-28 sm:px-6 sm:py-36">
         <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
           <div>
-            <Reveal><Fig n="07">Residents</Fig></Reveal>
+            <Reveal><Fig n="08">Residents</Fig></Reveal>
             <Reveal delay={0.08}><h2 className="mt-5 font-serif text-[clamp(36px,5vw,58px)] font-medium leading-[1.02] tracking-[-0.015em]">For people who <T>collect</T> as they <W>wander.</W></h2></Reveal>
             <Reveal delay={0.14}>
               <div className="relative mt-10 aspect-[4/5] max-w-[380px] overflow-hidden rounded-t-[999px] ring-1 ring-[#D3C3A7]">
@@ -428,7 +467,7 @@ export default function Landing() {
       {/* ---------- the house rules ---------- */}
       <section className="border-y border-[#D9CBB2] bg-[#E8DCC7]/40">
         <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-28">
-          <Reveal><Fig n="08">The house</Fig></Reveal>
+          <Reveal><Fig n="09">The house</Fig></Reveal>
           <Reveal delay={0.08}><h2 className="mt-5 max-w-2xl font-serif text-[clamp(36px,5vw,58px)] font-medium leading-[1.02] tracking-[-0.015em]">Built like a <T>home,</T> not a <W>shop.</W></h2></Reveal>
           <div className="mt-12 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -447,34 +486,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ---------- pricing ---------- */}
-      <section id="pricing" className="mx-auto max-w-6xl px-4 py-28 sm:px-6 sm:py-36">
-        <div className="max-w-2xl">
-          <Reveal><Fig n="09">Tenancy</Fig></Reveal>
-          <Reveal delay={0.08}><h2 className="mt-5 font-serif text-[clamp(38px,5.4vw,62px)] font-medium leading-[1] tracking-[-0.02em]">Move in <T>free.</T> Add a <W>room</W> when you need one.</h2></Reveal>
-        </div>
-        <div className="mt-14 grid gap-6 md:grid-cols-2">
-          {[
-            { name: 'Curator', price: '$0', per: 'forever', c: TURQ, dark: false, cta: 'Start free',
-              items: ['Unlimited links and notes', 'Pictures that never break', 'Notes beside everything you save', 'X, Instagram, Reddit, YouTube and more, kept as themselves', 'Chrome extension and iPhone share sheet'] },
-            { name: 'Heavy Storage', price: '$5', per: 'a month', c: WOOD, dark: true, cta: 'Choose Heavy Storage',
-              items: ['Everything in Curator', 'Unlimited PDF and media uploads', 'Search inside your PDFs', 'Smart tags, added for you'] },
-          ].map((p, i) => (
-            <Reveal key={p.name} delay={i * 0.08}>
-              <motion.div whileHover={reduce ? undefined : { y: -6 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-                className={`flex h-full flex-col rounded-[22px] p-8 ring-1 sm:p-10 ${p.dark ? 'bg-[#2A241D] text-[#F1E9DB] ring-[#2A241D]' : 'bg-[#FBF6EC] ring-[#D3C3A7]'}`}>
-                <p className="font-mono text-[10.5px] tracking-[0.22em] uppercase" style={{ color: p.dark ? '#E7B48A' : p.c }}>{p.name}</p>
-                <p className="mt-6 flex items-baseline gap-2"><span className="font-serif text-[72px] font-medium leading-none">{p.price}</span><span className={p.dark ? 'text-[#CBBDA6]' : 'text-[#8F8169]'}>{p.per}</span></p>
-                <ul className="mt-8 space-y-3.5 text-[15px]">
-                  {p.items.map((it) => <li key={it} className="flex items-start gap-3"><Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: p.dark ? '#9FD6DB' : p.c }} strokeWidth={2} /><span className={p.dark ? 'text-[#E6DACA]' : 'text-[#3A3128]'}>{it}</span></li>)}
-                </ul>
-                <div className="mt-auto pt-10"><Cta dark={!p.dark}>{p.cta}</Cta></div>
-              </motion.div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
       {/* ---------- FAQ ---------- */}
       <section id="faq" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 sm:pb-36">
         <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
@@ -488,7 +499,7 @@ export default function Landing() {
             </Reveal>
           </div>
           <Reveal delay={0.1} className="border-t border-[#D3C3A7]">
-            <Faq q="Is inntoit really free?" a="Yes. Links, notes, posts and pictures are free, with no limit on how many you keep. Heavy Storage is only for people who upload a lot of their own PDFs and media." />
+            <Faq q="Is inntoit free?" a="Yes. Saving links, notes, posts and pictures is free." />
             <Faq q="What can I save?" a="Any link, plus a proper card for X posts, Instagram, Reddit, YouTube, Substack, Medium, Threads, Spotify, Hacker News and LinkedIn. You can also save a selected passage, a picture, or a note of your own." />
             <Faq q="How do I save from my phone?" a="Add the inntoit Shortcut on your iPhone once. After that, tap Share in any app and choose inntoit. It takes a second." />
             <Faq q="Who can see my saves?" a="Only you. Your wall is private, and nothing you keep is shown to anyone else, ranked or used for ads." />
@@ -498,21 +509,22 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ---------- come in: through the arch ---------- */}
+      {/* ---------- come in: the sea through an arched window ---------- */}
       <section ref={door} className="relative overflow-hidden bg-[#2A241D]">
-        <motion.div style={{ scale: doorScale }} className="absolute inset-0">
-          <Image src="/landing/10.webp" alt="" fill sizes="100vw" className="object-cover object-[50%_45%]" />
-        </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1E1913]/30 via-[#1E1913]/45 to-[#1E1913]/80" />
-        <div className="relative mx-auto flex min-h-[86vh] max-w-6xl flex-col items-center justify-center px-4 py-28 text-center sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-24 text-center sm:px-6 sm:py-32">
           <Reveal><Fig n="11" light>Your door</Fig></Reveal>
           <Reveal delay={0.08}>
-            <h2 className="mx-auto mt-6 max-w-3xl font-serif text-[clamp(46px,7.4vw,104px)] font-medium leading-[0.94] tracking-[-0.025em] text-[#F6EEE1]">
+            <h2 className="mx-auto mt-6 max-w-3xl font-serif text-[clamp(44px,7vw,96px)] font-medium leading-[0.94] tracking-[-0.025em] text-[#F6EEE1]">
               Come in.<br /><em className="font-normal" style={{ color: '#9FD6DB' }}>Make yourself</em> <em className="font-normal" style={{ color: '#E7B48A' }}>at home.</em>
             </h2>
           </Reveal>
-          <Reveal delay={0.14}><p className="mx-auto mt-6 max-w-md text-[16px] leading-relaxed text-[#E6DACA]/90">It takes a few seconds to sign in with Google. Your first save takes one click.</p></Reveal>
-          <Reveal delay={0.2} className="mt-10 flex justify-center"><Cta dark={false}>Open your door, free</Cta></Reveal>
+          <Reveal delay={0.12} className="mt-12 w-full max-w-[560px]">
+            <motion.div style={{ scale: doorScale }} className="relative aspect-[736/1017] max-h-[620px] w-full overflow-hidden rounded-t-[999px] ring-1 ring-[#5A4C3C]">
+              <Image src="/landing/10.webp" alt="A carved arch opening onto the sea" fill sizes="560px" className="object-cover object-[50%_40%]" />
+            </motion.div>
+          </Reveal>
+          <Reveal delay={0.16}><p className="mx-auto mt-10 max-w-md text-[16px] leading-relaxed text-[#E6DACA]/90">It takes a few seconds to sign in with Google. Your first save takes one click.</p></Reveal>
+          <Reveal delay={0.2} className="mt-8 flex justify-center"><Cta dark={false}>Open your door, free</Cta></Reveal>
         </div>
       </section>
 
@@ -524,7 +536,7 @@ export default function Landing() {
           </div>
           <div className="space-y-2.5 text-[14.5px] text-[#5E5446]">
             <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8F8169]">The house</p>
-            {[['#save', 'Save'], ['#keep', 'Keep'], ['#find', 'Find'], ['#pricing', 'Pricing']].map(([h, t]) => <a key={h} href={h} className="block transition-colors hover:text-[#2A241D]">{t}</a>)}
+            {[['#save', 'Save'], ['#keep', 'Keep'], ['#find', 'Find'], ['#real', 'The app']].map(([h, t]) => <a key={h} href={h} className="block transition-colors hover:text-[#2A241D]">{t}</a>)}
           </div>
           <div className="space-y-2.5 text-[14.5px] text-[#5E5446]">
             <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8F8169]">Your door</p>

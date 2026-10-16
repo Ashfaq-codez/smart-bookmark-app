@@ -211,9 +211,9 @@ export function AppWindow() {
               </div>
               <AnimatePresence>
                 {panel && (
-                  <motion.div key="panel" layoutId="incoming" className="absolute right-2 top-2 z-20 origin-top-right scale-[0.72] sm:right-5 sm:top-4 sm:scale-100"
+                  <motion.div key="panel" layoutId="incoming" className="absolute right-2 top-2 z-20 sm:right-5 sm:top-4"
                     initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: EASE }}>
-                    <SavePanel state={step >= 3 ? 'saved' : step === 2 ? 'saving' : 'idle'} />
+                    <div className="w-[200px] sm:w-auto [&>div]:w-full sm:[&>div]:w-[270px]"><SavePanel state={step >= 3 ? 'saved' : step === 2 ? 'saving' : 'idle'} /></div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -359,7 +359,8 @@ export function SearchDemo() {
         <span className="text-[14px] text-[#2A241D]">{typed}<span className="ml-0.5 inline-block h-4 w-[1.5px] translate-y-[3px] animate-pulse" style={{ background: TURQ }} /></span>
         <span className={`${label} ml-auto text-[#8F8169]`}>{q.length >= 3 ? `${shown.length} found` : '314 saves'}</span>
       </div>
-      <motion.div layout className="mt-4 grid min-h-[300px] grid-cols-2 items-start gap-3 sm:grid-cols-3">
+      <div className="relative mt-4 h-[380px] overflow-hidden sm:h-[420px]">
+      <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {shown.map((c) => (
             <motion.div key={c.k} layout initial={{ opacity: 0, scale: 0.94, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94 }} transition={{ type: 'spring', stiffness: 240, damping: 26 }}>
@@ -367,7 +368,9 @@ export function SearchDemo() {
             </motion.div>
           ))}
         </AnimatePresence>
-      </motion.div>
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#EFE5D3] to-transparent" />
+      </div>
     </div>
   )
 }
