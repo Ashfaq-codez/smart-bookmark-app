@@ -27,7 +27,8 @@ create table if not exists public.bookmarks (
   -- added by 0005: stored snapshot of an X post (null = not read yet)
   post_data            jsonb check (post_data is null or pg_column_size(post_data) <= 65536),
   post_data_fetched_at timestamptz,
-  post_data_failed_at  timestamptz
+  post_data_failed_at  timestamptz,
+  preview_tried_at     timestamptz
 );
 
 create table if not exists public.api_keys (
@@ -51,8 +52,8 @@ create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = '' as $$
 begin
   -- 0005: reading an X snapshot is not an edit, so updated_at stays when only those columns change
-  if (to_jsonb(new) - array['post_data', 'post_data_fetched_at', 'post_data_failed_at', 'updated_at'])
-     = (to_jsonb(old) - array['post_data', 'post_data_fetched_at', 'post_data_failed_at', 'updated_at']) then
+  if (to_jsonb(new) - array['post_data', 'post_data_fetched_at', 'post_data_failed_at', 'preview_tried_at', 'updated_at'])
+     = (to_jsonb(old) - array['post_data', 'post_data_fetched_at', 'post_data_failed_at', 'preview_tried_at', 'updated_at']) then
     new.updated_at = old.updated_at;
   else
     new.updated_at = now();
