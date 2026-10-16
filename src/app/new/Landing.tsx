@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
-import { Cormorant_Garamond, IBM_Plex_Mono } from 'next/font/google'
+import { Cormorant_Garamond, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google'
 import Lenis from 'lenis'
 import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useReducedMotion } from 'motion/react'
 import { ArrowRight, ArrowUpRight, ShieldCheck, EyeOff, MonitorSmartphone, ImageIcon, Search, PenLine, FolderTree, Plus, Check, Ruler, BookOpen, ChefHat, GraduationCap } from 'lucide-react'
@@ -16,8 +16,12 @@ import { AppWindow, ContextMenuDemo, ShareSheetDemo, SearchDemo, FocusDemo, Fold
 // product demos (Motion). Everything still shows, standing still, when "reduce motion" is on.
 
 const serif = Cormorant_Garamond({ weight: ['400', '500', '600'], style: ['normal', 'italic'], subsets: ['latin'], display: 'swap', variable: '--font-cormorant' })
+const sans = Instrument_Sans({ weight: ['400', '500', '600'], subsets: ['latin'], display: 'swap', variable: '--font-instrument' })
 const mono = IBM_Plex_Mono({ weight: ['400', '500'], subsets: ['latin'], display: 'swap', variable: '--font-plex' })
 const EASE = [0.22, 1, 0.36, 1] as const
+
+// fine drawing-paper grain (an SVG noise tile), far quieter than a dot grid
+const PAPER_GRAIN = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.35  0 0 0 0 0.27  0 0 0 0 0.17  0 0 0 0.09 0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>')}")`
 
 // the two inks
 const T = ({ children }: { children: React.ReactNode }) => <em className="font-normal" style={{ color: TURQ }}>{children}</em>
@@ -25,11 +29,14 @@ const W = ({ children }: { children: React.ReactNode }) => <em className="font-n
 
 // ---------- building blocks ----------
 
+const TOTAL = '11'
 function Fig({ n, children, light = false }: { n: string; children: React.ReactNode; light?: boolean }) {
   return (
-    <p className={`font-mono text-[10.5px] tracking-[0.22em] uppercase ${light ? 'text-[#E6D6BF]' : 'text-[#7A6D5A]'}`}>
-      <span style={{ color: light ? '#9FD6DB' : TURQ }}>Fig. {n}</span> <span className="mx-1.5 opacity-50">·</span> {children}
-    </p>
+    <div className={`flex items-center gap-4 font-mono text-[10.5px] tracking-[0.22em] uppercase ${light ? 'text-[#E6D6BF]' : 'text-[#7A6D5A]'}`}>
+      <span className="min-w-0 truncate sm:shrink-0 sm:overflow-visible"><span style={{ color: light ? '#9FD6DB' : TURQ }}>Fig. {n}</span><span className="mx-2 opacity-40">/</span>{children}</span>
+      <span aria-hidden="true" className={`hidden h-px max-w-[120px] flex-1 sm:block ${light ? 'bg-[#E6D6BF]/25' : 'bg-[#C9B89B]/70'}`} />
+      <span aria-hidden="true" className="hidden shrink-0 opacity-50 sm:inline">{n} — {TOTAL}</span>
+    </div>
   )
 }
 
@@ -208,14 +215,14 @@ export default function Landing() {
 
   return (
     <main
-      className={`${serif.variable} ${mono.variable} min-h-dvh overflow-x-clip bg-[#F1E9DB] text-[#2A241D] [background-image:radial-gradient(rgba(120,95,60,0.07)_1px,transparent_1px)] [background-size:22px_22px]`}
-      style={{ ['--font-serif' as string]: 'var(--font-cormorant), Georgia, serif', ['--font-mono' as string]: 'var(--font-plex), ui-monospace, monospace' }}
+      className={`${serif.variable} ${mono.variable} ${sans.variable} min-h-dvh overflow-x-clip bg-[#F1E9DB] text-[#2A241D] antialiased [font-feature-settings:'ss01','kern']`}
+      style={{ ['--font-serif' as string]: 'var(--font-cormorant), Georgia, serif', ['--font-mono' as string]: 'var(--font-plex), ui-monospace, monospace', fontFamily: 'var(--font-instrument), system-ui, sans-serif', backgroundImage: PAPER_GRAIN }}
     >
       <motion.div style={{ scaleX: bar, background: TURQ }} className="fixed inset-x-0 top-0 z-[60] h-[2px] origin-left" />
 
       {/* ---------- top bar ---------- */}
       <header className="fixed inset-x-0 top-0 z-50 px-4 sm:px-6">
-        <div className="mx-auto mt-4 flex max-w-6xl items-center justify-between gap-4 rounded-full border border-[#D9CBB2]/80 bg-[#F1E9DB]/80 px-4 py-2.5 backdrop-blur-md sm:px-6">
+        <div className="mx-auto mt-4 flex max-w-6xl items-center justify-between gap-4 rounded-[18px] border border-[#D9CBB2]/80 bg-[#F1E9DB]/85 py-2.5 pl-5 pr-3 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_10px_30px_-20px_rgba(60,40,15,0.35)] backdrop-blur-md sm:pl-6">
           <Link href="/new" className="font-serif text-[24px] font-semibold leading-none tracking-tight">inntoit</Link>
           <nav className="hidden items-center gap-7 font-mono text-[11px] tracking-[0.2em] uppercase text-[#5E5446] md:flex">
             {[['#save', 'Save'], ['#keep', 'Keep'], ['#find', 'Find'], ['#real', 'The app'], ['#faq', 'FAQ']].map(([h, t]) => <a key={h} href={h} className="transition-colors hover:text-[#2A241D]">{t}</a>)}
@@ -223,7 +230,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <Link href="/login" className="hidden h-9 items-center px-4 text-[14px] text-[#5E5446] transition-colors hover:text-[#2A241D] sm:inline-flex">Sign in</Link>
             <Link href="/login" className="group rounded-[4px] focus:outline-none focus-visible:outline-2" style={{ outlineColor: TURQ }}>
-              <ArchShape fill="#2A241D" line="rgba(231,180,138,0.5)" className="h-[46px] px-5 pt-[16px] text-[13.5px] text-[#F1E9DB]">Begin <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5" strokeWidth={1.75} style={{ color: '#E7B48A' }} /></ArchShape>
+              <ArchShape crown={0.8} fill="#2A241D" line="rgba(231,180,138,0.5)" className="h-[40px] px-5 pt-[12px] text-[13.5px] text-[#F1E9DB]">Begin <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5" strokeWidth={1.75} style={{ color: '#E7B48A' }} /></ArchShape>
             </Link>
           </div>
         </div>
@@ -231,12 +238,12 @@ export default function Landing() {
 
       {/* ---------- hero ---------- */}
       <section ref={heroRef} className="relative mx-auto max-w-6xl px-4 pt-32 sm:px-6 sm:pt-40">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
-          <div className="relative z-10">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.25fr_0.75fr] lg:gap-14">
+          <div className="relative z-10 min-w-0">
             <Reveal now><Fig n="00">Elevation · A home for what you keep</Fig></Reveal>
-            <h1 className="mt-6 font-serif text-[clamp(44px,6.3vw,92px)] font-medium leading-[0.94] tracking-[-0.025em]">
+            <h1 className="mt-7 font-serif text-[clamp(42px,5.4vw,82px)] font-medium leading-[0.98] tracking-[-0.025em]">
               <Words text="A quiet home for" /><br />
-              <Words text="everything" delay={0.25} /> <T><Words text="you" delay={0.35} /></T><W><Words text="save." delay={0.43} /></W>
+              <span className="lg:whitespace-nowrap"><Words text="everything" delay={0.25} /><T><Words text="you" delay={0.35} /></T><W><Words text="save." delay={0.43} /></W></span>
             </h1>
             <Reveal now delay={0.5}>
               <p className="mt-8 max-w-[33rem] text-[17.5px] leading-relaxed text-[#5E5446]">
@@ -292,16 +299,17 @@ export default function Landing() {
       </section>
 
       {/* ---------- numbers ---------- */}
-      <section className="mx-auto grid max-w-6xl grid-cols-2 gap-px px-4 pt-24 sm:px-6 lg:grid-cols-4" aria-label="inntoit in numbers">
+      <section className="mx-auto grid max-w-6xl grid-cols-2 px-4 pt-24 sm:px-6 lg:grid-cols-4 [&>*]:border-[#D3C3A7]" aria-label="inntoit in numbers">
         {[
           { n: 1, s: ' click', d: 'to save from Chrome', c: TURQ },
           { n: 14, s: '', d: 'kinds of saves it understands', c: WOOD },
           { n: 3, s: ' s', d: 'to find anything again', c: TURQ },
           { n: 0, s: '', d: 'ads, feeds or trackers', c: WOOD },
         ].map((x, i) => (
-          <Reveal key={x.d} delay={i * 0.06} className="border-t border-[#D3C3A7] py-6 pr-4">
-            <p className="font-serif text-[clamp(44px,6vw,72px)] font-medium leading-none" style={{ color: x.c }}><Count to={x.n} suffix={x.s} /></p>
-            <p className="mt-3 max-w-[12rem] text-[14.5px] text-[#5E5446]">{x.d}</p>
+          <Reveal key={x.d} delay={i * 0.06} className={`border-t border-[#D3C3A7] py-7 pr-4 ${i ? 'lg:border-l lg:pl-7' : ''}`}>
+            <p className="font-mono text-[9.5px] tracking-[0.22em] uppercase text-[#8F8169]">0{i + 1}</p>
+            <p className="mt-4 font-serif text-[clamp(44px,5.6vw,68px)] font-medium leading-none tracking-[-0.02em]" style={{ color: x.c }}><Count to={x.n} suffix={x.s} /></p>
+            <p className="mt-3 max-w-[13rem] text-[14px] leading-snug text-[#5E5446]">{x.d}</p>
           </Reveal>
         ))}
       </section>
@@ -487,7 +495,7 @@ export default function Landing() {
       </section>
 
       {/* ---------- FAQ ---------- */}
-      <section id="faq" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 sm:pb-36">
+      <section id="faq" className="mx-auto max-w-6xl px-4 py-28 sm:px-6 sm:py-36">
         <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
           <div>
             <Reveal><Fig n="10">Questions</Fig></Reveal>

@@ -359,7 +359,7 @@ export function SearchDemo() {
         <span className="text-[14px] text-[#2A241D]">{typed}<span className="ml-0.5 inline-block h-4 w-[1.5px] translate-y-[3px] animate-pulse" style={{ background: TURQ }} /></span>
         <span className={`${label} ml-auto text-[#8F8169]`}>{q.length >= 3 ? `${shown.length} found` : '314 saves'}</span>
       </div>
-      <div className="relative mt-4 h-[380px] overflow-hidden sm:h-[420px]">
+      <div className="relative mt-4 h-[330px] overflow-hidden sm:h-[350px]">
       <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {shown.map((c) => (
