@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/client'
 import { useState, useEffect } from 'react'
 import { Merienda } from 'next/font/google'
-import { motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { Loader2 } from 'lucide-react'
 
 // The watercolour wall: arched stained-glass window, blossom branch, tiled skirting (public/login-bg.webp,
@@ -60,6 +60,64 @@ function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading
   )
 }
 
+// Cherry blossom petals drifting off the branch. Start points are in % of the box they float in, the drift in
+// petal sizes (dx, dy); the same
+// "random" values on the server and in the browser (seeded), so the page never flickers while loading.
+type Petal = { x: number; y: number; dx: number; dy: number; size: number; spin: number; dur: number; delay: number; tint: string }
+
+function makePetals(n: number, seed: number, area: { x: [number, number]; y: [number, number] }, drift: { dx: [number, number]; dy: [number, number] }): Petal[] {
+  let s = seed
+  const r = () => ((s = (s * 9301 + 49297) % 233280) / 233280)
+  const span = (a: [number, number]) => a[0] + r() * (a[1] - a[0])
+  return Array.from({ length: n }, () => ({
+    x: span(area.x), y: span(area.y), dx: span(drift.dx), dy: span(drift.dy),
+    size: 1 + r() * 0.8, spin: (r() > 0.5 ? 1 : -1) * (200 + r() * 340),
+    dur: 7 + r() * 6, delay: r() * 4, tint: ['#F6C1CC', '#F2AFBF', '#F9D3DA', '#EE9FB2'][Math.floor(r() * 4)],
+  }))
+}
+
+// Desktop: the branch is between 33% and 65% across the painting, petals blow to the right and down.
+const DESKTOP_PETALS = makePetals(16, 7, { x: [34, 58], y: [36, 66] }, { dx: [8, 30], dy: [8, 24] })
+// Phone: the branch is on the right of the window picture.
+const PHONE_PETALS = makePetals(9, 11, { x: [62, 92], y: [40, 78] }, { dx: [-30, -6], dy: [10, 30] })
+
+function Petals({ petals, unit }: { petals: Petal[]; unit: 'cqw' | 'px' }) {
+  const reduce = useReducedMotion()
+  if (reduce) return null
+  return (
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
+      {petals.map((p, i) => {
+        const size = unit === 'cqw' ? `${p.size}cqw` : `${Math.round(p.size * 12)}px`
+        return (
+          <motion.svg
+            key={i}
+            viewBox="0 0 20 24"
+            className="absolute"
+            style={{ left: `${p.x}%`, top: `${p.y}%`, width: size, height: size }}
+            initial={{ opacity: 0 }}
+            animate={{
+              x: ['0%', `${p.dx * 25}%`, `${p.dx * 60}%`],
+              y: ['0%', `${p.dy * 30}%`, `${p.dy * 60}%`],
+              rotate: [0, p.spin / 2, p.spin],
+              opacity: [0, 1, 1, 0],
+            }}
+            transition={{
+              default: { duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'easeInOut' },
+              // fade in quickly, stay, fade out before the next round
+              opacity: { duration: p.dur, delay: p.delay, repeat: Infinity, times: [0, 0.12, 0.8, 1], ease: 'linear' },
+            }}
+          >
+            {/* a cherry blossom petal: an oval, narrow at the base, with the little notch at its tip */}
+            <path d="M10 23C5 19 2 13 3 8 4 4 7 1.5 8.5 3L10 5l1.5-2C13 1.5 16 4 17 8c1 5-2 11-7 15z" fill={p.tint} />
+            <path d="M10 22c-.6-4-.6-9 0-15" stroke="#D97F96" strokeOpacity="0.35" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+            <path d="M6 9c1.5-2 3-2.5 3.5-2" stroke="#fff" strokeOpacity="0.5" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+          </motion.svg>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,8 +149,8 @@ export default function LoginPage() {
   return (
     <main className="min-h-dvh overflow-hidden bg-[#EFE5D6] bg-[radial-gradient(ellipse_at_30%_20%,#F7EFE3_0%,#EFE5D6_55%,#E6D9C5_100%)]">
       {/* Desktop (900px and wider): the whole painting, uncropped, framed like a window of its own in the middle of the page */}
-      <div className="hidden min-[900px]:flex min-h-dvh items-center justify-center p-8">
-        <div className="relative w-[min(1440px,94vw,calc((100dvh-4rem)*2.357))] aspect-[3168/1344] [container-type:inline-size] rounded-[1.2cqw] overflow-hidden ring-1 ring-[#D8C7AD] shadow-[0_2px_4px_rgba(90,65,35,0.08),0_24px_60px_-12px_rgba(90,65,35,0.28)]">
+      <div className="hidden min-[900px]:flex min-h-dvh items-center justify-center p-4">
+        <div className="relative w-[min(1720px,97vw,calc((100dvh-2rem)*2.357))] aspect-[3168/1344] [container-type:inline-size] rounded-[1.2cqw] overflow-hidden ring-1 ring-[#D8C7AD] shadow-[0_2px_4px_rgba(90,65,35,0.08),0_24px_60px_-12px_rgba(90,65,35,0.28)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/login-bg.webp"
@@ -100,6 +158,7 @@ export default function LoginPage() {
             className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
           />
+          <Petals petals={DESKTOP_PETALS} unit="cqw" />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
             <SignInCard wide {...card} />
           </div>
@@ -108,13 +167,16 @@ export default function LoginPage() {
 
       {/* Phones and tablets: the window on top, the card centred in the space below it, the tiles along the bottom */}
       <div className="flex min-[900px]:hidden min-h-dvh flex-col bg-[#FAF4EE]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/login-art.webp"
-          alt=""
-          className="w-full h-[42dvh] min-h-[240px] max-h-[520px] object-cover object-[30%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_80%,transparent)]"
-          draggable={false}
-        />
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/login-art.webp"
+            alt=""
+            className="w-full h-[42dvh] min-h-[240px] max-h-[520px] object-cover object-[30%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_80%,transparent)]"
+            draggable={false}
+          />
+          <Petals petals={PHONE_PETALS} unit="px" />
+        </div>
         <div className="flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
