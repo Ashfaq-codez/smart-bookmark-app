@@ -160,7 +160,8 @@ export default function LoginPage() {
       </div>
 
       {/* Phones and tablets: the window on top, the card centred in the space below it, the tiles along the bottom */}
-      <div className="relative flex min-[900px]:hidden min-h-dvh flex-col bg-[#FAF4EE]">
+      {/* behind everything: the painting's own wall (warm washes and stains), so the space around the card isn't blank */}
+      <div className="relative flex min-[900px]:hidden min-h-dvh flex-col bg-[#F6EBDB] bg-[url(/login-wall.webp)] bg-cover bg-[position:30%_50%]">
         <div className="relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
