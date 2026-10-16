@@ -128,6 +128,71 @@ function Petals({ petals, unit }: { petals: Petal[]; unit: 'cqw' | 'px' }) {
   )
 }
 
+// A small bluebird (blue body, orange beak) flying a loop around the picture, flapping its wings and turning to
+// face the way it flies. Its path keeps clear of the sign-in card. Points are in % of the box it flies in.
+type Pt = [number, number]
+// Desktop: around the window and the branch, and over the top of the wall (the card is on the right, 72%–95%).
+const DESKTOP_FLIGHT: Pt[] = [[-6, 30], [18, 12], [40, 22], [58, 10], [66, 34], [52, 48], [36, 36], [24, 54], [8, 40], [-6, 30]]
+// Phone: over the window picture at the top, then down past the card and back up.
+const PHONE_FLIGHT: Pt[] = [[-12, 12], [30, 5], [70, 16], [88, 34], [60, 30], [20, 40], [8, 82], [46, 90], [84, 80], [60, 24], [-12, 12]]
+
+function flight(points: Pt[]) {
+  // time at each point, by the distance flown, so the bird keeps a steady speed
+  const d = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]))
+  const total = d.reduce((a, b) => a + b, 0)
+  const times = [0]
+  d.forEach((len, i) => times.push(times[i] + len / total))
+  // facing: right (1) or left (-1) along each stretch, switching just after each turn
+  const face: number[] = [], faceTimes: number[] = []
+  d.forEach((_, i) => {
+    const f = points[i + 1][0] >= points[i][0] ? 1 : -1
+    face.push(f, f)
+    faceTimes.push(i === 0 ? 0 : Math.min(times[i] + 0.008, 1), times[i + 1])
+  })
+  return { left: points.map((p) => `${p[0]}%`), top: points.map((p) => `${p[1]}%`), times, face, faceTimes }
+}
+
+function Bird({ path, size, duration }: { path: Pt[]; size: string; duration: number }) {
+  const reduce = useReducedMotion()
+  if (reduce) return null
+  const f = flight(path)
+  return (
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
+      <motion.div
+        className="absolute"
+        style={{ width: size, height: size, left: f.left[0], top: f.top[0] }}
+        animate={{ left: f.left, top: f.top, scaleX: f.face }}
+        transition={{
+          left: { duration, times: f.times, repeat: Infinity, ease: 'easeInOut' },
+          top: { duration, times: f.times, repeat: Infinity, ease: 'easeInOut' },
+          scaleX: { duration, times: f.faceTimes, repeat: Infinity, ease: 'linear' },
+        }}
+      >
+        {/* bobs up and down a little as it flaps */}
+        <motion.svg viewBox="0 0 40 30" className="w-full h-full block overflow-visible [filter:drop-shadow(0_2px_2px_rgba(40,60,90,0.25))]"
+          animate={{ y: [0, -3, 0] }} transition={{ duration: 0.5, repeat: Infinity, ease: 'easeInOut' }}>
+          {/* tail */}
+          <path d="M8 16 L0 11 L2 17 L0 22 Z" fill="#2C6CB0" />
+          {/* far wing, behind the body */}
+          <motion.path d="M20 14 C16 4 10 2 6 4 C10 8 13 12 18 16 Z" fill="#2A63A3" style={{ originX: '20px', originY: '14px' }}
+            animate={{ rotate: [10, -35, 10] }} transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut' }} />
+          {/* body and belly */}
+          <ellipse cx="19" cy="17" rx="12" ry="7.5" fill="#3B82C9" />
+          <path d="M11 19 C15 25 25 25 29 19 C24 21 16 21 11 19 Z" fill="#A9D3F5" />
+          {/* head, eye, cheek and the orange beak */}
+          <circle cx="30" cy="12.5" r="6" fill="#3B82C9" />
+          <circle cx="32" cy="11.5" r="1.4" fill="#fff" />
+          <circle cx="32.4" cy="11.6" r="0.75" fill="#1B2430" />
+          <path d="M35.2 12 L40 13.6 L35.2 15.2 Z" fill="#F5992B" />
+          {/* near wing, in front */}
+          <motion.path d="M21 15 C19 3 12 0 7 2 C11 7 14 12 17 18 Z" fill="#5A9BDB" style={{ originX: '21px', originY: '15px' }}
+            animate={{ rotate: [0, -50, 0] }} transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut' }} />
+        </motion.svg>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -169,6 +234,7 @@ export default function LoginPage() {
             draggable={false}
           />
           <Petals petals={DESKTOP_PETALS} unit="cqw" />
+          <Bird path={DESKTOP_FLIGHT} size="3.2cqw" duration={26} />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
             <SignInCard wide {...card} />
           </div>
@@ -187,6 +253,7 @@ export default function LoginPage() {
           />
         </div>
         <Petals petals={PHONE_PETALS} unit="px" />
+        <Bird path={PHONE_FLIGHT} size="36px" duration={24} />
         <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
