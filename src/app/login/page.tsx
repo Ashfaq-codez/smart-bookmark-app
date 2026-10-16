@@ -8,8 +8,8 @@ import { Loader2 } from 'lucide-react'
 
 // The watercolour wall: arched stained-glass window, blossom branch, tiled skirting (public/login-bg.webp,
 // made from public/login.png with the painted card taken out). The sign-in card is real HTML on top of it.
-//   Wide screens: the whole painting along the bottom, the card where the design has it (sizes follow the
-//   painting's width, so it matches at every screen size).
+//   Desktop: the whole painting framed like a window in the middle of the page, the card where the design has
+//   it (sizes follow the painting's width, so it matches at every screen size).
 //   Phones and tall screens: the window on top, the card below it, the tiles along the bottom.
 // Always the light painting, also when the app is in dark mode: the page is the artwork.
 
@@ -31,13 +31,6 @@ function GoogleIcon({ className }: { className?: string }) {
 const PAPER = 'bg-no-repeat bg-[length:100%_100%] [filter:drop-shadow(0_6px_14px_rgba(110,80,40,0.16))]'
 const INK = 'text-[#4A3F33]'
 
-// The painting fades out at the top and sides, so it sits on the page like a painting on paper.
-const EDGE_FADE = {
-  maskImage: 'linear-gradient(to bottom, transparent, black 12%), linear-gradient(to right, transparent, black 7%, black 93%, transparent)',
-  WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 12%), linear-gradient(to right, transparent, black 7%, black 93%, transparent)',
-  maskComposite: 'intersect',
-  WebkitMaskComposite: 'source-in',
-} as const
 
 function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading: boolean; error: string | null; onSignIn: () => void }) {
   // Wide: sizes in cqw (hundredths of the painting's width) so the card scales with it. Phone: fixed sizes.
@@ -96,16 +89,15 @@ export default function LoginPage() {
   const card = { loading, error, onSignIn: handleLogin }
 
   return (
-    <main className="min-h-dvh bg-[#FAF4EE] overflow-hidden">
-      {/* Wide screens (at least 900px wide and wider than tall by 3:2) */}
-      <div className="hidden [@media(min-width:900px)_and_(min-aspect-ratio:3/2)]:flex min-h-dvh flex-col justify-end">
-        <div className="relative w-[88%] mx-auto aspect-[3168/1344] [container-type:inline-size]">
+    <main className="min-h-dvh overflow-hidden bg-[#EFE5D6] bg-[radial-gradient(ellipse_at_30%_20%,#F7EFE3_0%,#EFE5D6_55%,#E6D9C5_100%)]">
+      {/* Desktop (900px and wider): the whole painting, uncropped, framed like a window of its own in the middle of the page */}
+      <div className="hidden min-[900px]:flex min-h-dvh items-center justify-center p-8">
+        <div className="relative w-[min(1440px,94vw,calc((100dvh-4rem)*2.357))] aspect-[3168/1344] [container-type:inline-size] rounded-[1.2cqw] overflow-hidden ring-1 ring-[#D8C7AD] shadow-[0_2px_4px_rgba(90,65,35,0.08),0_24px_60px_-12px_rgba(90,65,35,0.28)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/login-bg.webp"
             alt=""
             className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-            style={EDGE_FADE}
             draggable={false}
           />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
@@ -114,21 +106,21 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Phones, tablets and tall windows */}
-      <div className="flex [@media(min-width:900px)_and_(min-aspect-ratio:3/2)]:hidden min-h-dvh flex-col">
+      {/* Phones and tablets: the window on top, the card centred in the space below it, the tiles along the bottom */}
+      <div className="flex min-[900px]:hidden min-h-dvh flex-col bg-[#FAF4EE]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/login-art.webp"
           alt=""
-          className="w-full h-[46dvh] min-h-[260px] object-cover object-[35%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_82%,transparent)]"
+          className="w-full h-[42dvh] min-h-[240px] max-h-[520px] object-cover object-[30%_100%] select-none pointer-events-none [mask-image:linear-gradient(to_bottom,black_80%,transparent)]"
           draggable={false}
         />
-        <div className="flex-1 flex items-start justify-center px-4 -mt-4 pb-8">
+        <div className="flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
         <div
           aria-hidden="true"
-          className="h-[88px] w-full shrink-0 bg-[url('/login-tiles.webp')] bg-repeat-x bg-[length:auto_100%] bg-left-bottom"
+          className="h-[72px] w-full shrink-0 bg-[url('/login-tiles.webp')] bg-repeat-x bg-[length:auto_100%] bg-left-bottom"
         />
       </div>
     </main>
