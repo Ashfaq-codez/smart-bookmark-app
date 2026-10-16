@@ -345,9 +345,9 @@ export async function POST(request: Request) {
         const details = await fetchPageDetails(cleanUrl, detectedType);
         // Pages that refuse servers (Medium): use what the extension read from the open page instead.
         // …or, for a Medium post (also on a publication's own domain), its publication's RSS feed.
-        const page = !details.title && detectedType === 'link'
-          ? parsePageCapture(rawPage) || (pageHtml ? pageMetaFromHtml(pageHtml) : null) || (mediumPostId(cleanUrl) ? await fetchMediumFromFeed(cleanUrl) : null)
-          : null;
+        // What the browser or phone saw also fills a gap the server left (a title but no picture).
+        const seen = detectedType === 'link' ? parsePageCapture(rawPage) || (pageHtml ? pageMetaFromHtml(pageHtml) : null) : null;
+        const page = seen || (!details.title && detectedType === 'link' && mediumPostId(cleanUrl) ? await fetchMediumFromFeed(cleanUrl) : null);
         const title = details.title || cleanTitle(page?.title) || null;
         const description = details.description || page?.description || null;
         const image = details.image || page?.image || null;

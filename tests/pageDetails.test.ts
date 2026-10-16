@@ -27,6 +27,32 @@ describe('fetchPageDetails', () => {
     expect(d.image).toBe('https://cdn.example.com/c.png')
   })
 
+  it('finds the picture in twitter:image:src, image_src or the structured data when there is no og:image', async () => {
+    for (const [head, want] of [
+      ['<meta name="twitter:image:src" content="https://cdn.example.com/t.png">', 'https://cdn.example.com/t.png'],
+      ['<link rel="image_src" href="/img/share.jpg">', 'https://example.com/img/share.jpg'],
+      ['<script type="application/ld+json">{"@graph":[{"@type":"Product","image":["https://cdn.example.com/p1.jpg"]}]}</script>', 'https://cdn.example.com/p1.jpg'],
+      ['<script type="application/ld+json">{"@type":"NewsArticle","image":{"url":"https://cdn.example.com/n.jpg"}}</script>', 'https://cdn.example.com/n.jpg'],
+    ]) {
+      vi.mocked(safeFetch).mockResolvedValueOnce(new Response(`<html><head><title>T</title>${head}</head></html>`, { status: 200 }))
+      expect((await fetchPageDetails('https://example.com/a', 'link')).image).toBe(want)
+    }
+  })
+
+  it('ignores picture addresses that are not web addresses', async () => {
+    vi.mocked(safeFetch).mockResolvedValue(new Response(
+      `<html><head><meta property="og:image" content="javascript:alert(1)"><meta name="twitter:image" content="data:image/png;base64,AA"></head></html>`, { status: 200 }))
+    expect((await fetchPageDetails('https://example.com/a', 'link')).image).toBeNull()
+  })
+
+  it('asks like a normal browser (some sites refuse anything else)', async () => {
+    vi.mocked(safeFetch).mockResolvedValue(new Response('<html></html>', { status: 200 }))
+    await fetchPageDetails('https://example.com/a', 'link')
+    const headers = (vi.mocked(safeFetch).mock.calls[0][1] as RequestInit).headers as Record<string, string>
+    expect(headers['User-Agent']).toMatch(/Chrome\/\d+/)
+    expect(headers['Accept-Language']).toBeTruthy()
+  })
+
   it('reads an X post through the vxtwitter helper', async () => {
     vi.mocked(safeFetch).mockResolvedValue(new Response(JSON.stringify({
       text: 'hello world', user_name: 'Ann', user_screen_name: 'ann',

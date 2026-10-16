@@ -245,6 +245,15 @@ describe('page details for sites that refuse servers', () => {
     })
   })
 
+  it('page picture: a relative image_src or the structured data when there is no og:image', () => {
+    const a = new JSDOM('<html><head><title>A</title><link rel="image_src" href="/share.png"></head></html>', { url: 'https://shop.example.com/item/1', runScripts: 'outside-only' })
+    a.window.eval(SRC)
+    expect((a.window as any).inntoitExtract.capturePageMeta(a.window.document).image).toBe('https://shop.example.com/share.png')
+    const b = new JSDOM('<html><head><title>B</title><script type="application/ld+json">{"@type":"Product","image":["https://cdn.example.com/p.jpg"]}</script></head></html>', { url: 'https://shop.example.com/item/2', runScripts: 'outside-only' })
+    b.window.eval(SRC)
+    expect((b.window as any).inntoitExtract.capturePageMeta(b.window.document).image).toBe('https://cdn.example.com/p.jpg')
+  })
+
   it('only for the page itself, never for a link to another page', () => {
     const { ex } = page('https://medium.com/@ev/a', '')
     expect(ex.samePage('https://medium.com/@ev/a#x', 'https://www.medium.com/@ev/a/')).toBe(true)

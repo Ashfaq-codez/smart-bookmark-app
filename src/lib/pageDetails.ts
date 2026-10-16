@@ -7,6 +7,40 @@ export type PageDetails = { title: string | null; description: string | null; im
 
 const EMPTY: PageDetails = { title: null, description: null, image: null };
 
+// Some sites (OpenAI…) refuse anything that doesn't look like a normal browser.
+export const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
+// A page's preview picture, from the usual places in order: og:image, twitter:image, <link rel="image_src">,
+// itemprop="image", then the structured data (ld+json). Relative addresses are made full; https only.
+export function pickPreviewImage($: cheerio.CheerioAPI, pageUrl: string): string | null {
+  const metas = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
+  const candidates: unknown[] = metas.map((k) => $(`meta[property="${k}"]`).attr('content') || $(`meta[name="${k}"]`).attr('content'));
+  candidates.push($('link[rel="image_src"]').attr('href'), $('meta[itemprop="image"]').attr('content'));
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const raw = JSON.parse($(el).contents().text());
+      const list = Array.isArray(raw) ? raw : Array.isArray(raw?.['@graph']) ? raw['@graph'] : [raw];
+      for (const d of list) {
+        const img = Array.isArray(d?.image) ? d.image[0] : d?.image;
+        candidates.push(typeof img === 'string' ? img : img?.url, d?.thumbnailUrl);
+      }
+    } catch { /* not JSON */ }
+  });
+  for (const c of candidates) {
+    if (typeof c !== 'string' || !c.trim() || c.length > 2048) continue;
+    try {
+      const u = new URL(c.trim(), pageUrl);
+      if (u.protocol === 'http:') u.protocol = 'https:';
+      if (u.protocol === 'https:') return u.href;
+    } catch { /* not an address */ }
+  }
+  return null;
+}
+
 // Reads the title, description and cover image of a saved page (or an X post).
 // Never throws: when the page cannot be read it simply returns nothing and the save stays as it was.
 export async function fetchPageDetails(cleanUrl: string, detectedType: string): Promise<PageDetails> {
@@ -36,7 +70,7 @@ export async function fetchPageDetails(cleanUrl: string, detectedType: string): 
     }
 
     const response = await safeFetch(cleanUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
+      headers: BROWSER_HEADERS,
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return EMPTY;
@@ -56,14 +90,7 @@ export async function fetchPageDetails(cleanUrl: string, detectedType: string): 
       description = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || null;
     }
 
-    let image: string | null = null;
-    const scrapedImg = $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content');
-    if (scrapedImg) {
-      try {
-        image = new URL(scrapedImg, cleanUrl).href;
-        if (image.startsWith('http://')) image = image.replace('http://', 'https://');
-      } catch { image = null; }
-    }
+    const image = pickPreviewImage($, cleanUrl);
     // Substack / Medium article: author, publication, date, reading time (shown by the article cards).
     const article = articleFromMeta(cleanUrl, readArticleMeta(html));
     return { title, description, image, article };

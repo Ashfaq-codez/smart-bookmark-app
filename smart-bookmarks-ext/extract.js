@@ -231,6 +231,16 @@
   }
 
   // ---------- page details (for sites that refuse servers, like Medium) ----------
+  // A picture address made full (some pages write "/cover.png"); https only.
+  function absolute(src, doc) {
+    if (!src || typeof src !== 'string') return null;
+    try {
+      const u = new URL(src, doc.baseURI);
+      if (u.protocol === 'http:') u.protocol = 'https:';
+      return u.protocol === 'https:' ? u.href : null;
+    } catch (e) { return null; }
+  }
+
   // The open page's own meta tags. The server checks every field and uses them only when it can't read the page.
   function capturePageMeta(doc) {
     const meta = (k) => {
@@ -241,6 +251,7 @@
     let author = meta('author');
     let publisher = null;
     let published = meta('article:published_time');
+    let ldImage = null;
     doc.querySelectorAll('script[type="application/ld+json"]').forEach((el) => {
       try {
         const raw = JSON.parse(el.textContent || '');
@@ -249,6 +260,8 @@
           if (!author && a && typeof a.name === 'string') author = a.name;
           if (!publisher && d && d.publisher && typeof d.publisher.name === 'string') publisher = d.publisher.name;
           if (!published && d && typeof d.datePublished === 'string') published = d.datePublished;
+          const img = Array.isArray(d && d.image) ? d.image[0] : d && d.image;
+          if (!ldImage && img) ldImage = typeof img === 'string' ? img : (typeof img.url === 'string' ? img.url : null);
         }
       } catch (e) { /* not JSON */ }
     });
@@ -256,14 +269,15 @@
     const out = {
       title: meta('og:title') || meta('twitter:title') || (doc.title || '').trim() || null,
       description: meta('og:description') || meta('description'),
-      image: meta('og:image') || meta('twitter:image'),
+      image: absolute(meta('og:image') || meta('twitter:image') || meta('twitter:image:src')
+        || (doc.querySelector('link[rel="image_src"]') || {}).href || ldImage, doc),
       site_name: meta('og:site_name'),
       author, publisher, published,
       read_label: readLabel,
       generator: meta('generator'),
       android_package: meta('al:android:package'),
     };
-    Object.keys(out).forEach((k) => { if (out[k] == null) delete out[k]; else if (typeof out[k] === 'string') out[k] = out[k].slice(0, 600); });
+    Object.keys(out).forEach((k) => { if (out[k] == null) delete out[k]; else if (typeof out[k] === 'string') out[k] = out[k].slice(0, k === 'image' ? 2048 : 600); });
     return out.title ? out : null;
   }
 
