@@ -26,21 +26,30 @@ function GoogleIcon({ className }: { className?: string }) {
   )
 }
 
-// The card's paper: warm, slightly uneven, soft edges, like the painted one.
-const PAPER = 'bg-[linear-gradient(160deg,#FBF4E8_0%,#F5EAD7_55%,#F1E3CC_100%)] border border-[#E6D6BC] shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_10px_30px_rgba(120,90,50,0.10)]'
+// Watercolour paper (public/login-paper*.webp): fine grain, soft blooms, pigment pooled at the torn (deckled) edges.
+// drop-shadow follows the torn outline, so the sheet seems to rest on the wall.
+const PAPER = 'bg-no-repeat bg-[length:100%_100%] [filter:drop-shadow(0_6px_14px_rgba(110,80,40,0.16))]'
 const INK = 'text-[#4A3F33]'
+
+// The painting fades out at the top and sides, so it sits on the page like a painting on paper.
+const EDGE_FADE = {
+  maskImage: 'linear-gradient(to bottom, transparent, black 12%), linear-gradient(to right, transparent, black 7%, black 93%, transparent)',
+  WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 12%), linear-gradient(to right, transparent, black 7%, black 93%, transparent)',
+  maskComposite: 'intersect',
+  WebkitMaskComposite: 'source-in',
+} as const
 
 function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading: boolean; error: string | null; onSignIn: () => void }) {
   // Wide: sizes in cqw (hundredths of the painting's width) so the card scales with it. Phone: fixed sizes.
   const s = wide
-    ? { pad: 'px-[1.6cqw]', title: 'text-[3cqw]', sub: 'text-[1.65cqw] mt-[0.5cqw]', btn: 'mt-[2.2cqw] w-[18cqw] h-[4cqw] gap-[1cqw] rounded-[0.6cqw] text-[1.4cqw]', icon: 'w-[2.2cqw] h-[2.2cqw]', err: 'text-[0.85cqw] mt-[1cqw]' }
-    : { pad: 'px-6 py-9', title: 'text-[40px]', sub: 'text-[19px] mt-1.5', btn: 'mt-7 w-full max-w-[290px] h-[54px] gap-3 rounded-xl text-[17px]', icon: 'w-7 h-7', err: 'text-[13px] mt-4' }
+    ? { pad: 'px-[1.6cqw]', title: 'text-[3cqw]', sub: 'text-[1.65cqw] mt-[0.5cqw]', btn: 'mt-[2.2cqw] w-[19cqw] h-[4.2cqw] gap-[0.9cqw] text-[1.32cqw]', icon: 'w-[2.2cqw] h-[2.2cqw]', err: 'text-[0.85cqw] mt-[1cqw]' }
+    : { pad: 'px-6 py-9', title: 'text-[40px]', sub: 'text-[19px] mt-1.5', btn: 'mt-7 w-full max-w-[290px] h-[54px] gap-3 text-[17px]', icon: 'w-7 h-7', err: 'text-[13px] mt-4' }
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
-      className={`${hand.className} ${PAPER} ${s.pad} ${INK} flex flex-col items-center justify-center text-center rounded-[6px] ${wide ? 'w-full h-full' : 'w-full max-w-[380px]'}`}
+      className={`${hand.className} ${PAPER} ${s.pad} ${INK} flex flex-col items-center justify-center text-center ${wide ? 'w-full h-full bg-[url(/login-paper.webp)]' : 'w-full max-w-[380px] bg-[url(/login-paper-wide.webp)]'}`}
     >
       <h1 className={`${s.title} leading-tight font-medium`}>Welcome</h1>
       <p className={`${s.sub} leading-tight opacity-90`}>Sign in to continue</p>
@@ -48,7 +57,7 @@ function SignInCard({ wide, loading, error, onSignIn }: { wide: boolean; loading
         type="button"
         onClick={onSignIn}
         disabled={loading}
-        className={`${s.btn} flex items-center justify-center border border-[#D9C7A9] bg-[linear-gradient(180deg,#F6EDDF,#EDE0CB)] shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_2px_6px_rgba(120,90,50,0.12)] transition-[filter,transform] duration-200 hover:brightness-[1.03] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8A6E4B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5EAD7] disabled:opacity-70 disabled:cursor-wait cursor-pointer`}
+        className={`${s.btn} flex items-center justify-center bg-[url(/login-paper-btn.webp)] bg-no-repeat bg-[length:100%_100%] [filter:drop-shadow(0_2px_3px_rgba(110,80,40,0.18))] transition-[filter,transform] duration-200 hover:[filter:drop-shadow(0_4px_8px_rgba(110,80,40,0.22))_brightness(1.03)] active:scale-[0.98] focus:outline-none focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-offset-4 focus-visible:outline-[#8A6E4B] disabled:opacity-70 disabled:cursor-wait cursor-pointer`}
       >
         {loading ? <Loader2 className={`${s.icon} animate-spin`} strokeWidth={1.75} /> : <GoogleIcon className={s.icon} />}
         <span>{loading ? 'Connecting…' : 'Sign in with Google'}</span>
@@ -90,12 +99,13 @@ export default function LoginPage() {
     <main className="min-h-dvh bg-[#FAF4EE] overflow-hidden">
       {/* Wide screens (at least 900px wide and wider than tall by 3:2) */}
       <div className="hidden [@media(min-width:900px)_and_(min-aspect-ratio:3/2)]:flex min-h-dvh flex-col justify-end">
-        <div className="relative w-full aspect-[3168/1344] [container-type:inline-size]">
+        <div className="relative w-[88%] mx-auto aspect-[3168/1344] [container-type:inline-size]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/login-bg.webp"
             alt=""
-            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none [mask-image:linear-gradient(to_bottom,transparent,black_10%)]"
+            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+            style={EDGE_FADE}
             draggable={false}
           />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
