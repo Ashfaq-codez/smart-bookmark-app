@@ -343,11 +343,17 @@ export default function BookmarkCard({
                 onError={() => setFallbackStep(prev => prev + 1)} 
               />
             ) : (
-              <div className="w-full aspect-[4/3] sm:aspect-video flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815] relative overflow-hidden group-hover/fallback:opacity-90 transition-opacity">
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-black/5 dark:text-white/5 uppercase select-none pointer-events-none">
-                    {getDomain(bookmark.url).substring(0, 1)}
-                 </div>
-                 <span className="text-sm font-semibold text-[#171A17] dark:text-[#F3F0E9] z-10 text-center line-clamp-2 px-4 leading-tight">{getDomain(bookmark.url)}</span>
+              // No picture could be found (yet): a text preview of the page instead of an empty box.
+              <div className="w-full aspect-[4/3] sm:aspect-video flex flex-col justify-between gap-3 p-5 bg-gradient-to-br from-[#F5F3EB] to-[#EAE6D8] dark:from-[#202520] dark:to-[#151815] group-hover/fallback:opacity-90 transition-opacity">
+                <div className="min-w-0 flex flex-col gap-1.5">
+                  <span className="text-[15px] font-semibold text-[#171A17] dark:text-[#F3F0E9] line-clamp-3 leading-snug break-words">
+                    {hasValidTitle && bookmark.title !== bookmark.url ? bookmark.title : getDomain(bookmark.url)}
+                  </span>
+                  {bookmark.description && bookmark.description !== bookmark.title && (
+                    <span className="text-[12.5px] text-[#5C605C] dark:text-[#A9ADA6] line-clamp-3 leading-relaxed break-words">{bookmark.description}</span>
+                  )}
+                </div>
+                <span className="text-[11.5px] font-medium text-[#8A8F88] dark:text-[#7E837C] truncate">{getDomain(bookmark.url)}</span>
               </div>
             )}
           </div>
