@@ -42,3 +42,47 @@ export async function storeScreenshot(
     return null;
   }
 }
+
+// A page's own preview picture, copied into our storage (attachments/<user>/img-<uuid>.webp).
+// Many sites refuse to show their pictures on other websites (hotlink protection); our copy always shows.
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+export { isOurStorage } from '@/lib/previewRule';
+
+export async function copyImageToStorage(
+  supabase: SupabaseClient,
+  userId: string,
+  imageUrl: string,
+  pageUrl: string,
+): Promise<{ stored: { path: string; publicUrl: string } | null; reason: string }> {
+  try {
+    const { safeFetch } = await import('@/utils/safeFetch');
+    const { BROWSER_HEADERS } = await import('@/lib/pageDetails');
+    const res = await safeFetch(imageUrl, {
+      // Sent as if the page itself showed it: most hotlink checks only look at this.
+      headers: { ...BROWSER_HEADERS, Accept: 'image/avif,image/webp,image/*,*/*;q=0.8', Referer: pageUrl },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return { stored: null, reason: `picture refused (status ${res.status})` };
+    const type = res.headers.get('content-type') || '';
+    if (!type.startsWith('image/')) return { stored: null, reason: `not a picture (${type.slice(0, 40) || 'unknown type'})` };
+    if (Number(res.headers.get('content-length') || 0) > MAX_IMAGE_BYTES) return { stored: null, reason: 'picture too large' };
+    const input = Buffer.from(await res.arrayBuffer());
+    if (input.length > MAX_IMAGE_BYTES) return { stored: null, reason: 'picture too large' };
+    const meta = await sharp(input, { limitInputPixels: 50_000_000 }).metadata();
+    // Tracking pixels and tiny icons are not a preview.
+    if ((meta.width || 0) < 120 || (meta.height || 0) < 60) return { stored: null, reason: `picture too small (${meta.width}×${meta.height})` };
+    const webp = await sharp(input, { limitInputPixels: 50_000_000 })
+      .rotate()
+      .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toBuffer();
+    const path = `${userId}/img-${crypto.randomUUID()}.webp`;
+    const { error } = await supabase.storage.from('attachments').upload(path, webp, { contentType: 'image/webp', upsert: false });
+    if (error) return { stored: null, reason: `storage upload failed: ${error.message}` };
+    const { data: { publicUrl } } = supabase.storage.from('attachments').getPublicUrl(path);
+    return { stored: { path, publicUrl }, reason: 'ok' };
+  } catch (e: any) {
+    return { stored: null, reason: `picture could not be read: ${String(e?.message || e).slice(0, 200)}` };
+  }
+}

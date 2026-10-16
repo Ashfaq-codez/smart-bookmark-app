@@ -53,5 +53,8 @@
     "serialize-javascript": "^6.0.2",
     "terser": "^5.14.2",
     "prosemirror-view": "1.37.2"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

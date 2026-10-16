@@ -1,5 +1,3 @@
-import chromium from '@sparticuz/chromium';
-import puppeteer from 'puppeteer-core';
 import { isSafeUrl } from '@/utils/safeFetch';
 
 // Our own screenshot of a page, taken by a headless Chrome running inside the app (no outside service).
@@ -20,17 +18,28 @@ export function looksBlocked(status: number | null, title: string): boolean {
   return BLOCK_TITLE.test(title.trim());
 }
 
+export type ShotResult = { shot: Buffer | null; reason: string };
+
 export async function takeScreenshot(url: string): Promise<Buffer | null> {
-  if (!(await isSafeUrl(url))) return null;
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+  return (await screenshotWithReason(url)).shot;
+}
+
+// The screenshot plus, when there is none, why (shown by the owner's check page).
+export async function screenshotWithReason(url: string): Promise<ShotResult> {
+  if (!(await isSafeUrl(url))) return { shot: null, reason: 'not a public web address' };
+  let browser: { close(): Promise<void> } | null = null;
   try {
-    browser = await puppeteer.launch({
+    // Loaded only when needed: a problem with Chrome can never break saving.
+    const chromium = (await import('@sparticuz/chromium')).default;
+    const puppeteer = (await import('puppeteer-core')).default;
+    const b = await puppeteer.launch({
       args: await puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' }),
       // CHROME_PATH: only for running the app on your own computer (a local Chrome); Vercel uses the bundled one.
       executablePath: process.env.CHROME_PATH || (await chromium.executablePath()),
       headless: 'shell',
     });
-    const page = await browser.newPage();
+    browser = b;
+    const page = await b.newPage();
     await page.setUserAgent({ userAgent: UA });
     await page.setViewport({ width: WIDTH, height: HEIGHT });
 
@@ -53,16 +62,18 @@ export async function takeScreenshot(url: string): Promise<Buffer | null> {
 
     const res = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 12_000 });
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 3_000 }).catch(() => {});
-    if (looksBlocked(res?.status() ?? null, await page.title().catch(() => ''))) return null;
+    const status = res?.status() ?? null;
+    const title = await page.title().catch(() => '');
+    if (looksBlocked(status, title)) return { shot: null, reason: `the site showed a blocked page (status ${status}, title "${title.slice(0, 60)}")` };
     // Almost no text (Amazon's "continue shopping" robot check, an empty app shell): not worth a picture.
     const words = await page.evaluate(() => (document.body?.innerText || '').trim().length).catch(() => 0);
-    if (words < MIN_TEXT) return null;
+    if (words < MIN_TEXT) return { shot: null, reason: `the page was almost empty (${words} characters of text)` };
 
     const shot = await page.screenshot({ type: 'jpeg', quality: 80, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
-    return Buffer.from(shot);
+    return { shot: Buffer.from(shot), reason: 'ok' };
   } catch (e: any) {
     console.error('[server-screenshot] failed:', e?.message);
-    return null;
+    return { shot: null, reason: `Chrome error: ${String(e?.message || e).slice(0, 300)}` };
   } finally {
     await browser?.close().catch(() => {});
   }

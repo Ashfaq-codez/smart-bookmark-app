@@ -7,7 +7,8 @@ type Ctx = { params: Promise<{ id: string }> };
 // Starting a headless Chrome and loading the page can take a while.
 export const maxDuration = 60;
 
-// "This link card has no picture": read the page again, or take our own screenshot of it. The card then refreshes
+// "This link card has no picture of its own": copy its picture into our storage, read the page again, or take our
+// own screenshot of it. The card then refreshes
 // through the normal live update. Only the owner's own bookmark, and at most once a day per card.
 export async function POST(_request: Request, { params }: Ctx) {
   try {
@@ -29,8 +30,9 @@ export async function POST(_request: Request, { params }: Ctx) {
     if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (!needsPreview(row)) return NextResponse.json({ status: 'skipped' });
 
-    const status = await repairPreview(supabase, user.id, row);
-    return NextResponse.json({ status });
+    const outcome = await repairPreview(supabase, user.id, row);
+    if (outcome.status === 'none') console.warn('[preview] no picture for', id, JSON.stringify(outcome.steps));
+    return NextResponse.json(outcome);
   } catch (error: any) {
     console.error('[preview] failed:', error?.code, error?.message);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });

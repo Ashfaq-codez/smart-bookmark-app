@@ -6,7 +6,7 @@ vi.mock('@/utils/supabase/server', () => ({ createClient: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }))
 vi.mock('@/utils/safeFetch', () => ({ isSafeUrl: vi.fn(), safeFetch: vi.fn() }))
 // Never start a real headless Chrome in tests.
-vi.mock('@/lib/serverScreenshot', () => ({ takeScreenshot: vi.fn(async () => null) }))
+vi.mock('@/lib/serverScreenshot', () => ({ screenshotWithReason: vi.fn(async () => ({ shot: null, reason: 'test' })) }))
 // In real life the page is read AFTER the answer is sent. In tests we collect that work and run it on demand.
 const afterTasks: (() => Promise<void>)[] = []
 vi.mock('@/lib/runAfterResponse', () => ({ runAfterResponse: (task: () => Promise<void>) => { afterTasks.push(task) } }))
@@ -16,7 +16,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { isSafeUrl, safeFetch } from '@/utils/safeFetch'
 import { POST, OPTIONS } from '@/app/api/save/route'
-import { takeScreenshot } from '@/lib/serverScreenshot'
+import { screenshotWithReason } from '@/lib/serverScreenshot'
 import { fakeSupabase, FakeOptions } from './helpers/fakeSupabase'
 
 const ORIGIN = 'https://smart-bookmark-app-lime.vercel.app'
@@ -222,10 +222,12 @@ describe('POST /api/save: reading the page (after saving)', () => {
     await finishBackgroundWork()
 
     expect(fake.updates).toHaveLength(1)
+    // the picture couldn't be copied here (the test page answers HTML), so its own address is kept
     expect(fake.updates[0].patch).toEqual({
       title: 'Great Page',
       description: 'About the page',
       image_url: 'https://example.com/cover.png',
+      preview_tried_at: expect.any(String),
     })
     // only ever changes this person's own row
     expect(fake.updates[0].filters).toEqual([['id', 1], ['user_id', 'user-1']])
@@ -254,24 +256,30 @@ describe('POST /api/save: reading the page (after saving)', () => {
     expect(fake.uploads[0].contentType).toBe('image/webp')
     expect(fake.updates[0].patch).toMatchObject({ image_url: `https://storage.test/attachments/${fake.uploads[0].path}`, file_path: fake.uploads[0].path })
 
-    // a page with its own picture: the screenshot is ignored
+    // a page with its own picture: that picture is copied to our storage and the screenshot is ignored
+    const cover = await sharp({ create: { width: 600, height: 315, channels: 3, background: '#123456' } }).png().toBuffer()
     const fake2 = loggedIn()
-    vi.mocked(safeFetch).mockImplementation(async () => new Response(PAGE_HTML, { status: 200 }))
+    vi.mocked(safeFetch).mockImplementation(async (u: any) => String(u).endsWith('/cover.png')
+      ? new Response(cover, { status: 200, headers: { 'content-type': 'image/png' } })
+      : new Response(PAGE_HTML, { status: 200 }))
     await post({ url: 'https://example.com/b', page: { title: 'x' }, screenshot: shot })
     await finishBackgroundWork()
-    expect(fake2.uploads).toHaveLength(0)
-    expect(fake2.updates[0].patch.image_url).toBe('https://example.com/cover.png')
+    expect(fake2.uploads).toHaveLength(1)
+    expect(fake2.uploads[0].path).toMatch(/^user-1\/img-/)
+    const sent = vi.mocked(safeFetch).mock.calls.find(([u]) => String(u).endsWith('/cover.png'))!
+    expect((sent[1] as any).headers.Referer).toBe('https://example.com/b')   // looks like the page itself showing it
+    expect(fake2.updates[0].patch.image_url).toBe(`https://storage.test/attachments/${fake2.uploads[0].path}`)
   })
 
   it('takes our own screenshot when nothing has a picture and the extension sent none (phone saves)', async () => {
     const sharp = (await import('sharp')).default
-    vi.mocked(takeScreenshot).mockResolvedValueOnce(await sharp({ create: { width: 1280, height: 960, channels: 3, background: '#fff' } }).jpeg().toBuffer())
+    vi.mocked(screenshotWithReason).mockResolvedValueOnce({ shot: await sharp({ create: { width: 1280, height: 960, channels: 3, background: '#fff' } }).jpeg().toBuffer(), reason: 'ok' })
     vi.mocked(isSafeUrl).mockResolvedValue(true)
     vi.mocked(safeFetch).mockResolvedValue(new Response('<html><head><title>Plain</title></head></html>', { status: 200 }))
     const fake = loggedIn()
     await post({ url: 'https://plain.example.com/c' })
     await finishBackgroundWork()
-    expect(takeScreenshot).toHaveBeenCalledWith('https://plain.example.com/c')
+    expect(screenshotWithReason).toHaveBeenCalledWith('https://plain.example.com/c')
     expect(fake.uploads[0].path).toMatch(/^user-1\/shot-/)
     expect(fake.updates[0].patch).toMatchObject({ image_url: expect.stringContaining('/shot-'), file_path: fake.uploads[0].path, preview_tried_at: expect.any(String) })
   })

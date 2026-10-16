@@ -15,15 +15,21 @@ describe('needsPreview', () => {
   it('a link card with no picture that was never tried', () => {
     expect(needsPreview(link, now)).toBe(true)
   })
-  it('not when it already has a picture or a stored file', () => {
-    expect(needsPreview({ ...link, image_url: 'https://cdn.example.com/a.png' }, now)).toBe(false)
+  it('a picture on someone else\'s site is copied to our storage; one already ours or a stored file is done', () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co')
+    expect(needsPreview({ ...link, image_url: 'https://cdn.example.com/a.png' }, now)).toBe(true)
+    expect(needsPreview({ ...link, image_url: 'https://abc.supabase.co/storage/v1/object/public/attachments/u/img-1.webp' }, now)).toBe(false)
     expect(needsPreview({ ...link, file_path: 'u/shot-1.webp' }, now)).toBe(false)
+    vi.unstubAllEnvs()
+  })
+  it('also for GitHub and article cards (they show the same picture area)', () => {
+    expect(needsPreview({ ...link, type: 'github' }, now)).toBe(true)
   })
   it('not for notes, images, social posts or internal note addresses', () => {
     for (const type of ['note', 'image', 'twitter', 'youtube']) expect(needsPreview({ ...link, type }, now)).toBe(false)
     expect(needsPreview({ ...link, url: 'https://smart-bookmark.internal/note-1' }, now)).toBe(false)
   })
-  it('at most once a day', () => {
+  it('at most once every few hours', () => {
     expect(needsPreview({ ...link, preview_tried_at: new Date(now - 60_000).toISOString() }, now)).toBe(false)
     expect(needsPreview({ ...link, preview_tried_at: new Date(now - PREVIEW_RETRY_MS).toISOString() }, now)).toBe(true)
   })

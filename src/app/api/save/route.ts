@@ -19,7 +19,8 @@ import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
 import { isOverSaveLimit } from '@/lib/saveLimit';
 import { parseInstagramCapture, instagramTitle, storeInstagramImage } from '@/lib/instagramCapture';
-import { parseScreenshot, storeScreenshot } from '@/lib/pageScreenshot';
+import { parseScreenshot, storeScreenshot, copyImageToStorage } from '@/lib/pageScreenshot';
+import { needsPreview } from '@/lib/previewRule';
 import { screenshotToStorage } from '@/lib/linkPreview';
 
 // The page details are read after the answer is sent; give that background work room to finish.
@@ -359,13 +360,16 @@ export async function POST(request: Request) {
         const patch: Record<string, unknown> = {};
         if (!givenTitle && !youTubeTitle && title && !/^(\(\d+\)\s*)?YouTube$/i.test(title)) patch.title = title;
         if (!customDesc && description) patch.description = description;
-        if (!customImg && image) patch.image_url = image;
-        // No picture anywhere: the screenshot the extension took of the page (kept in our own storage).
-        const shot = !customImg && !image && detectedType === 'link' ? parseScreenshot(rawScreenshot) : null;
+        // Link cards keep their picture in our own storage (many sites refuse to show theirs on other websites):
+        // the page's picture copied, else the screenshot the extension took, else our own screenshot (phone saves).
         let shotPath: string | null = null;
-        if (!customImg && !image && detectedType === 'link') {
-          // …or, when the extension sent none (phone saves), our own screenshot. Tried once now; the card retries once a day.
-          const stored = shot ? await storeScreenshot(db, userId, shot) : await screenshotToStorage(db, userId, cleanUrl);
+        const ownPreview = !customImg && needsPreview({ url: cleanUrl, type: detectedType });
+        if (!customImg && image) patch.image_url = image;
+        if (ownPreview) {
+          const shot = parseScreenshot(rawScreenshot);
+          const stored = (image ? (await copyImageToStorage(db, userId, image, cleanUrl)).stored : null)
+            || (shot ? await storeScreenshot(db, userId, shot) : null)
+            || (image ? null : await screenshotToStorage(db, userId, cleanUrl));
           if (stored) { patch.image_url = stored.publicUrl; patch.file_path = stored.path; shotPath = stored.path; }
           patch.preview_tried_at = new Date().toISOString();
         }
