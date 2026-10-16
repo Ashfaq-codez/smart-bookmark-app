@@ -20,9 +20,10 @@ import { htmlToPlainText } from '@/lib/htmlToPlainText';
 import { isOverSaveLimit } from '@/lib/saveLimit';
 import { parseInstagramCapture, instagramTitle, storeInstagramImage } from '@/lib/instagramCapture';
 import { parseScreenshot, storeScreenshot } from '@/lib/pageScreenshot';
+import { screenshotToStorage } from '@/lib/linkPreview';
 
 // The page details are read after the answer is sent; give that background work room to finish.
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const ALLOWED_ORIGINS = new Set([
   'https://smart-bookmark-app-lime.vercel.app',
@@ -362,9 +363,11 @@ export async function POST(request: Request) {
         // No picture anywhere: the screenshot the extension took of the page (kept in our own storage).
         const shot = !customImg && !image && detectedType === 'link' ? parseScreenshot(rawScreenshot) : null;
         let shotPath: string | null = null;
-        if (shot) {
-          const stored = await storeScreenshot(db, userId, shot);
+        if (!customImg && !image && detectedType === 'link') {
+          // …or, when the extension sent none (phone saves), our own screenshot. Tried once now; the card retries once a day.
+          const stored = shot ? await storeScreenshot(db, userId, shot) : await screenshotToStorage(db, userId, cleanUrl);
           if (stored) { patch.image_url = stored.publicUrl; patch.file_path = stored.path; shotPath = stored.path; }
+          patch.preview_tried_at = new Date().toISOString();
         }
         if (article && detectedType === 'link') {
           patch.post_data = article;

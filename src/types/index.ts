@@ -25,6 +25,7 @@ export type Bookmark = {
   post_data?: PostData | null;
   post_data_fetched_at?: string | null;
   post_data_failed_at?: string | null;
+  preview_tried_at?: string | null;
 };
 
 // ---------- X post snapshot (bookmarks.post_data) ----------

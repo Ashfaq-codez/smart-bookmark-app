@@ -9,7 +9,7 @@ export const MAX_PINS = 12
 
 // Everything a card needs, WITHOUT the full note body (content_preview is a trimmed copy made by the database).
 export const LIST_COLUMNS =
-  'id,created_at,updated_at,title,url,user_id,category,sub_category,description,image_url,tags,type,file_path,file_type,content_preview,pinned_at,post_data,post_data_fetched_at,post_data_failed_at'
+  'id,created_at,updated_at,title,url,user_id,category,sub_category,description,image_url,tags,type,file_path,file_type,content_preview,pinned_at,post_data,post_data_fetched_at,post_data_failed_at,preview_tried_at'
 
 export type SortOrder = 'desc' | 'asc'
 

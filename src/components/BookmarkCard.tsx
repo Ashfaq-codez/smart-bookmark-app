@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSnapshotRepair } from '@/hooks/useSnapshotRepair'
+import { usePreviewRepair } from '@/hooks/usePreviewRepair'
 import { cardHoverText } from '@/utils/bookmarkHelpers'
 import { RedditCard } from './social/RedditCard'
 import { ArticleCard } from './social/ArticleCard'
@@ -145,6 +146,7 @@ export default function BookmarkCard({
   
   const displayType = deriveDisplayType(bookmark);
   useSnapshotRepair(bookmark, displayType || 'link');
+  usePreviewRepair(bookmark, displayType || 'link');
   const ytVideoId = getYouTubeId(bookmark.url);
   const isYouTubeShort = bookmark.url?.toLowerCase().includes('/shorts/');
   const ytHighResThumbnail = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg` : undefined;

@@ -5,6 +5,8 @@ import crypto from 'node:crypto'
 vi.mock('@/utils/supabase/server', () => ({ createClient: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }))
 vi.mock('@/utils/safeFetch', () => ({ isSafeUrl: vi.fn(), safeFetch: vi.fn() }))
+// Never start a real headless Chrome in tests.
+vi.mock('@/lib/serverScreenshot', () => ({ takeScreenshot: vi.fn(async () => null) }))
 // In real life the page is read AFTER the answer is sent. In tests we collect that work and run it on demand.
 const afterTasks: (() => Promise<void>)[] = []
 vi.mock('@/lib/runAfterResponse', () => ({ runAfterResponse: (task: () => Promise<void>) => { afterTasks.push(task) } }))
@@ -14,6 +16,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { isSafeUrl, safeFetch } from '@/utils/safeFetch'
 import { POST, OPTIONS } from '@/app/api/save/route'
+import { takeScreenshot } from '@/lib/serverScreenshot'
 import { fakeSupabase, FakeOptions } from './helpers/fakeSupabase'
 
 const ORIGIN = 'https://smart-bookmark-app-lime.vercel.app'
@@ -260,6 +263,19 @@ describe('POST /api/save: reading the page (after saving)', () => {
     expect(fake2.updates[0].patch.image_url).toBe('https://example.com/cover.png')
   })
 
+  it('takes our own screenshot when nothing has a picture and the extension sent none (phone saves)', async () => {
+    const sharp = (await import('sharp')).default
+    vi.mocked(takeScreenshot).mockResolvedValueOnce(await sharp({ create: { width: 1280, height: 960, channels: 3, background: '#fff' } }).jpeg().toBuffer())
+    vi.mocked(isSafeUrl).mockResolvedValue(true)
+    vi.mocked(safeFetch).mockResolvedValue(new Response('<html><head><title>Plain</title></head></html>', { status: 200 }))
+    const fake = loggedIn()
+    await post({ url: 'https://plain.example.com/c' })
+    await finishBackgroundWork()
+    expect(takeScreenshot).toHaveBeenCalledWith('https://plain.example.com/c')
+    expect(fake.uploads[0].path).toMatch(/^user-1\/shot-/)
+    expect(fake.updates[0].patch).toMatchObject({ image_url: expect.stringContaining('/shot-'), file_path: fake.uploads[0].path, preview_tried_at: expect.any(String) })
+  })
+
   it('ignores a screenshot that is not a picture', async () => {
     vi.mocked(isSafeUrl).mockResolvedValue(true)
     vi.mocked(safeFetch).mockResolvedValue(new Response('<html><head><title>T</title></head></html>', { status: 200 }))
@@ -294,7 +310,9 @@ describe('POST /api/save: reading the page (after saving)', () => {
 
     expect(res.status).toBe(200)
     expect(fake.inserted[0].title).toBe('https://example.com/a')
-    expect(fake.updates).toHaveLength(0)
+    // only "a picture was looked for" is noted (the card tries again tomorrow)
+    expect(fake.updates).toHaveLength(1)
+    expect(Object.keys(fake.updates[0].patch)).toEqual(['preview_tried_at'])
   })
 
   it('does not break if the later update fails', async () => {
@@ -317,7 +335,7 @@ describe('POST /api/save: reading the page (after saving)', () => {
     expect(res.status).toBe(200)
     expect(safeFetch).not.toHaveBeenCalled()
     expect(fake.inserted[0].title).toBe('http://192.168.1.10/admin')
-    expect(fake.updates).toHaveLength(0)
+    expect(fake.updates.every((u) => Object.keys(u.patch).join() === 'preview_tried_at')).toBe(true)
   })
 
   it('does not read the page for notes or images', async () => {
