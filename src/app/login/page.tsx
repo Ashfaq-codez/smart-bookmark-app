@@ -128,108 +128,138 @@ function Petals({ petals, unit }: { petals: Petal[]; unit: 'cqw' | 'px' }) {
   )
 }
 
-// A small bluebird (blue body, orange beak) flying around the picture like a real small bird: a few quick wingbeats,
-// then a glide with the wings held out, over and over. It follows a smooth curve at a steady speed, tilts nose-up
-// when climbing and nose-down when diving, rises a little on every downstroke and turns to face the way it flies.
-// Its path keeps clear of the sign-in card. Points are in % of the box it flies in.
+// A common kingfisher, flying the way real ones do: fast, straight, low dashes with the wings whirring too quickly
+// to see clearly, sudden changes of speed and direction, short hovers with the body almost upright and the bill
+// pointing down, and a quick angled dip before dashing off again. It never glides. Its route keeps clear of the
+// sign-in card. Points are in % of the box it flies in.
 type Pt = [number, number]
-// Desktop: around the window and the branch, and over the top of the wall (the card is on the right, 72%–95%).
-const DESKTOP_FLIGHT: Pt[] = [[-8, 34], [12, 16], [32, 10], [50, 18], [64, 12], [68, 30], [56, 46], [40, 38], [26, 52], [10, 44], [-8, 34]]
-// Phone: over the window picture at the top, then down past the card and back up.
-const PHONE_FLIGHT: Pt[] = [[-14, 14], [20, 6], [56, 10], [86, 24], [74, 38], [40, 34], [14, 56], [20, 84], [56, 90], [88, 76], [70, 30], [30, 20], [-14, 14]]
+type Leg = { to: Pt; s: number; hover?: boolean }
+// Desktop: in from the left low over the window, a hover by the branch, a dip, dashes over the wall, and away.
+const DESKTOP_FLIGHT: { from: Pt; legs: Leg[] } = { from: [-8, 46], legs: [
+  { to: [20, 40], s: 1.6 }, { to: [34, 30], s: 1.1 }, { to: [36, 28], s: 1.4, hover: true },
+  { to: [44, 44], s: 0.7 }, { to: [62, 26], s: 1.4 }, { to: [63, 25], s: 1.2, hover: true },
+  { to: [44, 14], s: 1.2 }, { to: [16, 22], s: 1.5 }, { to: [-8, 46], s: 1.3 }, { to: [-8, 46], s: 6 },
+] }
+// Phone: across the window picture, a hover by the branch, down the side of the card and back.
+const PHONE_FLIGHT: { from: Pt; legs: Leg[] } = { from: [-16, 22], legs: [
+  { to: [40, 16], s: 1.5 }, { to: [72, 22], s: 1 }, { to: [73, 21], s: 1.4, hover: true },
+  { to: [30, 34], s: 1.1 }, { to: [10, 86], s: 1.6 }, { to: [60, 92], s: 1.2 }, { to: [96, 82], s: 0.9 },
+  { to: [80, 32], s: 1.6 }, { to: [-16, 22], s: 1.4 }, { to: [-16, 22], s: 6 },
+] }
 
-// A smooth curve through the points (Catmull-Rom), sampled finely; each sample gets its time (by distance, so the
-// speed is steady), its facing (right or left) and its tilt (from how steeply it climbs or dives, at most 20°).
-function flight(points: Pt[], steps = 14) {
-  const P = (i: number) => points[Math.max(0, Math.min(points.length - 1, i))]
-  const pts: Pt[] = []
-  for (let i = 0; i < points.length - 1; i++) {
-    const [p0, p1, p2, p3] = [P(i - 1), P(i), P(i + 1), P(i + 2)]
-    for (let k = 0; k < steps; k++) {
-      const t = k / steps, t2 = t * t, t3 = t2 * t
-      const c = (a: number, b: number, c2: number, d: number) => 0.5 * (2 * b + (-a + c2) * t + (2 * a - 5 * b + 4 * c2 - d) * t2 + (-a + 3 * b - 3 * c2 + d) * t3)
-      pts.push([c(p0[0], p1[0], p2[0], p3[0]), c(p0[1], p1[1], p2[1], p3[1])])
+// Keyframes for the whole route: where it is, which way it faces and how it is tilted, with the time of each.
+// Dashes speed up and slow down (a fast burst), hovers wobble on the spot with the body upright.
+function route({ from, legs }: { from: Pt; legs: Leg[] }) {
+  const left = [`${from[0]}%`], top = [`${from[1]}%`], rot = [0], head = [0], face = [1], at = [0]
+  const easeL: ([number, number, number, number] | 'linear')[] = []
+  let pos = from, t = 0, facing = 1
+  for (const leg of legs) {
+    const dx = leg.to[0] - pos[0], dy = leg.to[1] - pos[1]
+    if (leg.hover) {
+      // hovering: tiny bobs on the spot, body tipped up almost upright, head turned so the bill points down
+      const wob: Pt[] = [[leg.to[0] + 0.4, leg.to[1] - 0.6], [leg.to[0] - 0.3, leg.to[1] + 0.4], [leg.to[0] + 0.2, leg.to[1] - 0.3], leg.to]
+      wob.forEach((w, i) => {
+        t += leg.s / wob.length
+        left.push(`${w[0]}%`); top.push(`${w[1]}%`); rot.push(-58 + (i % 2 ? 4 : -3)); head.push(92 + (i % 2 ? -4 : 3)); face.push(facing); at.push(t)
+        easeL.push('linear' as const)
+      })
+    } else {
+      if (Math.abs(dx) > 0.5) facing = dx >= 0 ? 1 : -1
+      // a dash: body level, nose slightly into the climb or dip
+      const tilt = Math.max(-14, Math.min(22, (Math.atan2(dy, Math.abs(dx) || 0.001) * 180) / Math.PI * 0.5))
+      t += leg.s
+      left.push(`${leg.to[0]}%`); top.push(`${leg.to[1]}%`); rot.push(tilt); head.push(0); face.push(facing); at.push(t)
+      easeL.push([0.3, 0, 0.2, 1])   // bursts off quickly, brakes into the next move
     }
+    pos = leg.to
   }
-  pts.push(points[points.length - 1])
-  const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]))
-  const total = seg.reduce((x, y) => x + y, 0)
-  const times = [0]
-  seg.forEach((len, i) => times.push(times[i] + len / total))
-  times[times.length - 1] = 1
-  const dir = pts.map((p, i) => { const q = pts[Math.min(i + 1, pts.length - 1)], o = pts[Math.max(i - 1, 0)]; return [q[0] - o[0], q[1] - o[1]] })
-  const face = dir.map(([dx]) => (dx >= 0 ? 1 : -1))
-  const tilt = dir.map(([dx, dy]) => Math.max(-20, Math.min(20, (Math.atan2(dy, Math.abs(dx) || 0.001) * 180) / Math.PI * 0.75)))
-  return { left: pts.map((p) => `${p[0]}%`), top: pts.map((p) => `${p[1]}%`), times, face, tilt }
+  return { left, top, rot, head, face, times: at.map((x) => x / t), duration: t, ease: easeL }
 }
 
-// The near wing in three positions (same drawing steps, so it can move smoothly between them):
-// raised, held out level (gliding) and swept down. The shoulder is at (28, 18).
-const WING_UP = 'M28 18 C25 7 17 0 7 1 C11 4 14 7 17 10 C14 9 11 9 9 10 C14 13 20 16 26 20 Z'
-const WING_LEVEL = 'M28 18 C22 13 12 12 2 13 C7 16 11 17 14 18 C11 19 9 20 7 21 C13 22 20 22 26 21 Z'
-const WING_DOWN = 'M28 18 C25 24 19 32 11 37 C14 32 16 29 17 26 C15 27 13 29 11 31 C15 26 20 22 26 20 Z'
+// The near wing, short and rounded like a kingfisher's, in three positions (same drawing steps so it can move
+// smoothly between them). The shoulder is at (31, 17).
+const WING_UP = 'M31 17 C29 8 23 2 15 1 C17 4 19 7 20 9 C18 8 16 8 14 9 C19 12 25 15 29 19 Z'
+const WING_MID = 'M31 17 C26 13 18 12 10 14 C14 16 17 17 19 18 C17 19 15 20 13 21 C19 22 25 21 29 20 Z'
+const WING_DOWN = 'M31 17 C29 24 24 31 17 35 C19 31 20 28 21 26 C19 27 17 28 15 30 C19 26 24 22 29 20 Z'
+// whirring: one stroke in 45 ms, back and forth, so a full beat takes under a tenth of a second
+const WHIRR = { duration: 0.045, repeat: Infinity, repeatType: 'mirror' as const, ease: 'easeInOut' as const }
 
-// One round: four quick wingbeats, then a glide, then lifting the wings for the next beats (2.4 s).
-const BEAT = 2.4
-const WING_KEYS = [WING_LEVEL, WING_UP, WING_DOWN, WING_UP, WING_DOWN, WING_UP, WING_DOWN, WING_UP, WING_DOWN, WING_LEVEL, WING_LEVEL, WING_LEVEL]
-const WING_TIMES = [0, 0.04, 0.1, 0.16, 0.22, 0.28, 0.34, 0.4, 0.46, 0.54, 0.92, 1]
-// the body rises a little on each downstroke, then sinks gently while gliding
-const BOB_KEYS = [0, 0.6, -2.2, 0.6, -2.2, 0.6, -2.2, 0.6, -2.2, -1.5, 1.2, 0]
-const ease = (n: number) => Array.from({ length: n }, () => 'easeInOut' as const)
-
-function Bird({ path, size, duration }: { path: Pt[]; size: string; duration: number }) {
+function Bird({ path, size }: { path: { from: Pt; legs: Leg[] }; size: string }) {
   const reduce = useReducedMotion()
   // each bird's colour fills need their own names (the desktop and the phone bird are both on the page)
   const id = useId().replace(/:/g, '')
+  const r = route(path)
+  const go = (ease: typeof r.ease | 'linear') => ({ duration: r.duration, times: r.times, repeat: Infinity, ease })
   if (reduce) return null
-  const f = flight(path)
-  const loop = { duration, times: f.times, repeat: Infinity, ease: 'linear' as const }
-  const flap = { duration: BEAT, times: WING_TIMES, repeat: Infinity, ease: ease(WING_KEYS.length - 1) }
+  const turn = (p: number) => (p < 0.12 ? p / 0.12 : 1)
+  const u = (n: string) => `url(#${n}-${id})`
   return (
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
       <motion.div
         className="absolute"
-        style={{ width: size, height: `calc(${size} * 0.67)`, left: f.left[0], top: f.top[0], marginLeft: `calc(${size} / -2)` }}
-        animate={{ left: f.left, top: f.top, scaleX: f.face }}
-        transition={{ left: loop, top: loop, scaleX: loop }}
+        style={{ width: size, height: `calc(${size} * 0.58)`, left: r.left[0], top: r.top[0], marginLeft: `calc(${size} / -2)` }}
+        animate={{ left: r.left, top: r.top, scaleX: r.face }}
+        // turning round is quick: done in the first moment of the dash, not stretched over it
+        transition={{ left: go(r.ease), top: go(r.ease), scaleX: { duration: r.duration, times: r.times, repeat: Infinity, ease: turn } }}
       >
-        <motion.div className="w-full h-full" animate={{ rotate: f.tilt }} transition={{ rotate: loop }}>
-          <motion.svg viewBox="0 0 60 40" className="w-full h-full block overflow-visible [filter:drop-shadow(0_3px_3px_rgba(30,50,80,0.22))]"
-            animate={{ y: BOB_KEYS }} transition={{ y: flap }}>
+        <motion.div className="w-full h-full" animate={{ rotate: r.rot }} transition={{ rotate: go(r.ease) }}>
+          <svg viewBox="0 0 70 40" className="w-full h-full block overflow-visible [filter:drop-shadow(0_3px_2.5px_rgba(20,40,60,0.25))]">
+            <g filter={`url(#kf-paint-${id})`}>
             <defs>
-              <linearGradient id={`bird-back-${id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#2F6FB8" /><stop offset="0.55" stopColor="#3D86CF" /><stop offset="1" stopColor="#7DB6E8" />
+              {/* painted look: slightly uneven edges and a little paper grain, like the rest of the picture */}
+              <filter id={`kf-paint-${id}`} x="-10%" y="-10%" width="120%" height="120%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n" />
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="0.9" xChannelSelector="R" yChannelSelector="G" result="d" />
+                <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.9 0.62" result="grain" />
+                <feComposite in="grain" in2="d" operator="in" result="g" />
+                <feBlend in="d" in2="g" mode="multiply" />
+              </filter>
+              <linearGradient id={`kf-back-${id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#1E6FA8" /><stop offset="1" stopColor="#2B8FC4" />
               </linearGradient>
-              <linearGradient id={`bird-wing-${id}`} x1="1" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#3E86D0" /><stop offset="1" stopColor="#1F4F8C" />
+              <linearGradient id={`kf-belly-${id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#F08A3C" /><stop offset="1" stopColor="#D9642A" />
               </linearGradient>
-              <radialGradient id={`bird-belly-${id}`} cx="0.55" cy="0.35" r="0.7">
-                <stop offset="0" stopColor="#E6F2FC" /><stop offset="1" stopColor="#9CC8EE" />
-              </radialGradient>
+              <linearGradient id={`kf-wing-${id}`} x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#2A8BC0" /><stop offset="1" stopColor="#14507E" />
+              </linearGradient>
+              <linearGradient id={`kf-bill-${id}`} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="#E8562A" /><stop offset="0.75" stopColor="#D2481F" /><stop offset="1" stopColor="#3A2A24" />
+              </linearGradient>
             </defs>
-            {/* far wing, behind the body (darker, a moment behind the near one) */}
-            <motion.path fill="#244F86" opacity={0.85} animate={{ d: WING_KEYS }}
-              transition={{ d: { ...flap, delay: 0.03 } }} style={{ x: 3, y: -1 }} />
-            {/* forked tail */}
-            <path d="M14 21 L2 15 L5 20 L0 23 L5 24 L3 28 L15 24 Z" fill="#265E9E" />
-            <path d="M14 21 L4 18 M14 23 L3 25" stroke="#1C477A" strokeWidth="0.6" strokeOpacity="0.6" />
-            {/* body: round chest, tapering to the tail */}
-            <path d="M13 22 C15 14 25 11 34 12 C41 12 46 16 46 21 C46 27 38 30 29 29 C21 28 15 26 13 22 Z" fill={`url(#bird-back-${id})`} />
-            <path d="M20 25 C26 29 37 29 43 23 C40 27 33 29 27 28 C24 28 22 27 20 25 Z" fill={`url(#bird-belly-${id})`} />
-            <path d="M24 26 C30 28.5 37 28 42 24" stroke="#fff" strokeOpacity="0.35" strokeWidth="0.8" fill="none" />
-            {/* head */}
-            <circle cx="45" cy="15.5" r="7.2" fill="#3479C2" />
-            <path d="M40 12 C43 9 48 9 51 12" stroke="#5E9EDD" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.7" />
-            {/* eye with a highlight */}
-            <circle cx="48" cy="14.4" r="1.7" fill="#14202C" />
-            <circle cx="48.6" cy="13.8" r="0.55" fill="#fff" />
-            {/* orange beak: upper and lower half */}
-            <path d="M51.6 14.2 L58.5 15.8 L51.8 16.6 Z" fill="#F59A2E" />
-            <path d="M51.8 16.6 L57 16.2 L52 17.6 Z" fill="#D9771A" />
-            {/* near wing, in front, with darker flight feathers along its edge */}
-            <motion.path fill={`url(#bird-wing-${id})`} animate={{ d: WING_KEYS }} transition={{ d: flap }} />
-            <motion.path fill="none" stroke="#173F70" strokeWidth="0.7" strokeOpacity="0.55" animate={{ d: WING_KEYS }} transition={{ d: flap }} />
-          </motion.svg>
+            {/* far wing: a soft blur, it beats too fast to see */}
+            <motion.path fill="#164F7C" opacity={0.45} animate={{ d: [WING_DOWN, WING_UP] }} transition={{ d: WHIRR }} style={{ x: 2, y: -1 }} />
+            {/* short dark tail */}
+            <path d="M14 20 L4 18.5 L5 21 L4 23.5 L14 23 Z" fill="#14507E" />
+            {/* body: blue back, bright cyan stripe down the middle of the back, orange underneath */}
+            <path d="M12 21 C14 14 24 11 34 12 C41 12.5 44 16 44 21 C44 26 37 29 28 28.5 C20 28 14 25.5 12 21 Z" fill={u('kf-back')} />
+            <path d="M14 23.5 C20 28.5 34 30.5 43 23 C42 27 35 29.5 27 29 C21 28.6 16.5 26.5 14 23.5 Z" fill={u('kf-belly')} />
+            <path d="M16 23 C24 26 36 26 43.5 21" fill="none" stroke={u('kf-belly')} strokeWidth="3.4" />
+            <path d="M14 18.5 C20 14.5 28 13.4 35 14" fill="none" stroke="#5FE0F2" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+            {/* red feet tucked under the belly */}
+            <path d="M28 28.6 l-1.6 2.2 M31 28.6 l-1 2.4" stroke="#E2453A" strokeWidth="1.1" strokeLinecap="round" />
+            {/* head and bill turn down while hovering (pivot at the neck) */}
+            {/* view-box: the pivot (40, 17) is in the drawing's own units, at the neck */}
+            <motion.g style={{ transformBox: 'view-box', originX: '40px', originY: '17px' }} animate={{ rotate: r.head }} transition={{ rotate: go(r.ease) }}>
+            {/* big head: speckled blue crown, orange cheek, blue moustache stripe, white neck patch and throat */}
+            <circle cx="46" cy="15.5" r="9" fill="#1F72AA" />
+            <path d="M39 11 C42 7.5 49 7 53 10.5" stroke="#4FB3E0" strokeWidth="1" strokeDasharray="0.8 1.6" fill="none" strokeLinecap="round" />
+            <path d="M43 13.5 C46 12 51 12.5 54.5 15 C51 16.4 47 16.6 43 15.8 Z" fill="#EE8238" />
+            <path d="M41 18.5 C45 20 50 20 54 18 C51 21.5 46 22.5 42 21.5 Z" fill="#1A6699" />
+            <path d="M38.5 16 C39.5 14 41.5 13.5 42.5 15 C41.8 17 40 17.6 38.5 16 Z" fill="#F7F4EC" />
+            <path d="M47 22.5 C50 23.2 53 22.5 54.5 20.8 C53.5 23.8 50 25 47 24 Z" fill="#F7F4EC" />
+            {/* eye, with a highlight */}
+            <circle cx="50.2" cy="14" r="1.5" fill="#101418" />
+            <circle cx="50.7" cy="13.5" r="0.45" fill="#fff" />
+            {/* long, dagger-shaped orange-red bill with a dark tip */}
+            <path d="M53.5 14.2 L69.5 17.2 L53.8 18.6 Z" fill={u('kf-bill')} />
+            <path d="M53.8 16.5 L69 17.2" stroke="#8C2E14" strokeWidth="0.45" opacity="0.6" />
+            </motion.g>
+            {/* near wing: speckled azure, whirring; a faint second wing makes the motion blur */}
+            <motion.path fill={u('kf-wing')} opacity={0.35} animate={{ d: [WING_UP, WING_MID, WING_DOWN] }} transition={{ d: { ...WHIRR, delay: 0.045 } }} />
+            <motion.path fill={u('kf-wing')} animate={{ d: [WING_DOWN, WING_MID, WING_UP] }} transition={{ d: WHIRR }} />
+            </g>
+          </svg>
         </motion.div>
       </motion.div>
     </div>
@@ -277,7 +307,7 @@ export default function LoginPage() {
             draggable={false}
           />
           <Petals petals={DESKTOP_PETALS} unit="cqw" />
-          <Bird path={DESKTOP_FLIGHT} size="3.6cqw" duration={30} />
+          <Bird path={DESKTOP_FLIGHT} size="4cqw" />
           <div className="absolute left-[72.4%] top-[22.4%] w-[22.6%] h-[53%]">
             <SignInCard wide {...card} />
           </div>
@@ -296,7 +326,7 @@ export default function LoginPage() {
           />
         </div>
         <Petals petals={PHONE_PETALS} unit="px" />
-        <Bird path={PHONE_FLIGHT} size="44px" duration={28} />
+        <Bird path={PHONE_FLIGHT} size="50px" />
         <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
           <SignInCard wide={false} {...card} />
         </div>
