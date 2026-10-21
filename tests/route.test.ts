@@ -676,8 +676,8 @@ describe('POST /api/save: Instagram capture from the extension', () => {
     const sharp = (await import('sharp')).default
     const meta = await sharp(fake.uploads[0].data).metadata()
     expect(meta.format).toBe('webp')
-    expect(meta.width).toBe(1600)
-    expect(meta.height).toBe(1067)
+    expect(meta.width).toBe(1080)
+    expect(meta.height).toBe(720)
   })
 
   it('never fetches Instagram itself when a capture is present', async () => {

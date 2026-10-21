@@ -18,7 +18,7 @@ import { runAfterResponse } from '@/lib/runAfterResponse';
 import { sanitizeNoteHtml, MAX_NOTE_CHARS } from '@/lib/sanitizeNoteHtml';
 import { htmlToPlainText } from '@/lib/htmlToPlainText';
 import { isOverSaveLimit } from '@/lib/saveLimit';
-import { parseInstagramCapture, instagramTitle, storeInstagramImage } from '@/lib/instagramCapture';
+import { parseInstagramCapture, instagramTitle, replaceInstagramImage } from '@/lib/instagramCapture';
 import { parseScreenshot, storeScreenshot, copyImageToStorage } from '@/lib/pageScreenshot';
 import { needsPreview } from '@/lib/previewRule';
 import { screenshotToStorage } from '@/lib/linkPreview';
@@ -304,21 +304,8 @@ export async function POST(request: Request) {
         // Instagram posts: page details plus who posted it (stored as an Instagram snapshot).
         if (detectedType === 'instagram' && isInstagramPostUrl(cleanUrl)) {
           // Instagram picture addresses expire: keep our own copy of what the extension saw (video posts: the poster only).
-          let storedImage = false;
-          if (capture?.image_url && !customImg) {
-            const stored = await storeInstagramImage(db, userId, capture.image_url);
-            if (stored) {
-              const { error } = await db.from('bookmarks')
-                .update({ image_url: stored.publicUrl, file_path: stored.path })
-                .eq('id', savedId).eq('user_id', userId);
-              if (error) {
-                console.error('[after-save] instagram update failed:', error.message);
-                await db.storage.from('attachments').remove([stored.path]);
-              } else {
-                storedImage = true;
-              }
-            }
-          }
+          // Without the extension (iPhone Shortcut, the app) the page's picture is copied in enrichSocialPost.
+          const storedImage = !!capture?.image_url && !customImg && !!(await replaceInstagramImage(db, userId, { id: savedId }, capture.image_url));
           await enrichSocialPost(db, userId, { id: savedId, url: cleanUrl, type: 'instagram' }, 'save',
             { title: !!givenTitle, description: !!finalDescription, image: !!customImg || storedImage },
             capture ? { handle: capture.handle, caption: capture.caption, is_video: capture.is_video, pageHtml } : { pageHtml });

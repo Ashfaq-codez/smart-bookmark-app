@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicalizeXUrl, hostIs, isRedditShareLink, hackerNewsItemId, spotifyRef, threadsPostRef, isLinkedInPostUrl } from '@/lib/urlTools';
 import { fetchHackerNews, fetchSpotify, fetchThreadsEmbed, fetchLinkedIn, moreSocialTitle, readLinkedInPost } from '@/lib/moreSocialMeta';
-import { readInstagramPage } from '@/lib/instagramMeta';
-import { storeInstagramImage } from '@/lib/instagramCapture';
+import { readInstagramPage, isLoginWall } from '@/lib/instagramMeta';
+import { storeInstagramImage, isInstagramPostImage } from '@/lib/instagramCapture';
 import { youTubeVideoId, isAutoYouTubeTitle, fetchYouTubeInfo } from '@/lib/youtubeMeta';
 import { redditPostRef, fetchRedditPost, resolveRedditShareLink } from '@/lib/redditMeta';
 import { fetchPageDetails } from '@/lib/pageDetails';
@@ -164,28 +164,37 @@ async function enrichInstagram(
   const capturedCaption = typeof captured.caption === 'string' && captured.caption.trim() ? captured.caption : null;
   let caption = capturedCaption || captionFromDescription(row.description);
   let isVideo = captured.is_video === true || /\/(reels?|tv)\//.test(row.url);
+  let storedPath: string | null = null;   // our copy of the picture (removed again if the row is not updated)
   if ((mode === 'save' && !fromExtension) || !handle) {
     const fetched = await fetchInstagramPage(row.url);
-    // Login wall for the server: the phone's copy of the page (iPhone Shortcut) has the same details.
-    const page = fetched.ok ? fetched : captured.pageHtml ? { ok: true as const, page: readInstagramPage(captured.pageHtml) } : fetched;
+    // Login wall for the server: the phone's copy of the page (iPhone Shortcut) has the same details,
+    // unless the phone got the login wall too (its title "Instagram" and logo picture are never used).
+    const phonePage = captured.pageHtml && !isLoginWall(captured.pageHtml) ? captured.pageHtml : null;
+    const page = fetched.ok ? fetched : phonePage ? { ok: true as const, page: readInstagramPage(phonePage) } : fetched;
     if (page.ok && (page.page.handle || page.page.title)) {
       const p = page.page;
       if (!handle && p.handle) { handle = p.handle; source = 'page'; }
       caption = capturedCaption || captionFromDescription(p.description) || caption;
       isVideo = isVideo || p.is_video;
       const titleIsAuto = mode === 'save' ? !keep.title : isAutoInstagramTitle(row.title, row.url);
-      if (titleIsAuto && p.title) patch.title = p.title;
+      if (titleIsAuto && p.title && !isAutoInstagramTitle(p.title, row.url)) patch.title = p.title;
       if (mode === 'save' ? !keep.description : !row.description) { if (p.description) patch.description = p.description; }
-      if (mode === 'save' ? !keep.image : !row.image_url) { if (p.image) patch.image_url = p.image; }
+      if ((mode === 'save' ? !keep.image : !row.image_url) && isInstagramPostImage(p.image)) {
+        // Picture addresses expire after a few days: keep our own copy (the address itself only if copying failed).
+        const stored = await storeInstagramImage(db, userId, p.image!);
+        patch.image_url = stored?.publicUrl ?? p.image;
+        if (stored) { patch.file_path = stored.path; storedPath = stored.path; }
+      }
     }
     // Login wall or no answer: not an error, just nothing found for now.
   }
 
   if (!handle) {
-    await update({ ...patch, post_data_failed_at: now });
+    if (!(await update({ ...patch, post_data_failed_at: now })) && storedPath) await db.storage.from('attachments').remove([storedPath]);
     return 'not-found';
   }
   const ok = await update({ ...patch, post_data: instagramSnapshot(handle, source, caption, isVideo), post_data_fetched_at: now, post_data_failed_at: null });
+  if (!ok && storedPath) await db.storage.from('attachments').remove([storedPath]);
   return ok ? 'stored' : 'failed';
 }
 

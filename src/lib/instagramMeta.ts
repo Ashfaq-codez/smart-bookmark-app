@@ -56,12 +56,13 @@ export function readInstagramPage(html: string): PageInfo {
 
 export type InstagramFetch =
   | { ok: true; page: PageInfo }
-  | { ok: false; reason: 'login-wall' | 'unavailable' };
+  | { ok: false; reason: 'login-wall' | 'gone' | 'unavailable' };   // gone = deleted or private (404 / 410)
 
 export async function fetchInstagramPage(url: string): Promise<InstagramFetch> {
   try {
     const res = await safeFetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) });
     if (res.status >= 300 && res.status < 400) return { ok: false, reason: 'login-wall' };
+    if (res.status === 404 || res.status === 410) return { ok: false, reason: 'gone' };
     if (!res.ok) return { ok: false, reason: 'unavailable' };
     const html = await res.text();
     if (isLoginWall(html, res.url)) return { ok: false, reason: 'login-wall' };
